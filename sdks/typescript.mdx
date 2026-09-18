@@ -21,7 +21,7 @@ Hue Cloud is the default destination; no base URL is needed. See [connection set
 
 ## Send your first trace
 
-Save this as `trace.ts`. It traces a deterministic uppercase tool; it makes no model call.
+Save this as `trace.ts` in a package whose `package.json` contains `"type": "module"` (or name the file `trace.mts`). It traces a deterministic uppercase tool; it makes no model call.
 
 ```ts
 import { createHue, HueExportError } from "@hue-run/sdk";

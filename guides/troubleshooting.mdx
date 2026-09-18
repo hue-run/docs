@@ -51,6 +51,10 @@ Queues are bounded and held in memory. Process termination, queue overflow or sa
 
 The receiver accepts bounded OTLP requests. The SDK splits batches, but oversized helper content is omitted and recorded as an instrumentation failure. Application work still runs; raw external records remain subject to receiver limits. Keep binary files out of span attributes; file storage and document evaluation have a separate lifecycle.
 
+## The example throws `Cannot use import statement outside a module`
+
+Node.js treats `.js` and `.ts` files as CommonJS unless the nearest `package.json` contains `"type": "module"`. Run `npm pkg set type=module` in the example directory, or name the file `first-trace.mjs` / `trace.mts`, then run it again.
+
 ## Installation reports a dependency conflict
 
 Check the [compatibility matrix](/sdks/compatibility). TypeScript 0.1.5 core supports installation alongside AI SDK 6, but its `hueTelemetry` adapter requires AI SDK 7; older Hue versions can still conflict at install time. Python pins OpenTelemetry 1.44.0. Keep the application's existing instrumentation and use a standard OTLP exporter when its versions fall outside the tested SDK matrix; do not force an incompatible install.
@@ -64,12 +68,6 @@ A response-size or connection failure does not prove that a mutation was rejecte
 ## The trace is present but the evaluation fails
 
 Check which outcome failed: the original application execution, the scorer's execution, or the quality assessment. A boolean `false` is a valid scored result. Historical rescoring assesses frozen evidence and does not rerun your application.
-
-## The MCP server rejects the agent
-
-The [Hue MCP server](/agents/mcp-server) authenticates with a project service key sent as `Authorization: Bearer …`. `401` means the key is missing, malformed, revoked or expired. `403` means the key has no read access: create a key with the **Read-only** scope and configure it as `HUE_MCP_KEY` in the MCP client. `429` follows repeated failed authentications for one key id; wait for `Retry-After`. `503` means the server is momentarily saturated; retry after a second. A `405` or `404` answer to a `GET` or to a request carrying `Mcp-Session-Id` is expected: the server is stateless and accepts `POST` only.
-
-Results marked `truncated: true` were cut to the `max_chars` budget; lower `limit` or `max_spans`, raise `max_chars`, or fetch one object at a time. Recorded prompts and outputs are absent unless a tool is called with `include_content: true` and the application captured content. An empty search does not prove nothing happened; widen `since` or drop filters.
 
 ## Tracing is disabled or data is being dropped
 
