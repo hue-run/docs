@@ -22,7 +22,7 @@ do not use unreleased APIs or force incompatible dependency installation.
 Initialize one safe client per serving process and wire an environment kill
 switch. Start with metadata-only capture unless our team has already approved
 content capture. Preserve existing redaction and third-party capture controls.
-Use a tracing-only project key from the server secret store. Never print it.
+Use the project's read and write key from the server secret store. Never print it.
 
 Keep connection checks and strict receipt verification in a separate setup
 command. Do not block application readiness or responses on Hue, or rerun
@@ -37,7 +37,7 @@ trace link. Report test evidence, installed versions, capture choice and any
 remaining configuration or integration limits.
 ```
 
-Hue is currently invite-only: your organization is provisioned by Hue, and its owner accepts the invitation, signs up and verifies their email. An owner or admin then creates a **Tracing only** key in **Settings → Integrations & API keys**. Configure `HUE_API_KEY` through your normal [secret workflow](/guides/project-keys); do not paste it into chat.
+Hue is currently invite-only: your organization is provisioned by Hue, and its owner accepts the invitation, signs up and verifies their email. An owner or admin then creates a **Read and write** key in **Settings → Integrations & API keys**. Configure `HUE_API_KEY` through your normal [secret workflow](/guides/project-keys); do not paste it into chat.
 
 ## Install the skill for future sessions
 
@@ -53,14 +53,14 @@ Hosting the skill does not automatically load it into every agent. The startup p
 
 ## Connect the Hue MCP server
 
-The skill teaches the agent how to integrate tracing. The [Hue MCP server](/agents/mcp-server) additionally lets it read your project's traces, spans, sessions, datasets and experiment results and verify delivery itself, from Claude Code, Cursor, Codex, VS Code and other MCP clients. It uses a separate **Coding agent (read-only)** key configured as `HUE_MCP_KEY` in the agent's MCP client, never in the application. Skill 0.2.1 uses the server's `verify_trace` and `get_trace` tools when they are connected and falls back to receipt evidence otherwise.
+The skill teaches the agent how to integrate tracing. The [Hue MCP server](/agents/mcp-server) additionally lets it read your project's traces, spans, sessions, datasets and experiment results and verify delivery itself, from Claude Code, Codex, Cursor, Windsurf, Gemini CLI and other MCP clients. It uses a separate **Read-only** key configured as `HUE_MCP_KEY` in the agent's MCP client, never in the application. Skill 0.2.1 uses the server's `verify_trace` and `get_trace` tools when they are connected and falls back to receipt evidence otherwise.
 
 ## What the agent still needs
 
 - Access to your application code, its existing runtime and package manager.
-- A provisioned Hue project and a tracing-only key configured through your server's secret workflow.
+- A provisioned Hue project and a **Read and write** key configured through your server's secret workflow.
 - Access from the server to Hue's telemetry endpoint, and permission to exercise an appropriate request for verification.
-- Optionally, a coding-agent key in its MCP client so it can confirm stored traces and read evaluation results without your help.
+- Optionally, a **Read-only** key in its MCP client so it can confirm stored traces and read evaluation results without your help.
 
 The skill guides dependency checks, safe initialization, metadata-only capture by default, streaming lifetime, outage tests and stored trace verification. Wrapping an entry point alone does not automatically instrument its internal model and tool calls. The agent should use your framework's instrumentation or wrap those operations explicitly, and report any unsupported integration or missing access.
 

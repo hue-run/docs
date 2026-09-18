@@ -13,13 +13,16 @@ For direct HTTP requests, authentication uses `Authorization: Bearer <project-se
 
 ## Understand access
 
-New keys default to **Tracing only** (`telemetry_write`). They can ingest telemetry, check the destination project and verify exact known trace IDs. They cannot read or modify datasets, experiments, artifacts or environments, or start hosted evaluations.
+A key has one of two scopes:
 
-Choose **Tracing and evaluations** (`project_write`) explicitly when setting up an evaluation client. Choose **Coding agent (read-only)** (`project_read`) or **Coding agent (read + evaluations)** (`project_read` and `project_write`) for the [Hue MCP server](/agents/mcp-server): these keys let a coding agent read the project's traces, sessions, datasets and experiment results, and the second preset will also allow additive dataset writes once those tools ship. Configure a coding-agent key as `HUE_MCP_KEY` in the agent's MCP client, never in the application. Existing keys keep their access; creating a new restricted key does not narrow an older credential.
+- **Read-only** reads the project's traces, sessions, datasets and experiment results. It cannot send telemetry or change anything.
+- **Read and write** adds sending telemetry, modifying datasets and starting evaluation runs.
+
+New keys default to **Read-only**. Choose **Read and write** for the application and store it as `HUE_API_KEY`. Create a separate **Read-only** key for the [Hue MCP server](/agents/mcp-server) and configure it as `HUE_MCP_KEY` in the agent's MCP client, never in the application, so that a leaked agent key cannot alter your project. Existing keys keep their access; creating a new restricted key does not narrow an older credential.
 
 Treat either key as a server credential. Keep it out of browser bundles, logs, source control and prompts. Owners and admins can create and revoke keys. A newly invited member needs an owner or admin to supply a key through the team's secret store.
 
-A service key does not represent a signed-in Hue user. Human review uses the application's authenticated user session. Trace browsing for coding agents goes through the [MCP server](/agents/mcp-server) with a coding-agent key; the SDKs do not expose a general trace-search API.
+A service key does not represent a signed-in Hue user. Human review uses the application's authenticated user session. Trace browsing for coding agents goes through the [MCP server](/agents/mcp-server) with a read-only key; the SDKs do not expose a general trace-search API.
 
 ## Verify and rotate
 
