@@ -9,7 +9,7 @@ For option defaults and method signatures, see the [TypeScript API reference](/r
 
 ## Install
 
-Use Node.js 22 or 24, or Bun 1.4. [Install the TypeScript SDK](/installation#typescript), then configure your key below. The package is ESM; CommonJS applications on Node.js 22.12 or later load it with `require("@hue-run/sdk")`. Check the [compatibility matrix](/sdks/compatibility) if your application already uses AI SDK or OpenTelemetry.
+Use Node.js 22 or 24, or Bun 1.4. [Install the TypeScript SDK](/installation#typescript), then configure your key below. The package is ESM; CommonJS applications on Node.js 22.12 or later load it with `require("@hue-run/sdk")`. Check the [compatibility matrix](/sdks/compatibility) if your application already uses AI SDK or OpenTelemetry. Besides the core entry point, the package exposes `@hue-run/sdk/ai-sdk`, `@hue-run/sdk/evals`, `@hue-run/sdk/environment` and `@hue-run/sdk/managed`. `@hue-run/sdk/evals` needs the optional `zod` peer (`npm install zod`, 4.6.5 or later); [simulations](/evaluations/simulations) use it together with `@hue-run/sdk/environment`.
 
 ## Configure your project
 

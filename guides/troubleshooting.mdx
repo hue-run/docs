@@ -61,7 +61,7 @@ Check the [compatibility matrix](/sdks/compatibility). `@hue-run/sdk` core insta
 
 ## A JSON Schema scorer reports `SchemaValidatorUnavailable`
 
-The validator is optional in both SDKs. Run `npm install ajv` (8.17 or later) for `builtins.jsonSchema` in TypeScript, or `pip install 'hue-run[evals]'` for `builtin_scorers.json_schema` in Python; without it the Python helper raises `ImportError`. Other built-in scorers do not need these packages.
+The validator is optional in both SDKs. Run `npm install ajv` (8.17 or later) for `builtins.jsonSchema` in TypeScript, or `pip install 'hue-run[evals]'` for `builtin_scorers.json_schema` in Python; without it the Python helper raises `ImportError`. Other built-in scorers do not need these packages. Separately, importing `@hue-run/sdk/evals` at all needs the optional `zod` peer (`npm install zod`, 4.6.5 or later).
 
 ## Listing dataset cases fails for a large page
 

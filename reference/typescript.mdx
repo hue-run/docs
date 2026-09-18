@@ -1,6 +1,6 @@
 ---
 title: "TypeScript API reference"
-description: "Configuration, tracing, delivery and evaluation APIs in @hue-run/sdk 0.2.0."
+description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.2.0."
 ---
 
 This reference covers `@hue-run/sdk` **0.2.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
@@ -11,7 +11,8 @@ This reference covers `@hue-run/sdk` **0.2.0** on Node.js 22 or 24 and Bun 1.4. 
 | --- | --- |
 | `@hue-run/sdk` | `createHue`, `createHueSafe`, `HueClient`, `createHueTransport`, `HueTransport`, `hueExperimentalTelemetry`, `contentPrefixes`, `HueConnectionError`, `HueExportError`, `HueTraceVerificationError` and the tracing types below. |
 | `@hue-run/sdk/ai-sdk` | `hueTelemetry` for Vercel AI SDK 7. Requires the optional `ai` and `@ai-sdk/otel` peers. |
-| `@hue-run/sdk/evals` | Evaluation client, local runners, scorer definitions, evaluation errors and types. |
+| `@hue-run/sdk/evals` | Evaluation client, local runners including `runSimulation`, scorer definitions, attempt-preflight validators, evaluation errors and types. Requires the optional `zod` peer (4.6.5 or later). |
+| `@hue-run/sdk/environment` | `createEnvironmentClient`, `EnvironmentClient`, `bindEnvironmentTools`, `HueEnvironmentError` and the simulated-environment types. |
 | `@hue-run/sdk/managed` | `createManagedTargetHandler` and the managed-target types. |
 
 The package is ESM; CommonJS applications on Node.js 22.12 or later load every entry point with `require()`. The SDK runs on the server. It does not call a model provider for you or automatically instrument provider calls that emit no telemetry. Every exported type, option and member carries API documentation in the published declarations.
@@ -74,6 +75,7 @@ hue.tool<T>(
   name: string,
   input: unknown,
   execute: () => T | Promise<T>,
+  options?: Pick<SpanOptions, "parentContext">,
 ): Promise<T>
 
 hue.model<T>(
@@ -100,7 +102,7 @@ hue.recordMessages(
 
 `withSpan` returns the callback's result, ends the span after the callback settles, and records then rethrows an escaping application error. Consume streams inside the callback if their work belongs to that span. A returned streaming `Response` is not evidence that the stream has finished.
 
-`tool` runs `execute` inside a span named `execute_tool {name}` with `gen_ai.tool.name`, records `input` and a defined result as `gen_ai.tool.call.arguments` / `gen_ai.tool.call.result` according to your content policy, and returns the tool result. An `undefined` result omits result content.
+`tool` runs `execute` inside a span named `execute_tool {name}` with `gen_ai.tool.name`, records `input` and a defined result as `gen_ai.tool.call.arguments` / `gen_ai.tool.call.result` according to your content policy, and returns the tool result. An `undefined` result omits result content. `options.parentContext` supplies an explicit parent for the tool span.
 
 `model` runs `callback` inside a GenAI client span for one direct provider call, named `{operation} {model}` unless `options.name` is given, with `gen_ai.operation.name`, `gen_ai.request.model` and `gen_ai.provider.name`. The argument order matches `withSpan`. Inside it, the handle's `setInput` and `setOutput` record `gen_ai.input.messages` / `gen_ai.output.messages`, which should use the GenAI semantic-convention message shape; `recordMessages` inside the callback inherits the request metadata.
 
@@ -232,7 +234,7 @@ const client = createEvaluationClient({ apiKey: process.env.HUE_API_KEY! });
 
 `createEvaluationClient(options: EvaluationClientOptions): EvaluationClient` and `new EvaluationClient(options)` accept required `apiKey`, optional `baseUrl` (default `https://app.hue.run`) and optional `timeoutMillis` (default `10000`, range `100–60000`). `checkConnection()` returns the key's project. Registry writes require a **Read and write** key.
 
-Methods below return promises. `PageOptions` is `{ after?: string; limit?: number }`, with a supplied limit from 1 through 100. Paged responses are `Page<T>`, `{ items, nextCursor }`; pass a non-null cursor as the next `after`. IDs are UUIDs. `Identity` is `{ name, slug, description? }`.
+Methods below return promises. `PageOptions` is `{ after?: string; limit?: number }`, with a supplied limit from 1 through 100. Paged responses are `Page<T>`, `{ items, nextCursor }`; pass a non-null cursor as the next `after`. IDs are UUIDs. `Identity` is `{ name, slug, description? }`. `listDatasets` and `listScorers` accept `RegistryPageOptions`, `PageOptions` plus `includeArchived?: boolean`, which includes archived identities so callers can diagnose slug conflicts explicitly.
 
 Evaluation responses are limited to **4 MiB**. `listCases(versionId, page?)` includes case content, so a valid row limit can still produce an oversized response when cases are large. Request a smaller page, such as `{ limit: 1 }`, and follow `nextCursor`; the client does not automatically split or retry an oversized page. Request bodies are limited to 1 MiB.
 
@@ -243,9 +245,9 @@ Evaluation responses are limited to **4 MiB**. `listCases(versionId, page?)` inc
 | Type | Meaning |
 | --- | --- |
 | `Dataset` / `DatasetVersion` | A dataset with its `versions` / one version with `revision`, `frozenAt` and `contentDigest` (`null` while it is a draft). |
-| `DatasetCase` | A stored case: `id`, `externalKey`, `inputs`, optional `expected`, `metadata` and `datasetVersionId`. |
+| `DatasetCase` | A stored case: `id`, `externalKey`, `inputs`, optional `expected`, `metadata` and `datasetVersionId`, plus optional immutable provenance: `environmentVersionId` (the exact simulated world selected for the case), `sourceTraceId` / `sourceTraceRevision` and `artifactManifestId`. |
 | `ExperimentCase` | A `DatasetCase` as an experiment sees it, with `hasExpected` (JSON `null` counts as present). |
-| `CaseWrite` | Input for `addCase`. |
+| `CaseWrite` | Input for `addCase`; optional `environmentVersionId` selects an immutable simulated-world version for the case. |
 | `Scorer` / `ScorerVersion` | A scorer and its published `versions` / an immutable published definition with `contentDigest`. |
 | `ScorerDefinition` / `MetricDefinition` | The pinned definition variants / a typed metric a scorer declares. |
 | `JudgeConfig` | Hosted judge configuration: `model`, `provider`, `rubric`, `bindings`, `maxOutputTokens`, `timeoutMs` and optional `temperature`. |
@@ -255,14 +257,17 @@ Evaluation responses are limited to **4 MiB**. `listCases(versionId, page?)` inc
 | `StartExecution` / `CompleteExecution` / `Completion` | Inputs and result of the low-level execution methods. |
 | `EvaluationRun` | Scoring progress for an experiment or rescore: pinned `scorerVersions`, `itemCount` and result counts by state. |
 | `EvaluationItem` | A subject within an evaluation run, with `hasOutput` and `traceSnapshotId`. |
-| `Subject` | An immutable saved outcome: `inputs`, optional `output` and `expected`, `metadata`, `executionState`, trace evidence fields and the source case, experiment and attempt. |
+| `Subject` | An immutable saved outcome: `executionId`, `inputs`, optional `output` and `expected`, `metadata`, `executionState`, trace evidence fields and the source case, experiment and attempt. |
 | `Score` / `Result` | A scorer outcome (`scored`, `error` or `skipped`) / a score addressed to an `evaluationItemId` and `scorerVersionId`. |
 | `Metric` | A reported metric value: `name`, `value` and optional `passed`; a failed metric stays `state: "scored"`. |
 | `TypedError` | A sanitized `{ type, message? }`; the message is stored only when result content is persisted. |
 | `ResultSummary` / `StoredResult` | A listed result with `state` / the full stored result with `metrics`, `explanation`, `evidence`, `error` and `sourceDigest`. |
-| `ScoreContext` / `LocalScorer` | What a local scorer callback receives / a pinned `local_code` definition with its bound callback. |
+| `ScoreContext` / `LocalScorer` | What a local scorer callback receives, including sealed `environment` evidence when the runner requires it / a pinned `local_code` definition with its bound callback. |
 | `JudgeJob` | A hosted judge job with `state`, charge accounting and timestamps. |
 | `JudgeBudget` | The project's hosted judge allowance and admission controls; credential resolution does not establish provider acceptance. |
+| `RegistryPageOptions` | `PageOptions` plus `includeArchived` for `listDatasets` and `listScorers`. |
+| `EnvironmentEvidenceSnapshot` / `EnvironmentEvidence` | Sealed environment evidence resolved through one target execution: `runId`, `executionId`, `environmentVersionId`, `definitionDigest`, `seed`, terminal `status` (`completed`, `abandoned` or `expired`), `stepCount`, `stateDigest`, `initialState`, `finalState` and the coverage fields / the snapshot plus its complete `steps` ordered by ordinal. |
+| `SimulationMcpCapability` | Short-lived execution-scoped MCP connection for one simulated world: `url`, `token` and `expiresAt`. Never persist or expose the token. |
 
 ### Datasets and scorer definitions
 
@@ -300,6 +305,8 @@ Hosted `config` is a `JudgeConfig` with required `model`, `provider`, `rubric`, 
 | `getExperiment(id)` / `listExperimentItems(id, page?)` / `getExperimentCase(id, caseId)` | An `Experiment` / a page of `ExperimentItem` values / an `ExperimentCase`. |
 | `startExecution(experimentId, caseId, input: StartExecution)` | Start or recover an attempt → `Execution`. |
 | `getExecution(id)` / `completeExecution(id, input: CompleteExecution)` | Read an attempt / acknowledge its terminal outcome → `Completion`. |
+| `getEnvironmentEvidence(executionId)` / `getEnvironmentSteps(executionId, { after?, limit? }?)` | The sealed `EnvironmentEvidenceSnapshot` linked to an execution / a `StepPage` of its sealed journal; `after` is a step ordinal (`-1` starts at the first step) and `limit` is 1–100. |
+| `createSimulationMcpCapability({ runId, executionId })` | The execution-scoped generic MCP capability for one world → `SimulationMcpCapability`. `runSimulation` calls it when no provider-profile preflight is requested. |
 | `finishExperiment(id, idempotencyKey)` | `{ id, finishedAt }`. |
 | `createEvaluationRun(input)` | `{ idempotencyKey, name, subjectIds, scorerVersionIds }` → `{ id }`. |
 | `getEvaluationRun(id)` / `listEvaluationItems(id, page?)` / `getSubject(subjectId)` | An `EvaluationRun` / a page of `EvaluationItem` values / an immutable `Subject`. |
@@ -335,8 +342,9 @@ Both functions are exported from `@hue-run/sdk/evals`.
 | `scorers` | Optional array of bound `LocalScorer` definitions/callbacks. |
 | `concurrency` | Default `1`; integer `1–16`. |
 | `schemaTimeoutMillis` | Default `2000`; integer `100–60000`; applies to JSON Schema validation, not arbitrary callbacks. |
+| `environmentEvidence` | Optional `"required"`: resolve sealed world evidence for local scoring and historical rescoring. `runSimulation` sets it. |
 
-`runExperiment` additionally requires `hue`, `experimentId`, `traceEvidence` and `target(inputs, { config, item, span })`. The target may return a JSON value, `undefined`, or a promise of either. Evidence must be `{ mode: "required" }` or `{ mode: "omit", reason: "..." }`. Telemetry and evaluation clients must use the same project and origin.
+`runExperiment` additionally requires `hue`, `experimentId`, `traceEvidence` and `target(inputs, { config, item, span, executionId })`. The target may return a JSON value, `undefined`, or a promise of either. Evidence must be `{ mode: "required" }` or `{ mode: "omit", reason: "..." }`. Telemetry and evaluation clients must use the same project and origin.
 
 `rescore` additionally requires `runId` and has **no target callback**. Create its evaluation run from existing subject IDs first. Both return a `RunnerReport`, `{ runId, subjectIds, resultIds, deferredScorerVersionIds }`.
 
@@ -353,9 +361,9 @@ With `persistResultContent: false`, completions and checkpoints omit raw output,
 | `sourceDigest(source: string \| Uint8Array)` | SHA-256 declaration for supplied source bytes/text. |
 | `scoreLocally(version, context, { scorers?, schemaTimeoutMillis? }?)` | Computes `Promise<Score>` without uploading it. |
 
-JSON Schema scoring uses `ajv`, an optional peer dependency (8.17 or later) loaded inside a worker only when `builtins.jsonSchema` scores a case; without it that scorer reports `SchemaValidatorUnavailable`. The tracing core depends only on `@opentelemetry/*` packages.
+`@hue-run/sdk/evals` uses `zod`, an optional peer dependency (4.6.5 or later), for its bounded runtime contracts; install it when you use evaluations or simulations. JSON Schema scoring uses `ajv`, a separate optional peer dependency (8.17 or later) loaded inside a worker only when `builtins.jsonSchema` scores a case; without it that scorer reports `SchemaValidatorUnavailable`. The tracing core depends only on `@opentelemetry/*` packages.
 
-`ScoreContext` contains `inputs`, `hasOutput`, `hasExpected`, optional `output`/`expected`, `metadata` and `executionState`. A `Score` is `scored` with declared metrics and explanation/evidence, `error` with a typed error, or `skipped` with an explanation. A failed quality metric is still `scored`, with `passed: false`.
+`ScoreContext` contains `inputs`, `hasOutput`, `hasExpected`, optional `output`/`expected`, `metadata`, `executionState` and, when the runner requires environment evidence, `environment` (an `EnvironmentEvidence`). With environment evidence present, a `local_code` scorer runs even when no output is stored. When required evidence cannot be read, `local_code` results record an `EnvironmentEvidenceUnavailable` error; a world marked `environment_incomplete` produces a skipped result with the fixed explanation `Environment incomplete: provider behavior is not implemented.` A `Score` is `scored` with declared metrics and explanation/evidence, `error` with a typed error, or `skipped` with an explanation. A failed quality metric is still `scored`, with `passed: false`.
 
 Custom callbacks run locally, without a general execution timeout or side-effect cancellation. The source digest is a caller declaration, not attestation of dependencies or closures. Hosted judge pins must be dispatched through judge jobs; `scoreLocally` does not execute them.
 
@@ -363,6 +371,8 @@ Custom callbacks run locally, without a general execution timeout or side-effect
 
 - `UncertainExecutionError` exposes `caseId` and optional `executionId`: no durable outcome is available, so the runner refuses to repeat potentially completed work.
 - `OutcomeSerializationError` exposes `executionId`: the target returned, but its outcome could not be saved as JSON. The runner does not invoke it again.
+- `TargetCancelledError` is thrown when cooperative caller cancellation stops target execution; the runner records the execution as `cancelled`.
+- `TargetOutcomeUncertainError` exposes `executionId`: the target or its simulated world may have committed but acknowledgement is unavailable, so a resume will not invoke the target again.
 - Required trace export failures surface through `HueExportError` or recovery checks. A new empty exporter cannot prove receipt of an earlier trace.
 
 Use one checkpoint directory per experiment or rescore run. Checkpoint files contain allowed result content and are private local files, not encrypted storage. After an upload failure, resume with the same run, directory and options so saved payloads and idempotency keys are reused. If a process crashes, confirm its recorded owner has stopped before removing the directory's `.lock` file. Removing a lock never authorizes another target invocation.
@@ -370,6 +380,192 @@ Use one checkpoint directory per experiment or rescore run. Checkpoint files con
 When a target's outcome is uncertain, restarting the runner will not repeat it. Investigate side effects first. The low-level `startExecution` API requires an explicit `previousExecutionId` for a replacement attempt and `allowUncertainRetry: true` to replace a still-started attempt. The convenience runner does not automatically adopt an externally created attempt; use a new experiment for an intentional fresh target run. Required evidence never silently changes to omitted evidence after an export failure.
 
 For a runnable experiment and historical rescore, see the public [first evaluation guide](/evaluations/first-evaluation).
+
+## Run a simulation
+
+```ts
+runSimulation(options: RunSimulationOptions): Promise<SimulationReport>
+```
+
+`runSimulation` runs an existing agent callback against one fresh hosted world per case. It owns immutable resolution, execution linkage, finalization, scoring and resumable uploads, and it is exported from `@hue-run/sdk/evals`. The environment client comes from `@hue-run/sdk/environment` and must use the same Hue origin as the evaluation client. For the workflow, see [simulations](/evaluations/simulations).
+
+### RunSimulationOptions
+
+| Option | Required/default |
+| --- | --- |
+| `client` | Required `EvaluationClient` for the target Hue project. |
+| `environmentClient` | Required `EnvironmentClient` for the same Hue origin and project. |
+| `hue` | Required `HueClient` used for target and tool spans. |
+| `checkpointDirectory` | Required dedicated private directory for resumable checkpoints. Running a changed scenario while an unfinished simulation is checkpointed there fails; recover that simulation first. |
+| `scenario` | Required `SimulationScenario`. |
+| `persistResultContent` | Required boolean for saved target and scorer content. |
+| `traceEvidence` | Required `{ mode: "required" }` or `{ mode: "omit", reason }`. |
+| `target(inputs, context)` | Required. Invokes the existing local agent exactly once for this attempt with a `SimulationTargetContext`; returns a JSON value, `undefined` or a promise of either. |
+| `localScorers` | Optional `LocalScorer[]` bound by their declared source digests. |
+| `concurrency` | Default `1`; integer `1–16`. |
+| `schemaTimeoutMillis` | JSON Schema worker deadline in milliseconds. |
+| `maxSteps` | Per-world action ceiling, `1–500`. |
+| `ttlSeconds` | Per-world lease in seconds, `1–86400`. |
+| `signal` | Optional `AbortSignal`; cancellation is cooperative. |
+| `runName` | Optional display name for the fresh experiment; defaults to the source experiment or scenario name. |
+| `onProgress(event)` | Optional callback receiving bounded nonsecret `SimulationProgress` events. |
+| `actualAgentManifest` | Optional `ActualAgentManifestInputV2`, or a function of `{ config, item, signal }` returning one, that opts into immutable provider-profile preflight. Requires `requestedProviders` and `mcpSurface`. Omitted evidence normalizes to explicit V2 missing evidence; it is never assumed equal to the baseline. |
+| `requestedProviders` | Optional `RequestedAttemptProviderV2[]`: the exact provider instances and ordered surfaces asserted for strict preflight. Supplied together with `mcpSurface`. |
+| `mcpSurface` | Optional `{ providerInstanceKey, surfaceKey: "google.gmail/mcp" \| "slack/mcp" }` selected from `requestedProviders` and projected to `context.mcp`. |
+
+`SimulationReport` extends `RunnerReport` with `experimentId`, the fresh experiment created for this invocation, and `runUrl`, the browser URL joining task, trace, world evidence and scoring. Invalid bounds throw `RangeError`; mismatched origins and an unfinished checkpointed scenario throw `Error`.
+
+### SimulationScenario
+
+`SimulationScenario` is a union of an app-authored reference and a repository-authored definition.
+
+| Kind | Fields |
+| --- | --- |
+| `{ kind: "experiment", experimentId }` | Selects an existing app-authored immutable experiment template. Each completed invocation clones its frozen dataset version, configuration and scorer-version pins into a fresh experiment. |
+| `{ kind: "repository", name, slug, description?, environment, cases, scorers, config? }` | Publishes and resolves the definition. `slug` is the stable dataset slug used for immutable version resolution; `environment` is an `EnvironmentIdentity` plus its `definition: EnvironmentDefinition`; `config` is passed to every target callback. At least one case and one scorer are required, and case keys must be unique. |
+
+`RepositorySimulationCase` is `{ externalKey, inputs, expected?, metadata? }`: a stable key unique within the scenario dataset, the JSON inputs passed to the target, an optional reference output and optional caller-owned metadata. `RepositorySimulationScorer` is an `Identity` plus `scorer`, a `ScorerDefinition` to publish or a `LocalScorer` bound to its source digest. Stable slugs reuse matching immutable content digests; changed definitions publish new versions. Unsupported or server-only scorer kinds throw `TypeError` before any write.
+
+### SimulationTargetContext
+
+| Field | Meaning |
+| --- | --- |
+| `config` / `item` | Frozen experiment configuration / the frozen `ExperimentCase`, including its immutable environment-version pin. |
+| `executionId` / `environmentRunId` | Target execution identity / stable world identity for adapter control operations such as coverage reporting. Neither is a credential. |
+| `tools` | `Record<string, EnvironmentTool>`: framework-neutral local callables backed by this attempt's isolated world. |
+| `mcp` | `SimulationMcpCapability` for providers that execute MCP remotely; scoped to one execution and world. |
+| `connectionBundle` | Optional `AttemptConnectionBundleV2` with credential-bearing provider connections for this callback only. Hue never checkpoints, logs or adds it to parity digests. |
+| `signal` | Optional `AbortSignal`; pass it into the real agent or provider call. |
+
+### SimulationProgress
+
+Progress events carry no target output, credentials or other sensitive content.
+
+| `type` | Fields |
+| --- | --- |
+| `run_created` | `experimentId` and `runUrl`, emitted as soon as the inspectable experiment exists. |
+| `world_created` / `target_started` / `world_sealed` | `experimentId`, `executionId`, `caseId` and `environmentRunId`. |
+| `attempt_prepared` | The lifecycle fields plus `bindingId`, `status` (`"ready"` or `"environment_incomplete"`), stable nonsecret `findingCodes` and, for ready attempts, the credential-free `executionManifestDigest`. |
+
+### Attempt preflight
+
+An experiment whose `config` carries an immutable `AttemptBaselineV2` can require strict provider-profile preflight before the callback runs. `runSimulation` performs it when `requestedProviders` and `mcpSurface` are supplied; the evaluation-client methods and validators below are exported for adapters that drive it directly.
+
+| Method | Result or purpose |
+| --- | --- |
+| `prepareAttempt(input: PrepareAttemptRequestV2)` | Prepares the immutable provider-profile binding for one execution → `PrepareAttemptResultV2`. The route identity is removed from the JSON body, and credential-bearing responses are validated against the request before being returned; a malformed success response throws `HueApiError` without exposing details. |
+| `getAttemptBinding(bindingId)` | Coupled, secret-free V1 or V2 binding evidence → `AttemptBindingRead`. It never reacquires credentials. |
+| `refreshAttemptConnection(previous: AttemptConnectionBundleV2, { idempotencyKey })` | Rotates an unexpired V2 connection while preserving its immutable binding evidence → `RefreshAttemptResultV2`. The credential generation must advance by one and the stable evidence must be unchanged. |
+| `revokeAttemptConnection({ bindingId })` | Revokes an attempt binding → `RevokeAttemptResult`. A revoked connection must not be reused or refreshed. |
+
+| Type | Meaning |
+| --- | --- |
+| `ActualAgentManifestV2` / `ActualAgentManifestInputV2` | Canonical caller-observed agent configuration after missing evidence is made explicit: six strict `components` (`agent`, `prompt`, `model`, `tools`, `approvals`, `orchestration`), each `{ digest: string \| null, evidence: "observed" \| "declared" \| "missing" }`, MCP `catalogs` in effective model-visible order (never sorted) and native `helperConfigurations` / the input form, in which omitted evidence normalizes to missing. |
+| `ExpectedAgentManifestV2` | Immutable expected agent evidence pinned by an experiment: a required `digest` and `minimumEvidence` (`"observed"` or `"declared"`) for every strict component, catalog and helper configuration. |
+| `SurfaceBindingV2` | Secret-free registration identity for one selected provider surface. MCP surfaces (`google.gmail/mcp`, `slack/mcp`) carry a `catalogDigest`; native surfaces (`google.gmail/rest`, `slack/web-api`) carry a `helperConfigurationDigest`. |
+| `DependencyProviderV2` / `DependencyManifestV2` | One provider instance (`providerId` `"google.gmail"` or `"slack"`) with its synthetic principal, sorted `scopes` and immutable profile and surface pins / the secret-free dependency manifest pinned to one attempt, with 1–16 uniquely keyed providers. |
+| `AttemptBaselineV2` | Immutable V2 parity and provider baseline stored with an experiment version: `expectedAgentManifestId`, `expectedAgentManifestDigest`, `expectedAgentManifest` and `dependencyManifest`. |
+| `RequestedAttemptProviderV2` | Exact provider instance and surface selection requested for an attempt: `providerInstanceKey` and `surfaceKeys` in effective order. |
+| `PrepareAttemptRequestV2` / `PrepareAttemptInputV2` | Caller input to `prepareAttempt` (`schemaVersion: 2`, `idempotencyKey`, `executionId`, `environmentRunId`, `expectedAgentManifestDigest`, optional `actualManifest` and `requestedProviders`) / the canonical input after defaulting caller evidence. |
+| `PreflightFindingV2` / `PreflightReportV2` | One strict parity, profile, binding or coverage finding with a stable `code`, nullable `component`, `providerInstanceKey` and `surfaceKey`, and a fixed nonsecret `message` / the credential-free decision: `status`, `evidenceSource: "caller_supplied"` and `findings`, empty when ready. |
+| `ParityEvidenceV2` | Stable parity evidence stored without endpoints or credentials, including `actualAgentManifestDigest`, `dependencyManifestDigest` and `executionManifestDigest`. |
+| `AttemptIdentityV2` | Stable identities shared by every credential generation of an attempt: `bindingId`, `executionId` and `environmentRunId`. |
+| `AttemptConnectionBundleV2` | Credential-bearing V2 provider connections delivered only to the callback: `expiresAt`, a monotonic `credentialGeneration`, `providers` whose surfaces add an HTTPS `endpoint` and a short-lived `bearer`, and `parity`. Never persist or log it. |
+| `AttemptBindingRead` | Secret-free persisted binding state, discriminated by `schemaVersion` 1 or 2 without converting V1 evidence; includes `outcome`, `credentialGeneration`, `createdAt` and `revokedAt`. |
+| `PrepareAttemptReadyV2` / `PrepareAttemptIncompleteV2` / `PrepareAttemptResultV2` | Successful preparation with a finding-free report and a fresh `bundle` / inconclusive preparation with `bindingId`, its findings and the durable `gap`, after which no target or scorer may run / their union. |
+| `RefreshAttemptResultV2` / `RevokeAttemptResult` | A successful rotation, the same shape as `PrepareAttemptReadyV2` / `{ bindingId, revokedAt }`. |
+
+The runtime validators are `zod` schemas (`z.ZodType`) for the types of the same name: `actualAgentManifestV2`, `expectedAgentManifestV2`, `surfaceBindingV2`, `dependencyProviderV2`, `dependencyManifestV2`, `attemptBaselineV2`, `prepareAttemptInputV2`, `preflightFindingV2`, `preflightReportV2`, `parityEvidenceV2`, `attemptIdentityV2`, `attemptConnectionBundleV2` and `attemptBindingRead`. They reject unknown keys, check digests against immutable contents and, for connection bundles, require the parity digests to match the bundle's own evidence and attempt identity.
+
+| Function | Behavior |
+| --- | --- |
+| `agentManifestDigestV2(manifest)` | Computes the canonical `sha256:` digest shared by actual and expected V2 agent manifests. |
+| `executionManifestDigestV2(actualManifest, dependencyManifest, identity)` | Binds actual agent evidence, secret-free dependencies and stable attempt identities into one digest. |
+| `secretFreeBindingV2(bundle)` | Removes endpoints and bearers from a validated bundle, retaining its dependency identity as a `DependencyManifestV2`. |
+| `projectMcpConnectionV2(bundle, providerInstanceKey)` | The `SimulationMcpCapability` projection of the provider's MCP surface, or `null`. This legacy `context.mcp` projection is credential-bearing and is never another source of binding truth. |
+
+## Environment client
+
+```ts
+import { createEnvironmentClient } from "@hue-run/sdk/environment";
+
+const environments = createEnvironmentClient({ apiKey: process.env.HUE_API_KEY! });
+```
+
+`createEnvironmentClient(options: EnvironmentClientOptions): EnvironmentClient` and `new EnvironmentClient(options)` create a typed client for authored environments, isolated runs and immutable journals.
+
+| Option | Type | Default and behavior |
+| --- | --- | --- |
+| `apiKey` | `string` | Required. Project service key sent as a bearer token; server-side only. |
+| `baseUrl` | `string` | `https://app.hue.run`; the same origin rules as the tracing client. |
+| `timeoutMillis` | `number` | `10000`. Per-request deadline in milliseconds, with the same range as the evaluation client. |
+| `maxAttempts` | `number` | `4`; integer `1–10`. Attempts for idempotent run mutations. |
+
+Run mutations retry on transport failure and on HTTP 408, 429, 500, 502, 503 and 504 with exponential backoff, reusing the same invocation or idempotency identity. `createEnvironment` and `publishVersion` are non-idempotent registry writes and are not retried. Failures throw `HueEnvironmentError`, whose fixed message never includes response text or credentials; `status` carries the HTTP status when Hue answered and is absent for transport, timeout or parse failure. Responses are limited to 4 MiB and request bodies to 1 MiB; a published definition may contain up to 240 KB.
+
+### Environments and versions
+
+| Method | Result or purpose |
+| --- | --- |
+| `createEnvironment(input: EnvironmentIdentity)` | `EnvironmentSummary`. Creates an environment identity; not retried. |
+| `listEnvironments(page?: EnvironmentPageOptions)` / `getEnvironment(id)` | An `EnvironmentPage` of active identities / an `Environment` with its immutable version summaries. |
+| `publishVersion(environmentId, definition: EnvironmentDefinition)` | `EnvironmentVersionSummary`. Publishes an immutable definition; not retried. |
+| `getVersion(id)` | The full `EnvironmentVersion` with its generated action catalog. |
+
+`EnvironmentIdentity` is `{ name, slug, description? }`; `EnvironmentSummary` adds `id` and `archivedAt` (`null` while active), and `Environment` adds `versions`. `EnvironmentVersionSummary` is `{ id, version, contentDigest, createdAt }`, where `contentDigest` is the canonical digest of the stored, defaulted definition; `EnvironmentVersion` adds `environmentId`, the stored `definition` and the generated `actions`. `EnvironmentPage` is `{ items, nextCursor }` and `EnvironmentPageOptions` is `{ after?, limit? }` with a limit from 1 through 100.
+
+#### EnvironmentDefinition
+
+`EnvironmentDefinition` is the complete V1 authored-world document stored as an immutable version.
+
+| Field | Meaning |
+| --- | --- |
+| `schemaVersion: 1` | Definition schema discriminator. |
+| `description?` | Human-readable world description. |
+| `determinism?.clock` | Virtual clock: `startNs`, the initial virtual nanoseconds as a decimal string (default `"0"`), and `stepAdvanceNs`, the nanoseconds advanced after each recorded step (default `"1000000"`). |
+| `state.collections` | Initial normalized state: collections keyed by collection, entity and field names, each field a `JsonValue`. |
+| `actions` | The closed catalog of `EnvironmentActionDeclaration` values exposed by this world. |
+| `provenance?` | `{ kind: "handwritten" }` (default), `{ kind: "synthetic", note? }` or `{ kind: "derived_from_trace", traceId, revision }`. |
+| `metadata?` | Caller-owned immutable metadata. |
+
+Each `EnvironmentActionDeclaration` has a unique `name`, an optional agent-visible `description`, flat `params`, `semantics` and an optional `observation` whose only V1 `projection` is `"identity"`. An `EnvironmentActionParameter` has `name`, `type` (`"string"`, `"number"`, `"boolean"` or `"string[]"`), `required` (default `true`), optional `description` and optional `enum`. `semantics.entry` is a `SemanticEntry`, a versioned deterministic semantic implemented by Hue's environment kernel: `hue.collection.get@1`, `hue.collection.list@1`, `hue.collection.search@1`, `hue.collection.create@1`, `hue.collection.update@1`, `hue.gmail.search_messages@1`, `hue.gmail.get_message@1`, `hue.gmail.get_thread@1`, `hue.gmail.create_draft@1`, `hue.gmail.update_draft@1`, `hue.slack.search@1`, `hue.slack.read_channel@1`, `hue.slack.read_thread@1`, `hue.slack.draft@1` or `hue.slack.destination@1`. `semantics.config` is an `EnvironmentSemanticConfig`: the primary `collection` plus optional `draftsCollection`, `slackActorId`, `slackWorkspaceId`, `mailboxAddress`, `idParam`, `queryParam`, `fields`, `filter` (`{ field, param }`), `limit`, `set`, `setFromParams`, `idPrefix`, `guards` (`{ field, equals, error }` entries, default `[]`) and `notFoundError` (default `"not_found"`).
+
+Publishing generates one `ActionDefinition` per action: `name`, `description?` and `inputSchema`, an `ActionSchema`. That is the JSON Schema subset `{ type: "object", properties, required, additionalProperties: false }` whose properties are scalar types with an optional `enum` or bounded string arrays with `maxItems` and item `maxLength`. Unknown action arguments are rejected.
+
+### Runs, actions and journals
+
+| Method | Result or purpose |
+| --- | --- |
+| `createRun(input: CreateRunInput)` | `EnvironmentRun`. Creates or recovers one fresh isolated world using a stable idempotency key. |
+| `getRun(runId)` | `RunState`, the authoritative current or sealed world state. Older servers that omit coverage fields read as `validity: "not_assessed"` and `coverageGap: null`. |
+| `act(runId, input: ActionInput)` | `ActionResult`. Invokes an action; repeating an invocation identity replays its recorded result. |
+| `listSteps(runId, page?: StepPageOptions)` | `StepPage`. Pages the immutable journal by step ordinal. |
+| `finishRun(runId, input: FinishRunInput)` | `SealedRun`. Seals a world as `completed` or `abandoned` and freezes its evidence. |
+| `recordCoverageGap(runId, input: CoverageGapInput)` | `CoverageGapResult`. Records a known coverage gap with durable identity; retries reuse the exact request. |
+
+`CreateRunInput` requires `idempotencyKey` and `environmentVersionId`; optional fields are `executionId` (the target execution linked to this world), `seed` (32 lowercase hexadecimal characters), `maxSteps` (`1–500`) and `ttlSeconds` (`1–86400`). Invalid bounds throw `RangeError` or `TypeError` before any request. `ActionInput` is `{ invocationId, action, args? }`; omitted `args` means an empty object. `FinishRunInput` is `{ idempotencyKey, status }`, `completed` for accepted outcomes and `abandoned` for failures or cancellation. `StepPageOptions` is `{ after?, limit? }`: `after` is the last seen ordinal (`-1` starts at the first step) and `limit` is 1–100.
+
+| Type | Meaning |
+| --- | --- |
+| `EnvironmentRun` | Newly created isolated world: `id`, `environmentVersionId`, `clockNs`, `stateDigest`, `maxSteps`, `expiresAt` and the closed generated `actions` catalog. |
+| `ActionResult` | `runId`, zero-based `stepOrdinal`, the `observation`, normalized `effects`, `stateDigest` and `clockNs` after the action, `replayed` and `stepsRemaining`. |
+| `Observation` | The recorded answer returned by the simulated world: `status` `"ok"` or `"error"` plus additional bounded fields. An error observation is a world answer, not a transport exception. |
+| `Effect` | One normalized world-state effect: `kind` (`created`, `updated` or `deleted`), `collection`, `entityId` and changed `fields`. |
+| `RunState` | `id`, `environmentVersionId`, `executionId` (`null` for a standalone run), `seed`, `status` (`open`, `completed`, `abandoned` or `expired`), `stepCount`, `maxSteps`, `clockNs`, `expiresAt`, `createdAt`, `sealedAt`, `stateDigest`, `finalState` after sealing and the `EnvironmentCoverage` fields. |
+| `Step` / `StepPage` | One immutable journal entry: `id`, `ordinal`, `invocationId`, `action`, validated `args`, `observation`, `effects`, `mutated`, `clockNs` and `stateDigest` / `{ items, nextCursor }` with a numeric cursor. |
+| `SealedRun` | `id`, requested terminal `status`, final `stepCount`, `stateDigest` and `sealedAt`. |
+| `CoverageGapInput` / `CoverageGap` / `CoverageGapResult` | A durable first-fault report for known missing provider behavior (`idempotencyKey`, `provider`, `operation`, `code`, `args` bounded to 16,000 JSON bytes and a nonsecret `description`) / the stored gap with `reportedAt` and `reportedBy` (`{ kind: "project_key" \| "user", id }`) / `{ runId, validity: "environment_incomplete", coverageGap }`. |
+| `EnvironmentCoverage` | `validity` (`"not_assessed"` or `"environment_incomplete"`) and `coverageGap` (`null` when none was reported). Missing fields from older servers mean `not_assessed`, never verified parity. |
+
+### Bind local tools
+
+```ts
+bindEnvironmentTools(options: BindEnvironmentToolsOptions): Record<string, EnvironmentTool>
+```
+
+`bindEnvironmentTools` binds a run's generated catalog to plain local callables without changing the agent framework. `BindEnvironmentToolsOptions` requires `hue`, the client that records each action as tool telemetry, `client`, an environment client bound to the same Hue origin (only `act` is used), and `run`, the fresh `EnvironmentRun` whose closed catalog becomes callables. `parentContext` supplies an optional parent span context for the generated tool spans; `invocationId(action)` is an optional durable invocation-ID factory for caller-owned resume state, and without it each call uses a random UUID.
+
+Each `EnvironmentTool` has `name`, `description?`, `inputSchema` (the action's `ActionSchema`) and `execute(args?)`, which runs the action inside `hue.tool(name, args, ...)` and resolves with the world's `Observation`. Transport failures reject with `HueEnvironmentError`.
 
 ## Managed target adapter
 

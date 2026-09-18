@@ -22,7 +22,7 @@ Requires Node.js 22 or 24 (Node.js 26 also runs in CI) or Bun 1.4. Run the comma
   </Tab>
 </Tabs>
 
-The package is ESM; CommonJS applications on Node.js 22.12 or later load it with `require("@hue-run/sdk")`. The core package can coexist with AI SDK 6, whose calls accept `hueExperimentalTelemetry(hue)` as `experimental_telemetry`. The `hueTelemetry` adapter requires AI SDK 7 and a compatible `@ai-sdk/otel` peer. Check [compatibility](/sdks/compatibility) before adding it to an existing application. An application already using OpenTelemetry can send data through its [standard exporter](/integrations/opentelemetry). JSON Schema scoring in `@hue-run/sdk/evals` needs the optional `ajv` peer (`npm install ajv`).
+The package is ESM; CommonJS applications on Node.js 22.12 or later load it with `require("@hue-run/sdk")`. The core package can coexist with AI SDK 6, whose calls accept `hueExperimentalTelemetry(hue)` as `experimental_telemetry`. The `hueTelemetry` adapter requires AI SDK 7 and a compatible `@ai-sdk/otel` peer. Check [compatibility](/sdks/compatibility) before adding it to an existing application. An application already using OpenTelemetry can send data through its [standard exporter](/integrations/opentelemetry). Importing `@hue-run/sdk/evals` for evaluations or [simulations](/evaluations/simulations) needs the optional `zod` peer (`npm install zod`, 4.6.5 or later); JSON Schema scoring additionally needs the optional `ajv` peer (`npm install ajv`).
 
 ## Python
 
