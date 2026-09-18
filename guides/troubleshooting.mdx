@@ -9,9 +9,9 @@ Start by separating the application result from the telemetry result. A model re
 
 Confirm that the key belongs to the selected Hue project and has not been revoked. Use a project service key in the server process. Do not use a management token or place the key in browser code.
 
-Both SDKs default to `https://app.hue.run`. If you override `baseUrl` or `base_url`, supply an origin. Do not append `/api` or the OTLP endpoint. The SDK adds its own paths. Hosted origins require HTTPS; loopback HTTP is supported for local development.
+Both SDKs default to `https://app.hue.run`. If you override `baseUrl` or `base_url`, supply an origin. Do not append `/api` or the OTLP endpoint. The SDK adds its own paths. Hosted origins require HTTPS; loopback HTTP is supported for local development, and TypeScript accepts plain HTTP to another host only with `allowInsecureHttp: true`.
 
-Report the error and project identity without printing the key or request authorization header.
+Report the error and project identity without printing the key or request authorization header. TypeScript's `HueConnectionError` carries the HTTP `status` when Hue answered and the underlying network, timeout or parsing error as `cause`.
 
 ## No trace appears
 
@@ -31,11 +31,11 @@ An OpenTelemetry status of `Unset` means no explicit status was recorded. It is 
 
 ## Input or output is missing
 
-Check the explicit content setting. `captureContent: false` in TypeScript or `capture_content=False` in Python intentionally omits supported content fields in Hue helpers. Python third-party instrumentors need their own content controls.
+Check the explicit content setting. `captureContent: false` in TypeScript or `capture_content=False` in Python intentionally omits supported content fields in Hue helpers. Both SDKs also strip recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes from every record on Hue's export path, including spans from third-party instrumentors on the same provider; the [compatibility matrix](/sdks/compatibility) lists the keys.
 
-Content must also be supplied by the instrumentation. The SDK does not reconstruct prompts, invent an output or estimate missing usage. JSON `null` is a recorded value; an absent output is different.
+Content must also be supplied by the instrumentation. The SDK does not reconstruct prompts, invent an output or estimate missing usage. JSON `null` is a recorded value; an absent output is different. Helper spans never record exception messages or stack traces, only `error.type` and the span status.
 
-If you add third-party instrumentation, configure its own content controls too. Avoid placing private text in custom span names or arbitrary attributes, which cannot all be classified automatically.
+If you add third-party instrumentation, configure its own content controls too: unrecognized custom keys pass through, and the instrumentor may still send content to other exporters. Avoid placing private text in custom span names or arbitrary attributes, which cannot all be classified automatically.
 
 ## Streaming spans end too early
 
@@ -53,11 +53,15 @@ The receiver accepts bounded OTLP requests. The SDK splits batches, but oversize
 
 ## The example throws `Cannot use import statement outside a module`
 
-Node.js treats `.js` and `.ts` files as CommonJS unless the nearest `package.json` contains `"type": "module"`. Run `npm pkg set type=module` in the example directory, or name the file `first-trace.mjs` / `trace.mts`, then run it again.
+Node.js treats `.js` and `.ts` files as CommonJS unless the nearest `package.json` contains `"type": "module"`. Run `npm pkg set type=module` in the example directory, or name the file `first-trace.mjs` / `trace.mts`, then run it again. A CommonJS application on Node.js 22.12 or later can instead load the package with `require("@hue-run/sdk")`.
 
 ## Installation reports a dependency conflict
 
-Check the [compatibility matrix](/sdks/compatibility). TypeScript 0.1.5 core supports installation alongside AI SDK 6, but its `hueTelemetry` adapter requires AI SDK 7; older Hue versions can still conflict at install time. Python pins OpenTelemetry 1.44.0. Keep the application's existing instrumentation and use a standard OTLP exporter when its versions fall outside the tested SDK matrix; do not force an incompatible install.
+Check the [compatibility matrix](/sdks/compatibility). `@hue-run/sdk` core installs alongside AI SDK 6; pass `hueExperimentalTelemetry(hue)` as `experimental_telemetry` there, because the `hueTelemetry` adapter requires AI SDK 7 and throws a `TypeError` on AI SDK 6. Python accepts OpenTelemetry `>=1.40,<2` (1.44.0 is the certified combination and 1.40.0 the tested floor), so `hue-run` installs next to instrumentation packages on another OpenTelemetry 1.x release. Keep the application's existing instrumentation and use a standard OTLP exporter when its versions fall outside the tested SDK matrix; do not force an incompatible install.
+
+## A JSON Schema scorer reports `SchemaValidatorUnavailable`
+
+The validator is optional in both SDKs. Run `npm install ajv` (8.17 or later) for `builtins.jsonSchema` in TypeScript, or `pip install 'hue-run[evals]'` for `builtin_scorers.json_schema` in Python; without it the Python helper raises `ImportError`. Other built-in scorers do not need these packages.
 
 ## Listing dataset cases fails for a large page
 
@@ -68,6 +72,12 @@ A response-size or connection failure does not prove that a mutation was rejecte
 ## The trace is present but the evaluation fails
 
 Check which outcome failed: the original application execution, the scorer's execution, or the quality assessment. A boolean `false` is a valid scored result. Historical rescoring assesses frozen evidence and does not rerun your application.
+
+## The MCP server rejects the agent
+
+The [Hue MCP server](/agents/mcp-server) authenticates with a project service key sent as `Authorization: Bearer …`. `401` means the key is missing, malformed, revoked or expired. `403` means the key has no read access: create a key with the **Read-only** scope and configure it as `HUE_MCP_KEY` in the MCP client. `429` follows repeated failed authentications for one key id; wait for `Retry-After`. `503` means the server is momentarily saturated; retry after a second. A `405` or `404` answer to a `GET` or to a request carrying `Mcp-Session-Id` is expected: the server is stateless and accepts `POST` only.
+
+Results marked `truncated: true` were cut to the `max_chars` budget; lower `limit` or `max_spans`, raise `max_chars`, or fetch one object at a time. Recorded prompts and outputs are absent unless a tool is called with `include_content: true` and the application captured content. An empty search does not prove nothing happened; widen `since` or drop filters.
 
 ## Tracing is disabled or data is being dropped
 

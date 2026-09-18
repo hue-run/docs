@@ -81,6 +81,8 @@ try {
 
 Run `node otel.ts` after setting your environment. An export rejection makes the command fail rather than reporting successful delivery. Hue does not register or replace a global tracer, logger, or context manager. An instrumentor that only uses global providers still needs your application's normal OpenTelemetry initialization.
 
+Your providers own the resource in this mode: set `service.name`, `deployment.environment.name` and similar attributes on them. `resourceAttributes` on the transport options is ignored and reported as a `warning` issue. The Python SDK attaches the same way through `tracer_provider=` and `logger_provider=`; a provider Hue creates for the other signal reuses the borrowed provider's resource. See the [Python guide](/sdks/python#use-an-existing-provider).
+
 ## Flush streamed responses in Next.js
 
 For an existing AI SDK 7 app, add Hue's processors to your existing OpenTelemetry providers at startup and retain a `hue` client around that transport and those providers. Keep these instances for the server's lifetime, including your existing exporters and normal provider registration.
@@ -133,7 +135,7 @@ A child can arrive before its parent, and a correlated log can arrive before its
 
 When using an external exporter directly, configure capture and redaction in your instrumentation or collector. Hue stores the content it receives; it does not reconstruct missing prompts or apply an automatic retention timer.
 
-The TypeScript Hue transport filters recognized content when `captureContent` is false. Python's `capture_content` controls Hue helpers and does not filter arbitrary third-party instrumentors. Avoid sensitive values in custom metadata regardless of your chosen SDK.
+Both Hue SDKs strip recognized content attributes from every record on their export path when `captureContent` / `capture_content` is false, including records from third-party instrumentors on a borrowed provider; unrecognized custom keys pass through, so keep the instrumentor's own capture controls configured. Avoid sensitive values in custom metadata regardless of your chosen SDK.
 
 ## Observe collector acknowledgements
 
