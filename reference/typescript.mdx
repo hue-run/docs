@@ -178,7 +178,7 @@ import { createEvaluationClient } from "@hue-run/sdk/evals";
 const client = createEvaluationClient({ apiKey: process.env.HUE_API_KEY! });
 ```
 
-`createEvaluationClient(options: EvaluationClientOptions): EvaluationClient` and `new EvaluationClient(options)` accept required `apiKey`, optional `baseUrl` (default `https://app.hue.run`) and optional `timeoutMillis` (default `10000`, range `100–60000`). `checkConnection()` returns the key's project. Registry writes require the key's `project_write` capability.
+`createEvaluationClient(options: EvaluationClientOptions): EvaluationClient` and `new EvaluationClient(options)` accept required `apiKey`, optional `baseUrl` (default `https://app.hue.run`) and optional `timeoutMillis` (default `10000`, range `100–60000`). `checkConnection()` returns the key's project. Registry writes require a **Read and write** key.
 
 Methods below return promises. `PageOptions` is `{ after?: string; limit?: number }`, with a supplied limit from 1 through 100. Paged responses are `{ items, nextCursor }`; pass a non-null cursor as the next `after`. IDs are UUIDs. `Identity` is `{ name, slug, description? }`.
 
