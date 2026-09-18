@@ -98,9 +98,9 @@ An exception escaping a Hue span records error type/status, then propagates unch
 | `set_input(value)` / `set_output(value)` | Captures JSON helper content according to `capture_content` and the redactor. Model/tool helpers choose their corresponding GenAI field names. |
 | `set_usage(*, input_tokens=None, output_tokens=None)` | Sets known nonnegative integer token counts. `None` omits a count; booleans and negative counts are rejected. |
 | `record_error(error)` | Records error type and status without exception text. Does not raise the supplied error itself. |
-| `log_inference(...)` | Accepts optional keyword-only `input` and `output`. Emits an inference-details log correlated to this span, even outside its active scope. Omit either keyword for absent content; passing `None` records JSON null when capture is enabled. |
+| `log_inference(...)` | Accepts optional keyword-only `input`, `output`, `operation`, `provider` and `model`. Emits an inference-details log correlated to this span, even outside its active scope, with a structured body and `gen_ai.*` request attributes from the enclosing `model()` block or those keywords plus `gen_ai.conversation.id` from `context()`. Omit a content keyword for an absent field; passing `None` keeps the key with an empty value. Nothing is emitted when `capture_content` is False. |
 
-Choose logs or span attributes for the same content event to avoid duplicate storage. `log_inference` still emits a metadata-only correlated log when content capture is disabled. `hue.tracer`, `hue.tracer_provider` and `hue.logger_provider` expose the configured OpenTelemetry objects for integrations that accept explicit instances.
+Choose logs or span attributes for the same content event to avoid duplicate storage. `log_inference` emits no record when content capture is disabled. `hue.tracer`, `hue.tracer_provider` and `hue.logger_provider` expose the configured OpenTelemetry objects for integrations that accept explicit instances.
 
 ## Content policy
 

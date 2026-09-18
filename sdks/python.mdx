@@ -78,7 +78,7 @@ Use `hue.model(model, provider=...)` for a model operation. Report known token c
 
 Use `hue.context(session_id=..., user_id=...)` around related helpers. These are observed application identifiers, not Hue account identities. `Hue.inject(headers)` and `Hue.extract(headers)` support W3C trace-context propagation across services.
 
-`span.log_inference(input=..., output=...)` emits a log correlated with that span. Use logs or span attributes for a given content event instead of storing identical copies in both. With capture enabled, explicit Python `None` is JSON null; it is not missing content.
+`span.log_inference(input=..., output=...)` emits a log correlated with that span. Use logs or span attributes for a given content event instead of storing identical copies in both. With capture enabled, an explicit `None` field keeps its key with an empty value, distinct from an absent field. With capture disabled, `log_inference` emits no record.
 
 ## Verify stored trace evidence
 
