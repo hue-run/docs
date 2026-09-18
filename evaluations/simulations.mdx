@@ -1,0 +1,213 @@
+---
+title: "Run an agent in a simulated world"
+sidebarTitle: "Simulations"
+description: "Run your existing TypeScript agent callback against a fresh simulated world per case, then score the sealed journal next to the trace."
+---
+
+Your agent runs in your process while a disposable simulated world runs in Hue. The world is authoritative and records an ordered journal of every action. Hue does not execute your agent code or hold your provider credentials.
+
+Simulations are available in `@hue-run/sdk` 0.2.0 for TypeScript only. They build on the [local evaluation runner](/evaluations/first-evaluation): each invocation creates a fresh experiment, one isolated world per case and a resumable checkpoint directory. For signatures and types, see the [simulation](/reference/typescript#run-a-simulation) and [environment](/reference/typescript#environment-client) sections of the reference.
+
+## Install
+
+Importing `@hue-run/sdk/evals` needs the optional `zod` peer (4.6.5 or later). Install it with the SDK:
+
+```sh
+npm install @hue-run/sdk@0.2.0 zod
+```
+
+Set `HUE_API_KEY` to a [project service key](/guides/project-keys) with **Read and write** access. The evaluation client and the environment client must use the same Hue origin.
+
+## What a simulated world is
+
+An environment is a versioned, immutable definition of a world: its initial state, organized as collections of entities with JSON fields, and a closed catalog of actions. Each action maps to one deterministic semantic implemented by Hue's environment kernel, such as `hue.collection.get@1`, `hue.gmail.create_draft@1` or `hue.slack.read_channel@1`, and declares flat parameters of type `string`, `number`, `boolean` or `string[]`. Publishing a definition creates an environment version with a content digest. A stable definition reuses its matching version; a changed definition publishes a new one.
+
+A run instantiates one version into one fresh isolated world with a virtual clock, a step budget of at most 500 actions, a lease and a journal. Every action becomes a journal step that records the validated arguments, the world's observation, the normalized state effects and the state digest after the step. Repeating an invocation identity replays the recorded result instead of acting twice. Sealing the run as `completed` or `abandoned` freezes the journal and final state as evidence.
+
+An observation with `status: "error"` is a recorded world answer, for example a guard that refused a mutation. It is not a transport exception.
+
+## Run a scenario like a test
+
+`runSimulation()` is the one-shot developer path. It calls your existing callback directly, so IDE breakpoints and cooperative cancellation work. It does not register a worker, poll for jobs, host your laptop or require an inbound tunnel.
+
+```ts
+import { createHue } from "@hue-run/sdk";
+import { createEnvironmentClient } from "@hue-run/sdk/environment";
+import { createEvaluationClient, runSimulation } from "@hue-run/sdk/evals";
+
+const connection = { apiKey: process.env.HUE_API_KEY! };
+const hue = createHue({ ...connection, serviceName: "agent-test", captureContent: true });
+
+try {
+  const report = await runSimulation({
+    client: createEvaluationClient(connection),
+    environmentClient: createEnvironmentClient(connection),
+    hue,
+    checkpointDirectory: ".hue-checkpoints/refund-scenario",
+    scenario: { kind: "experiment", experimentId: process.env.HUE_EXPERIMENT_ID! },
+    persistResultContent: true,
+    traceEvidence: { mode: "required" },
+    // runMyExistingAgent is your application function, not an SDK method.
+    target: (inputs, { tools, mcp, config, signal }) =>
+      runMyExistingAgent({ inputs, config, tools, mcp, signal }),
+    onProgress(event) {
+      if (event.type === "run_created") console.log(`Inspect this run: ${event.runUrl}`);
+    },
+  });
+  console.log(report.runUrl);
+} finally {
+  await hue.shutdownSafe();
+}
+```
+
+The referenced experiment is an app-authored template. Each completed invocation clones its exact frozen dataset, configuration and scorer-version pins into a fresh experiment and creates one isolated world per case. The `run_created` event carries the experiment URL as soon as the experiment exists, so you can inspect progress while the agent runs.
+
+Repeat the command after an edit for a fresh attempt and world. An interrupted invocation resumes through the private checkpoint directory instead of starting again. Use one directory per scenario and add it to `.gitignore`.
+
+## Repository-authored scenarios
+
+A repository scenario keeps the world definition, cases and scorers next to the agent code. `runSimulation()` publishes them through the same validated environment, dataset, scorer and experiment APIs as scenarios authored in Hue. Stable slugs reuse matching immutable content digests; changed definitions, cases or scorers publish new versions. Hue does not synchronize files back from its UI, and the helper refuses an unrelated mutable dataset draft instead of overwriting it.
+
+```ts
+import { defineLocalScorer } from "@hue-run/sdk/evals";
+import type { EnvironmentDefinition } from "@hue-run/sdk/environment";
+
+// A minimal world: one collection and one read action.
+const recordsWorld: EnvironmentDefinition = {
+  schemaVersion: 1,
+  state: { collections: { records: { r_1: { title: "Quarterly summary", status: "draft" } } } },
+  actions: [
+    {
+      name: "list_records",
+      description: "List every record in the world.",
+      params: [],
+      semantics: { entry: "hue.collection.list@1", config: { collection: "records" } },
+    },
+  ],
+};
+
+// Scores the sealed journal: did the agent inspect the world before answering?
+const listedRecords = defineLocalScorer({
+  source: "listed-records-v1",
+  entrypoint: "score",
+  metrics: [{ name: "listed_records", type: "boolean" }],
+  score(context) {
+    const listed =
+      context.environment?.steps.some((step) => step.action === "list_records") ?? false;
+    return {
+      state: "scored",
+      metrics: [{ name: "listed_records", value: listed, passed: listed }],
+      explanation: listed ? "The agent listed the records." : "The agent never listed the records.",
+    };
+  },
+});
+
+const scenario = {
+  kind: "repository" as const,
+  name: "Summarize the records",
+  slug: "summarize-records",
+  environment: { name: "Records fixture", slug: "records-fixture", definition: recordsWorld },
+  cases: [
+    {
+      externalKey: "one-draft",
+      inputs: { request: "Summarize every record." },
+      metadata: { suite: "reporting" },
+    },
+  ],
+  scorers: [{ name: "Listed records", slug: "listed-records", scorer: listedRecords }],
+  config: { agentMode: "reporting" },
+};
+
+await runSimulation({
+  client,
+  environmentClient,
+  hue,
+  checkpointDirectory: ".hue-checkpoints/summarize-records",
+  scenario,
+  persistResultContent: false,
+  traceEvidence: { mode: "required" },
+  target: (inputs, context) => runMyExistingAgent({ inputs, ...context }),
+});
+```
+
+Repository publication supports the public `ScorerDefinition` union: exact match, includes, JSON Schema, local code, manual and model-judge definitions. A `LocalScorer` from `defineLocalScorer` publishes its pinned definition and binds the callback in the same step. `runSimulation()` applies the same identity-affecting defaults as Hue before resolving versions and rejects unknown or server-only kinds; in particular, `document_verifier` is not part of this SDK contract and is rejected rather than published with a guessed digest.
+
+A scenario needs at least one case and one scorer, and case keys must be unique. Definition defaults are applied before the digest is computed: `required: true` on parameters, an identity observation projection, empty `guards`, a `not_found` error and handwritten provenance. Writing the defaults out does not create a new version.
+
+## What the callback receives
+
+`target(inputs, context)` is invoked exactly once per attempt. The context contains:
+
+| Field | Meaning |
+| --- | --- |
+| `config` / `item` | The frozen experiment configuration and the frozen case, including its immutable environment-version pin. |
+| `tools` | Framework-neutral local callables generated from the world's catalog. `execute(args)` records a tool span, invokes the action and resolves with the world's observation. |
+| `mcp` | A short-lived bearer (`url`, `token`, `expiresAt`) for the same run's closed catalog when a model provider executes MCP remotely. It is scoped to one execution and world and is not the Hue project key. |
+| `executionId` / `environmentRunId` | The target execution and the world. `environmentRunId` identifies the world for adapter control operations such as `environmentClient.recordCoverageGap`; it is not a credential. |
+| `signal` | Cooperative cancellation. Pass it into the provider or agent call. |
+| `connectionBundle` | Present only after a ready provider-profile preflight. See below. |
+
+Configuration alone does not redirect real provider calls; give `tools` or `mcp` to the agent's actual tool boundary. The MCP token is delivered only to the callback and is never written to checkpoints or progress events.
+
+The local tools are bounded. Each callable accepts only the flat parameters its action declares and rejects unknown arguments; array parameters carry item and length limits. Every call is one journal step against the world's `maxSteps` budget (1–500, set per invocation), and each result reports `stepsRemaining`. Each call becomes an `execute_tool` span under the case span, so the trace and the journal describe the same actions.
+
+## Evidence and scoring
+
+The run URL joins the task, the trace, the world's effects and final state, the target outcome and the scorer results. Target failures and cancellations seal the world as `abandoned`; scorer errors remain separate from target errors.
+
+Local scoring resolves the sealed world before calling a scorer. A local-code scorer receives `context.environment`: the sealed run, its `initialState` and `finalState` as `{ collections }` objects, and the complete ordered journal in `steps`. The SDK checks that the journal is complete, ordered and ends at the sealed state digest, and it limits the evidence to 8 MiB without truncating history. When environment evidence is present, a local-code scorer runs even if the target returned no output.
+
+If the sealed evidence cannot be read, local-code results record an `EnvironmentEvidenceUnavailable` error instead of scoring on incomplete data; built-in scorers still score the saved output. Historical rescoring with `rescore({ ..., environmentEvidence: "required" })` reads the same sealed evidence through the execution, so a stored simulation can be rescored without running the agent again. Manual and hosted judge scorer pins stay pending for their owning workflows.
+
+## Cancellation and uncertainty
+
+Cancellation is cooperative. Pass `signal` to `runSimulation()` and forward `context.signal` into the provider or agent call. A cancelled attempt is recorded with execution state `cancelled` and its world is sealed as `abandoned`.
+
+If the agent may have run without a saved outcome, resume fails explicitly with `UncertainExecutionError` and never calls it again. If Hue cannot confirm whether the world sealed, or a preflight response is lost after a decision may have been committed, the execution stays uncertain and `TargetOutcomeUncertainError` names the execution; a resume neither reacquires credentials nor invokes the callback again. Inspect the execution and its side effects before authorizing a new attempt. Removing the checkpoint directory or its lock is not permission to run the target again.
+
+Running a changed scenario while an unfinished simulation is checkpointed in the same directory fails. Recover or finish that simulation first, or use another directory.
+
+## Pinned provider-profile preflight
+
+An experiment whose configuration carries an immutable `attemptBaselineV2` can require the local process to describe the agent configuration it is about to run. Supply `actualAgentManifest`, the exact ordered `requestedProviders` and an `mcpSurface` selected from that request. Hue compares the agent, prompt, model, tools, approvals, orchestration, MCP catalogs and native-helper configuration before the callback or model runs. Missing evidence stays explicitly `missing`; it is never treated as a match.
+
+On a ready decision, `context.connectionBundle` contains the selected provider surfaces with attempt-scoped endpoints and bearers, and `context.mcp` remains the projection of the selected MCP surface. Endpoints, bearers, expiry and credential generation stay in callback memory: the runner does not write them to checkpoints or progress events, and it never mutates `process.env`. A durable `environment_incomplete` decision skips both the callback and scoring; the `attempt_prepared` progress event carries its stable finding codes. If a ready response or the world seal cannot be confirmed, the checkpoint stays uncertain and a resume neither reacquires credentials nor invokes the callback again.
+
+This is currently a control-plane contract. Hue can issue provider endpoints, but a provider data-plane facade call has not yet been proven by the released integration. The generic Hue MCP capability remains the runnable hosted-tool path; do not read preparation or local-tool tests as evidence of a hosted Gmail or Slack MCP call.
+
+## Direct environment tools
+
+For lower-level use, publish a definition, create a run and bind its generated catalog yourself:
+
+```ts
+import { randomUUID } from "node:crypto";
+import { bindEnvironmentTools, createEnvironmentClient } from "@hue-run/sdk/environment";
+
+const client = createEnvironmentClient(connection);
+const environment = await client.createEnvironment({ name: "Records fixture", slug: "records-fixture" });
+const version = await client.publishVersion(environment.id, recordsWorld);
+const run = await client.createRun({ idempotencyKey: randomUUID(), environmentVersionId: version.id });
+const tools = bindEnvironmentTools({ hue, client, run });
+const observation = await tools.list_records!.execute({});
+console.log(observation.status); // "ok" or "error", a recorded world answer either way
+await client.finishRun(run.id, { idempotencyKey: randomUUID(), status: "completed" });
+```
+
+Run mutations (`createRun`, `act`, `finishRun`, `recordCoverageGap`) retry transient failures with stable invocation and idempotency identities. Registry writes (`createEnvironment`, `publishVersion`) do not retry automatically, because identity creation and publication have no request key. `HueEnvironmentError` carries the HTTP status when Hue answered and never includes response text or credentials.
+
+## Coverage gaps
+
+A provider adapter can record a known valid provider request that the environment cannot implement with `client.recordCoverageGap(run.id, { idempotencyKey, provider, operation, code, args, description })`. Use a durable UUID idempotency key and repeat the identical request to recover a lost acknowledgement. This is a runner or adapter control operation, not an agent tool. `args` must be a JSON object of at most 16,000 encoded bytes.
+
+Hue preserves the first report, marks the run `validity: "environment_incomplete"` and refuses new actions while still replaying already-recorded invocation receipts. `coverageGap` retains the request and reporting provenance. An absent gap means `not_assessed`; it does not establish provider parity.
+
+Local scoring and historical rescoring skip incomplete evidence before calling a scorer, even when the target returned no output or failed; the skipped result's explanation is `Environment incomplete: provider behavior is not implemented.` Unsupported caller syntax and real provider errors are not automatically coverage gaps; the adapter must identify a known missing provider behavior. When the callback throws, `runSimulation()` checks the authoritative world: a durably recorded gap finishes the attempt as environment-incomplete rather than as a target error, while a gap or seal that cannot be confirmed stays uncertain and never causes the agent to be replayed.
+
+## Current limits
+
+- `runSimulation()` is TypeScript-only. Like the other local runners, it needs POSIX filesystem semantics for its checkpoint directory; use WSL2 or a Linux runner on Windows.
+- Definitions use `schemaVersion: 1`, flat parameters and the fixed catalog of kernel semantics listed under `SemanticEntry` in the [reference](/reference/typescript#environmentdefinition). Identity is the only observation projection.
+- A world records at most 500 actions and its lease is at most 86,400 seconds. A published definition may contain up to 240 KB; evidence validation accepts worlds of at most 64 collections and 2,000 entities and evidence of at most 8 MiB; coverage-gap arguments are limited to 16,000 bytes; API responses to 4 MiB and request bodies to 1 MiB.
+- The hosted MCP connection exposes Hue's bounded native actions. It is not general Gmail or Slack HTTP parity and does not proxy arbitrary provider traffic.
+- Forking, in-place reset and arbitrary-step diffs are outside this interface.
+- `document_verifier` scorers cannot be published from a repository scenario.

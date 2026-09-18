@@ -1,18 +1,19 @@
 ---
 title: "Python API reference"
-description: "Configuration, tracing, delivery and evaluation APIs in hue-run 0.1.3."
+description: "Configuration, tracing, delivery and evaluation APIs in hue-run 0.2.0."
 ---
 
-This reference covers `hue-run` **0.1.3** on Python 3.10 or later, tested on 3.10 and 3.14. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
+This reference covers `hue-run` **0.2.0** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
 | Module | Public exports |
 | --- | --- |
-| `hue_sdk` | `Hue`, `create_hue_safe`, `HueSpan`, `Project`, `ProjectValidationError`, `Redactor`, `ExportStatus`. |
-| `hue_sdk.evals` | `EvaluationClient`, `HueApiError`, `run_experiment`, `rescore`, `builtins`, `define_local_scorer`, `score_locally`, `MISSING`, evaluation types and recovery errors. |
+| `hue_sdk` | `Hue`, `create_hue_safe`, `HueSpan`, `Project`, `ProjectValidationError`, `Redactor`, `ExportStatus`, `TraceReceipt`, `TraceReceiptField`, `TraceReceiptFields`, `TraceVerificationError`, `TraceVerificationResult`. |
+| `hue_sdk.evals` | `EvaluationClient`, `HueApiError`, `run_experiment`, `rescore`, `builtin_scorers` (with `builtins` as an alias), `define_local_scorer`, `score_locally`, `MISSING`, `TraceEvidence`, `TargetContext`, `ScoreContext`, `Score`, `LocalScorer`, `RunnerReport` and the recovery errors. |
+| `hue_sdk.managed` | `ManagedTargetHandler`, `ManagedTargetContext`, `ManagedInputFile`, `ManagedOutputFile`, `ManagedTargetResult`, `ManagedResponse`. |
 
-The SDK sends OpenTelemetry traces and correlated logs. Your application remains responsible for provider calls and the instrumentation that observes them.
+The SDK sends OpenTelemetry traces and correlated logs. Your application remains responsible for provider calls and the instrumentation that observes them. The tracing core depends only on the OpenTelemetry packages and `requests`.
 
 ## Create a tracing client
 
@@ -35,6 +36,7 @@ Hue(
     capture_content: bool,
     service_name: str = "hue-python-agent",
     tracer_provider: TracerProvider | None = None,
+    logger_provider: LoggerProvider | None = None,
     redactor: Redactor | None = None,
     export_timeout_seconds: float = 10,
     enabled: bool = True,
@@ -48,17 +50,18 @@ Hue(
 | `base_url` | Optional origin; defaults to `https://app.hue.run`. Do not append an API path. HTTPS is required except for loopback HTTP; credentials, query strings and fragments are rejected. |
 | `api_key` | Required project service key; keep it in the server environment. |
 | `capture_content` | Required explicit `True` or `False`; there is no default. |
-| `service_name` | Default `"hue-python-agent"`; configures resources for providers created by Hue. |
+| `service_name` | Default `"hue-python-agent"`; configures the resource when Hue creates both providers. |
 | `tracer_provider` | Optional OpenTelemetry SDK `TracerProvider` to borrow. Hue adds its span processor without replacing the global provider. |
+| `logger_provider` | Optional OpenTelemetry SDK `LoggerProvider` to borrow for correlated logs. Hue adds its log record processor without replacing the global provider. |
 | `redactor` | Optional `Callable[[str, Any], Any]`: receives a field name and helper content, and returns a JSON-serializable replacement. |
 | `export_timeout_seconds` | Default `10`; positive finite number. Configures export HTTP I/O and project validation; it is distinct from a flush wait budget. |
 | `enabled` | Default `True`; must be a boolean. `False` creates a disabled client without requiring a key or attaching to a supplied provider. |
 | `max_queue_size` | Default `2048`; positive integer limiting pending records per signal, including admissions and active export batches. |
 | `max_queue_bytes` | Default `8388608`; positive integer limiting encoded queue bytes per signal, including active export batches. |
 
-Use the `api_key=` keyword when omitting the origin. When enabled, the key is required and validated even though the signature permits `None` to preserve existing `Hue(base_url, api_key, ...)` calls. Disabled clients do not require a key. The constructor does not load environment variables or an environment file automatically. Invalid options raise `TypeError` or `ValueError`.
+Use the `api_key=` keyword when omitting the origin. The first positional parameter is `base_url`, so `Hue("<key>")` raises `TypeError` naming `api_key=`; existing `Hue(base_url, api_key, ...)` calls are unchanged. When enabled, the key is required and validated even though the signature permits `None`. Disabled clients do not require a key. The constructor does not load environment variables or an environment file automatically. Invalid options raise `TypeError` or `ValueError`.
 
-Hue creates its own logger provider. With a borrowed tracer provider, your application owns that provider's resources and other processors. Use one Hue instance for its provider lifecycle; OpenTelemetry has no public processor-removal API. See [existing OpenTelemetry](/integrations/opentelemetry).
+With a borrowed tracer or logger provider, your application owns that provider's resource and other processors, and the provider Hue creates for the other signal reuses the borrowed provider's resource, so spans and correlated logs report one `service.name`. Borrowed providers are not shut down by the client. Use one Hue instance for its provider lifecycle; OpenTelemetry has no public processor-removal API. See [existing OpenTelemetry](/integrations/opentelemetry).
 
 ## Spans and context
 
@@ -101,7 +104,7 @@ Choose logs or span attributes for the same content event to avoid duplicate sto
 
 ## Content policy
 
-`capture_content=False` omits input/output content from Hue's helpers **before it enters an OpenTelemetry queue**. `True` permits that helper content. The policy does not scrub arbitrary attributes, span names, session identifiers, external instrumentors or other exporters. Configure an external instrumentor's own content policy before enabling it.
+`capture_content=False` omits input/output content from Hue's helpers **before it enters an OpenTelemetry queue** and, at export, strips recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes, legacy `gen_ai.*` message events, log bodies and status descriptions from every record on Hue's export path, including spans from third-party instrumentors on a borrowed provider. The key list is identical to TypeScript's `contentPrefixes` and is reproduced in the [compatibility matrix](/sdks/compatibility). `True` permits that content. The policy does not classify arbitrary attribute names, span names, session identifiers or another exporter's records; unrecognized custom keys pass through. Configure an external instrumentor's own content policy before enabling it.
 
 `redactor(field, value)` receives a bounded, detached content snapshot before helper JSON serialization. Supported inputs are ordinary built-in JSON-compatible scalars, dictionaries and lists, plus built-in tuples and scalar dictionary keys accepted by Python's JSON encoder. Container shape and nested values are preserved without sharing mutable application containers. Custom objects and subclasses, cycles, non-finite numbers, integers above 14,000 bits, depth beyond 64, more than 65,536 visited values/keys, or a conservative value budget above 1 MiB are rejected before the callback. The budget counts UTF-8 string bytes plus value overhead; it is not a process-memory limit. The initial snapshot also runs when no redactor is configured. A redactor's returned value passes through a fresh snapshot with the same independent bounds before JSON encoding, so oversized nested output or custom serialization hooks cannot bypass this check.
 
@@ -122,14 +125,14 @@ hue.export_status -> ExportStatus
 
 A flush timeout bounds how long the caller waits; it does not cancel network work already running in the background. Timeout values must be positive integers. Queues are bounded and in memory; termination or overflow can lose telemetry. A successful flush does not prove that every operation was instrumented or that all parents have arrived.
 
-`shutdown()` stops new helpers, drains and closes Hue-owned resources. Borrowed tracer providers and their other processors remain usable. A timeout returns `False` while shutdown continues; repeated calls wait for the same shutdown work. A `with Hue(...) as hue:` block calls `shutdown_safe(timeout_millis=1000)` on exit, but does not raise if that boolean is false. Use a checked flush when command success must require delivery:
+`shutdown()` stops new helpers, drains and closes Hue-owned resources. Borrowed tracer and logger providers and their other processors remain usable. A timeout returns `False` while shutdown continues; repeated calls wait for the same shutdown work. A `with Hue(...) as hue:` block calls `shutdown_safe(timeout_millis=1000)` on exit, but does not raise if that boolean is false. Use a checked flush when command success must require delivery:
 
 ```python
 if not hue.force_flush():
     raise RuntimeError("Hue did not acknowledge all telemetry.")
 ```
 
-Exports use the official OTLP HTTP/protobuf exporters and their retry policy. HTTP errors, malformed acknowledgements and OTLP partial rejections count as failed batches. Partial rejections are not resent as a whole batch. Stop producing spans before shutdown; shared server clients should remain alive between requests.
+Exports use the official OTLP HTTP/protobuf exporters and their retry policy. Request bodies are gzip-compressed and carry a `hue-sdk-python/<version>` User-Agent ahead of the exporter's own token. HTTP errors, malformed acknowledgements and OTLP partial rejections count as failed batches. Partial rejections are not resent as a whole batch. Stop producing spans before shutdown; shared server clients should remain alive between requests.
 
 ## Trace verification
 
@@ -142,9 +145,9 @@ confirmation = hue.verify_trace(
 )
 ```
 
-Returns a typed `TraceVerificationResult` with `verified` and `receipt: TraceReceipt | None`. A receipt has `trace_id`, `span_count`, `revision`, `fields`, `matched_span_ids`, `missing_span_ids`, and `trace_url`. `verified` requires a stored receipt, every supplied expected span, and every required field. Timeout returns `verified=False` with the latest partial receipt, or `None` if none arrived. Other failures raise exported `TraceVerificationError`, with `code` and optional `status_code`, without response bodies or credentials.
+Returns a typed `TraceVerificationResult` with `verified` and `receipt: TraceReceipt | None`. A `TraceReceipt` has `trace_id`, `span_count`, `revision`, `fields`, `matched_span_ids`, `missing_span_ids`, and `trace_url`. `fields` is a `TraceReceiptFields` dataclass with `input`, `output`, `model`, `usage` and `session` booleans; it reports the presence of received fields without exposing their captured values. `verified` requires a stored receipt, every supplied expected span, and every required field. Timeout returns `verified=False` with the latest partial receipt, or `None` if none arrived. Other failures raise exported `TraceVerificationError`, with `code` and optional `status_code`, without response bodies or credentials.
 
-`expected_span_ids` and `required_fields` accept sequences. Field names are `input`, `output`, `model`, `usage`, and `session`.
+`expected_span_ids` and `required_fields` accept sequences. `required_fields` takes `TraceReceiptField` names: `"input"`, `"output"`, `"model"`, `"usage"` and `"session"`.
 
 Trace IDs are 32 lowercase hexadecimal characters; expected span IDs are 16. All IDs must be nonzero. Supply at most 100 unique expected span IDs and unique required field names. The timeout defaults to 10,000 ms and must be positive, finite, and at most 60,000 ms. The receipt response is limited to 64 KiB.
 
@@ -163,7 +166,7 @@ client = EvaluationClient(
 )
 ```
 
-`EvaluationClient(base_url: str = "https://app.hue.run", api_key: str | None = None, *, timeout_seconds: float = 10)` requires a valid project service key. Use `api_key=` for Hue Cloud or retain `EvaluationClient(base_url, api_key)` for an explicit origin; timeouts must be positive and finite. Registry writes require a **Read and write** key.
+`EvaluationClient(base_url: str = "https://app.hue.run", api_key: str | None = None, *, timeout_seconds: float = 10)` requires a valid project service key. Use `api_key=` for Hue Cloud or retain `EvaluationClient(base_url, api_key)` for an explicit origin; a bare key in the first position raises `TypeError` naming `api_key=`. Timeouts must be positive and finite. Registry writes require a **Read and write** key.
 
 Client methods are synchronous and return dictionaries. **Arguments use snake_case; response fields and low-level completion payloads use HTTP camelCase.** `check_connection()` returns the current project. List methods accept keyword-only `after=None, limit=100`; limits are 1–100. Responses contain `items` and `nextCursor`.
 
@@ -190,10 +193,12 @@ Scorer `definition` dictionaries use **camelCase** keys, even when supplied to a
 
 | Definition | Required fields |
 | --- | --- |
-| Built-in | Use `builtins.exact_match()`, `builtins.includes(case_sensitive)` or `builtins.json_schema(schema)` for the exact versioned declaration. |
+| Built-in | Use `builtin_scorers.exact_match()`, `builtin_scorers.includes(case_sensitive)` or `builtin_scorers.json_schema(schema)` for the exact versioned declaration. |
 | Local code | `kind: "local_code"`, `language: "python"` or `"typescript"`, `entrypoint`, `sourceDigest`, `metrics`. `define_local_scorer` creates the Python declaration and binds the callback. |
 | Manual | `kind: "manual"`, `metrics`. Completion requires the platform's human workflow. |
 | Hosted judge | `kind: "llm_judge"`, `metrics`, `config`. Hosted dispatch is separate from a local run. |
+
+Import the built-in bundle as `from hue_sdk.evals import builtin_scorers`. `builtins` remains an alias, but it shadows the standard-library module of the same name in any file that imports it. `builtin_scorers.json_schema` needs the optional `hue-run[evals]` extra (`jsonschema` and `referencing`); without it the helper raises `ImportError` and stored schema scorers report `SchemaValidatorUnavailable`.
 
 Each metric definition has a `name` and `type`: `boolean`, `text`, `number` (optional `min`/`max`), or `category` (required `categories`, a list of strings). Results must match the pinned definitions exactly.
 
@@ -262,9 +267,9 @@ Returning `MISSING` means unavailable output; returning `None` is JSON null. Wit
 
 | Export | Behavior |
 | --- | --- |
-| `builtins.exact_match()` | Publishable typed JSON equality definition. |
-| `builtins.includes(case_sensitive=True)` | Publishable string-inclusion definition. |
-| `builtins.json_schema(schema)` | Publishable JSON Schema draft 2020-12 definition. |
+| `builtin_scorers.exact_match()` | Publishable typed JSON equality definition. |
+| `builtin_scorers.includes(case_sensitive=True)` | Publishable string-inclusion definition. |
+| `builtin_scorers.json_schema(schema)` | Publishable JSON Schema draft 2020-12 definition; requires the `hue-run[evals]` extra. |
 | `define_local_scorer(*, source, entrypoint, metrics, score)` | Returns `LocalScorer`; source is text or bytes. |
 | `score_locally(version, context, *, scorers=None, schema_timeout_millis=2000)` | Returns `Score` without uploading it. |
 
@@ -288,14 +293,14 @@ Required evidence waits for both signals after the root span ends. Omission is a
 
 ## Managed target adapter
 
-`ManagedTargetHandler` from `hue_sdk.managed` requires `machine_credential`, a synchronous `target` callback and `flush_telemetry`. Optional arguments are `tracer`, `base_url`, `max_execution_millis` (default 90000, at most 90000) and `finalization_millis` (default 30000, at most 30000).
+`ManagedTargetHandler` from `hue_sdk.managed` requires `machine_credential`, a synchronous `target` callback and `flush_telemetry`. Optional arguments are `tracer`, `base_url`, `max_execution_millis` (default 90000, at most 90000) and `finalization_millis` (default 30000, at most 30000). Pass `tracer=hue.tracer` with a Hue-owned client; without it the handler falls back to the global tracer, its span is not recorded and every invocation returns `uncertain`.
 
-`handle(payload, headers)` accepts bounded raw JSON bytes or a dictionary and returns `ManagedResponse` with `status_code`, `body` and `headers`. The target receives `ManagedTargetContext` and returns `ManagedTargetResult`; generated files use `ManagedOutputFile`. Calls use the existing tracing providers. A false flush result leaves telemetry pending. See [managed runs](/evaluations/managed-runs) for framework integration, cancellation and recovery.
+`handle(payload, headers)` accepts bounded raw JSON bytes or a dictionary and returns `ManagedResponse` with `status_code`, `body` and `headers`. The target receives a `ManagedTargetContext` with `execution_id`, `attempt`, `input`, `config`, `input_files`, the `cancelled` event, `deadline_monotonic` and `trace_id`; `input_files` is a tuple of `ManagedInputFile` entries with `artifact_id`, `filename`, `content_type`, `byte_size`, `sha256`, `role` and the verified `data` bytes. It returns `ManagedTargetResult`; generated files use `ManagedOutputFile`. Calls use the existing tracing providers. A false flush result leaves telemetry pending. See [managed runs](/evaluations/managed-runs) for framework integration, cancellation and recovery.
 
 ## Safe serving lifecycle
 
 Import `create_hue_safe` from `hue_sdk`. It accepts the same constructor arguments as `Hue`, catches ordinary initialization failures and returns a disabled client with an instrumentation failure. `enabled=False` needs no API key and does not attach to a supplied provider. Initialize once per serving process after fork; inherited clients no-op instead of reusing parent worker locks.
 
-`force_flush_safe(timeout_millis=1000)` and `shutdown_safe(timeout_millis=1000)` return booleans without raising. Observe `export_status`; it now includes `instrumentation_failures`, `dropped_trace_records`, `dropped_log_records`, `queued_trace_records`, `queued_log_records`, `queued_trace_bytes` and `queued_log_bytes`. Queued counts include in-flight records; health is cumulative.
+`force_flush_safe(timeout_millis=1000)` and `shutdown_safe(timeout_millis=1000)` return booleans without raising. Observe `export_status`; it includes `instrumentation_failures`, `dropped_trace_records`, `dropped_log_records`, `queued_trace_records`, `queued_log_records`, `queued_trace_bytes` and `queued_log_bytes`. Queued counts include in-flight records; health is cumulative.
 
 Constructor options `max_queue_size=2048` and `max_queue_bytes=8388608` bound each signal's retained telemetry. Encoded bytes are not total process RSS. HTTP acknowledgements are capped at 64 KiB; 429 and Retry-After are honored within the transport budget. One retained network worker per signal bounds blocked network work, although Python cannot forcibly cancel every blocked system call. After a request timeout, that worker may retain up to 1 MiB of encoded request data per signal outside queue counters. Later batches stay queued within their limits until transport recovery; shutdown counts any queued records it must discard. See [production safety](/guides/production-safety).

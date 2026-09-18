@@ -5,7 +5,7 @@ description: "Keep application behavior independent of telemetry availability, w
 
 Keep tracing best effort in a serving application. A Hue outage should reduce observability without preventing your agent from answering. Hue follows OpenTelemetry's [runtime error containment](https://opentelemetry.io/docs/specs/otel/error-handling/) and [nonblocking, bounded-resource principles](https://opentelemetry.io/docs/specs/otel/performance/): preserve business behavior, drop telemetry when budgets are exhausted, and make the loss observable.
 
-The supported SDKs suppress OpenTelemetry instrumentation while exporting so an HTTP instrumentor does not recursively trace Hue's own uploads. Snapshot boundaries reject unsupported custom objects; TypeScript also rejects Proxies without invoking their traps, measures typed-byte values through native accessors, and copies them into a fixed-size allocation so concurrent shared-buffer growth cannot bypass the queue budget. These protections complement the limits below. Verify your application's actual dependency and instrumentor combination in CI; a successful trace is not by itself a failure-isolation test.
+The supported SDKs suppress OpenTelemetry instrumentation while exporting so an HTTP instrumentor does not recursively trace Hue's own uploads. If an OpenTelemetry release in Python's accepted range stops exposing its suppression key, Hue warns once and exports without suppression while its own queues still ignore its export work. Snapshot boundaries reject unsupported custom objects; TypeScript also rejects Proxies without invoking their traps, measures typed-byte values through native accessors, and copies them into a fixed-size allocation so concurrent shared-buffer growth cannot bypass the queue budget. These protections complement the limits below. Verify your application's actual dependency and instrumentor combination in CI; a successful trace is not by itself a failure-isolation test.
 
 <Note>
 The APIs below require TypeScript `@hue-run/sdk >= 0.1.5` or Python `hue-run >= 0.1.3`. Confirm the installed version before using them. Older SDKs can propagate capture or lifecycle errors.
@@ -93,7 +93,7 @@ No library executing inside your process can promise immunity to process termina
 
 ## Kill switch and monitoring
 
-The snippets explicitly read `HUE_TRACING_ENABLED`. Set it to `false` and restart the process to bypass Hue initialization and export without changing the application function. It is not an automatically polled remote flag. The strict constructors also accept `enabled: false` / `enabled=False`.
+The snippets explicitly read `HUE_TRACING_ENABLED`. Set it to `false` and restart the process to bypass Hue initialization and export without changing the application function. It is not an automatically polled remote flag. The strict constructors also accept `enabled: false` / `enabled=False`; a disabled client needs neither a key nor a `captureContent` / `capture_content` choice.
 
 Inspect TypeScript's `hue.transport.getReport()` and Python's `hue.export_status` for instrumentation failures, dropped records, pending bytes and failed exports. Failure and delivery counters are cumulative for a client lifetime; pending bytes and records are current queue gauges. Emit only counts and sanitized status; never log credentials, prompts, responses or raw provider exceptions. Do not route these health signals exclusively through Hue.
 
@@ -101,7 +101,7 @@ Before rollout, test your real entry point against a loopback receiver that retu
 
 ## Capture, titles and retention
 
-Start with metadata-only capture until your team approves storing prompt and tool content. Configure third-party instrumentors separately, especially in Python. Custom names and arbitrary attributes are application-controlled.
+Start with metadata-only capture until your team approves storing prompt and tool content. Both SDKs strip recognized third-party content attributes on Hue's export path in that mode, but unrecognized custom keys pass through, so configure third-party instrumentors' own capture controls as well. Custom names and arbitrary attributes are application-controlled.
 
 AI trace titles are off by default. An owner or admin can enable them in **Settings → Projects → Edit project**, which permits short excerpts of captured content to be sent to Google Gemini through Vercel AI Gateway. Turning the setting off stops new title requests; a request already in flight may finish. Existing titles remain.
 

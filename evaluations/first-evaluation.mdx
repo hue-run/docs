@@ -5,7 +5,7 @@ description: "Freeze a dataset, score a deterministic target locally, and rescor
 
 This example creates one dataset case, publishes an exact-match scorer, and evaluates a deterministic uppercase function. It then scores the same saved output in a new evaluation run. It makes no model call and consumes no hosted-judge allowance.
 
-[Install the SDK](/installation) for your language and set `HUE_API_KEY` to a [project service key](/guides/project-keys) created with **Read and write** access. A **Read-only** key cannot use evaluation APIs. Both SDKs connect to Hue Cloud by default.
+[Install the SDK](/installation) for your language and set `HUE_API_KEY` to a [project service key](/guides/project-keys) created with **Read and write** access. A **Read-only** key cannot use evaluation APIs. Both SDKs connect to Hue Cloud by default. To run an existing TypeScript agent against a disposable simulated world instead of a plain function, see [simulations](/evaluations/simulations).
 
 ## Choose your content policy
 
@@ -24,7 +24,7 @@ Choose one language. The program creates its setup once and saves its IDs locall
 
 <Tabs>
 <Tab title="TypeScript">
-Save this as `first-evaluation.ts`, then run `node first-evaluation.ts` with Node.js 24.
+Save this as `first-evaluation.ts`, then run `node first-evaluation.ts` with Node.js 22 or 24.
 
 ```ts
 import { randomUUID } from "node:crypto";
@@ -127,7 +127,7 @@ import os
 from pathlib import Path
 from uuid import uuid4
 from hue_sdk import Hue
-from hue_sdk.evals import EvaluationClient, TraceEvidence, builtins, run_experiment, rescore
+from hue_sdk.evals import EvaluationClient, TraceEvidence, builtin_scorers, run_experiment, rescore
 
 api_key = os.environ["HUE_API_KEY"]
 client = EvaluationClient(api_key=api_key)
@@ -157,7 +157,7 @@ if fresh:
     # Freeze the cases and publish a scorer version for repeatable comparisons.
     frozen = client.freeze_dataset_version(version["id"], version["revision"])
     scorer = client.create_scorer(name="Exact match", slug=f"exact-{suffix}")
-    exact = client.publish_scorer_version(scorer["id"], builtins.exact_match())
+    exact = client.publish_scorer_version(scorer["id"], builtin_scorers.exact_match())
     request = dict(
         idempotency_key=str(uuid4()), name="Uppercase baseline",
         dataset_version_id=frozen["id"], scorer_version_ids=[exact["id"]],

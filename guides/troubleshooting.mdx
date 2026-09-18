@@ -9,9 +9,9 @@ Start by separating the application result from the telemetry result. A model re
 
 Confirm that the key belongs to the selected Hue project and has not been revoked. Use a project service key in the server process. Do not use a management token or place the key in browser code.
 
-Both SDKs default to `https://app.hue.run`. If you override `baseUrl` or `base_url`, supply an origin. Do not append `/api` or the OTLP endpoint. The SDK adds its own paths. Hosted origins require HTTPS; loopback HTTP is supported for local development.
+Both SDKs default to `https://app.hue.run`. If you override `baseUrl` or `base_url`, supply an origin. Do not append `/api` or the OTLP endpoint. The SDK adds its own paths. Hosted origins require HTTPS; loopback HTTP is supported for local development, and TypeScript accepts plain HTTP to another host only with `allowInsecureHttp: true`.
 
-Report the error and project identity without printing the key or request authorization header.
+Report the error and project identity without printing the key or request authorization header. TypeScript's `HueConnectionError` carries the HTTP `status` when Hue answered and the underlying network, timeout or parsing error as `cause`.
 
 ## No trace appears
 
@@ -31,11 +31,11 @@ An OpenTelemetry status of `Unset` means no explicit status was recorded. It is 
 
 ## Input or output is missing
 
-Check the explicit content setting. `captureContent: false` in TypeScript or `capture_content=False` in Python intentionally omits supported content fields in Hue helpers. Python third-party instrumentors need their own content controls.
+Check the explicit content setting. `captureContent: false` in TypeScript or `capture_content=False` in Python intentionally omits supported content fields in Hue helpers. Both SDKs also strip recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes from every record on Hue's export path, including spans from third-party instrumentors on the same provider; the [compatibility matrix](/sdks/compatibility) lists the keys.
 
-Content must also be supplied by the instrumentation. The SDK does not reconstruct prompts, invent an output or estimate missing usage. JSON `null` is a recorded value; an absent output is different.
+Content must also be supplied by the instrumentation. The SDK does not reconstruct prompts, invent an output or estimate missing usage. JSON `null` is a recorded value; an absent output is different. Helper spans never record exception messages or stack traces, only `error.type` and the span status.
 
-If you add third-party instrumentation, configure its own content controls too. Avoid placing private text in custom span names or arbitrary attributes, which cannot all be classified automatically.
+If you add third-party instrumentation, configure its own content controls too: unrecognized custom keys pass through, and the instrumentor may still send content to other exporters. Avoid placing private text in custom span names or arbitrary attributes, which cannot all be classified automatically.
 
 ## Streaming spans end too early
 
@@ -51,9 +51,17 @@ Queues are bounded and held in memory. Process termination, queue overflow or sa
 
 The receiver accepts bounded OTLP requests. The SDK splits batches, but oversized helper content is omitted and recorded as an instrumentation failure. Application work still runs; raw external records remain subject to receiver limits. Keep binary files out of span attributes; file storage and document evaluation have a separate lifecycle.
 
+## The example throws `Cannot use import statement outside a module`
+
+Node.js treats `.js` and `.ts` files as CommonJS unless the nearest `package.json` contains `"type": "module"`. Run `npm pkg set type=module` in the example directory, or name the file `first-trace.mjs` / `trace.mts`, then run it again. A CommonJS application on Node.js 22.12 or later can instead load the package with `require("@hue-run/sdk")`.
+
 ## Installation reports a dependency conflict
 
-Check the [compatibility matrix](/sdks/compatibility). TypeScript 0.1.5 core supports installation alongside AI SDK 6, but its `hueTelemetry` adapter requires AI SDK 7; older Hue versions can still conflict at install time. Python pins OpenTelemetry 1.44.0. Keep the application's existing instrumentation and use a standard OTLP exporter when its versions fall outside the tested SDK matrix; do not force an incompatible install.
+Check the [compatibility matrix](/sdks/compatibility). `@hue-run/sdk` core installs alongside AI SDK 6; pass `hueExperimentalTelemetry(hue)` as `experimental_telemetry` there, because the `hueTelemetry` adapter requires AI SDK 7 and throws a `TypeError` on AI SDK 6. Python accepts OpenTelemetry `>=1.40,<2` (1.44.0 is the certified combination and 1.40.0 the tested floor), so `hue-run` installs next to instrumentation packages on another OpenTelemetry 1.x release. Keep the application's existing instrumentation and use a standard OTLP exporter when its versions fall outside the tested SDK matrix; do not force an incompatible install.
+
+## A JSON Schema scorer reports `SchemaValidatorUnavailable`
+
+The validator is optional in both SDKs. Run `npm install ajv` (8.17 or later) for `builtins.jsonSchema` in TypeScript, or `pip install 'hue-run[evals]'` for `builtin_scorers.json_schema` in Python; without it the Python helper raises `ImportError`. Other built-in scorers do not need these packages. Separately, importing `@hue-run/sdk/evals` at all needs the optional `zod` peer (`npm install zod`, 4.6.5 or later).
 
 ## Listing dataset cases fails for a large page
 

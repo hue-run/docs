@@ -45,6 +45,7 @@
         "group": "Evaluations",
         "pages": [
           "evaluations/first-evaluation",
+          "evaluations/simulations",
           "evaluations/managed-runs"
         ]
       },
