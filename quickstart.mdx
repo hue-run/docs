@@ -11,7 +11,7 @@ Send a real trace to Hue with a local text transformation. No model provider or 
 
 ## Before you start
 
-You need a Hue project and **Node.js 24** or **Python 3.10+**. Prefer to have your coding agent do the integration? Start with [For agents](/guides/agent-setup).
+You need a Hue project and **Node.js 22 or 24** or **Python 3.10+**. Prefer to have your coding agent do the integration? Start with [For agents](/guides/agent-setup).
 
 <Note>
   Hue Cloud is currently invite-only. To request access, email [team@hue.run](mailto:team@hue.run). You do not need a project to try the SDKs: both send standard OTLP/HTTP, so the same programs run against a local OpenTelemetry Collector or any OTLP receiver when you set `baseUrl` / `base_url` to a loopback origin such as `http://127.0.0.1:4318`. See [connection settings](/guides/project-keys#connection-settings); skip the connection check in that case.
@@ -32,7 +32,7 @@ export HUE_API_KEY=your_project_service_key
 export HUE_CAPTURE_CONTENT=true
 ```
 
-This example records only `Hello Hue` and `HELLO HUE`. Choose `true` to store that content or `false` to send metadata only. The programs read these variables explicitly; neither SDK automatically loads a `.env` file. External Python instrumentors have their own capture settings, covered in the [Python guide](/sdks/python).
+This example records only `Hello Hue` and `HELLO HUE`. Choose `true` to store that content or `false` to send metadata only. The programs read these variables explicitly; neither SDK automatically loads a `.env` file. Third-party instrumentors have their own capture settings, covered in the [TypeScript](/sdks/typescript) and [Python](/sdks/python) guides.
 
 ## 3. Record a request
 
@@ -128,7 +128,7 @@ The program checks the key before sending data, prints `HELLO HUE` and a trace I
 
 In the same Hue project, open **Traces** and match the printed trace ID. You should see:
 
-- A root span named `first-trace` and an uppercase tool child. Python names the child `execute_tool uppercase`.
+- A root span named `first-trace` and a tool child named `execute_tool uppercase`.
 - Session `hue-quickstart` and the recorded timing.
 - Input `Hello Hue` and output `HELLO HUE` when capture is enabled; unavailable content when disabled.
 

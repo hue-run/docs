@@ -7,22 +7,22 @@ Choose your language below, then [send your first trace](/quickstart) or let you
 
 ## TypeScript
 
-Requires Node.js 24. Run the command in your application's directory. For a new example, create a directory and run `npm init -y && npm pkg set type=module` first so that `import` statements work in `.js` and `.ts` files.
+Requires Node.js 22 or 24 (Node.js 26 also runs in CI) or Bun 1.4. Run the command in your application's directory. For a new example, create a directory and run `npm init -y && npm pkg set type=module` first so that `import` statements work in `.js` and `.ts` files.
 
 <Tabs>
   <Tab title="npm">
     ```sh
-    npm install @hue-run/sdk@0.1.5
+    npm install @hue-run/sdk@0.2.0
     ```
   </Tab>
   <Tab title="Bun">
     ```sh
-    bun add @hue-run/sdk@0.1.5
+    bun add @hue-run/sdk@0.2.0
     ```
   </Tab>
 </Tabs>
 
-The core package can coexist with AI SDK 6. The `hueTelemetry` adapter still requires AI SDK 7 and a compatible `@ai-sdk/otel` peer. Check [compatibility](/sdks/compatibility) before adding it to an existing application. An application already using OpenTelemetry can send data through its [standard exporter](/integrations/opentelemetry).
+The package is ESM; CommonJS applications on Node.js 22.12 or later load it with `require("@hue-run/sdk")`. The core package can coexist with AI SDK 6, whose calls accept `hueExperimentalTelemetry(hue)` as `experimental_telemetry`. The `hueTelemetry` adapter requires AI SDK 7 and a compatible `@ai-sdk/otel` peer. Check [compatibility](/sdks/compatibility) before adding it to an existing application. An application already using OpenTelemetry can send data through its [standard exporter](/integrations/opentelemetry). JSON Schema scoring in `@hue-run/sdk/evals` needs the optional `ajv` peer (`npm install ajv`).
 
 ## Python
 
@@ -31,22 +31,22 @@ Requires Python 3.10 or later; tested on 3.10 and 3.14. Install into your projec
 <Tabs>
   <Tab title="pip">
     ```sh
-    pip install hue-run==0.1.3
+    pip install hue-run==0.2.0
     ```
   </Tab>
   <Tab title="uv">
     ```sh
-    uv add hue-run==0.1.3
+    uv add hue-run==0.2.0
     ```
   </Tab>
 </Tabs>
 
 For a new pip example, create and activate a virtual environment first with `python3 -m venv .venv` and `source .venv/bin/activate`. For a new uv project, run `uv init` before `uv add`; run the examples with `uv run python` or activate its `.venv`.
 
-The SDK uses OpenTelemetry 1.44.0. See [compatibility](/sdks/compatibility) if your application already pins a different version.
+The SDK accepts `opentelemetry-api`, `opentelemetry-sdk` and `opentelemetry-exporter-otlp-proto-http` in the range `>=1.40,<2`, so it installs next to applications and instrumentation packages on another OpenTelemetry 1.x release. OpenTelemetry 1.44.0 is the certified combination; 1.40.0 is tested as the floor. See [compatibility](/sdks/compatibility) if your application already uses a different release. JSON Schema scoring needs the optional extra: `pip install 'hue-run[evals]'`.
 
 ## Verify your installation
 
-The documented releases are [TypeScript 0.1.5 on npm](https://www.npmjs.com/package/@hue-run/sdk/v/0.1.5) and [Python 0.1.3 on PyPI](https://pypi.org/project/hue-run/0.1.3/). Check the installed version with `npm ls @hue-run/sdk` or `python -m pip show hue-run`; in a uv project, use `uv tree`.
+The documented releases are [TypeScript 0.2.0 on npm](https://www.npmjs.com/package/@hue-run/sdk/v/0.2.0) and [Python 0.2.0 on PyPI](https://pypi.org/project/hue-run/0.2.0/). Check the installed version with `npm ls @hue-run/sdk` or `python -m pip show hue-run`; in a uv project, use `uv tree`.
 
 Continue with the [quickstart](/quickstart) to check your key and send a trace. Both SDKs connect to Hue Cloud by default.
