@@ -1,0 +1,42 @@
+---
+title: "Welcome to Hue"
+description: "Trace your AI application, inspect its behavior, and evaluate frozen outputs."
+sidebarTitle: "Introduction"
+og:title: "Welcome to Hue"
+---
+
+Hue records what your AI application does and helps you evaluate its outputs. Your application runs in your own environment and sends telemetry to Hue through OpenTelemetry.
+
+Start with one request. Inspect its input, output, model calls and tool calls, then turn useful examples into a dataset for repeatable evaluations.
+
+<CardGroup cols={2}>
+  <Card title="Send your first trace" href="/quickstart">
+    Connect your application and inspect a trace without making a paid model call.
+  </Card>
+
+  <Card title="For agents" href="/guides/agent-setup">
+    Give your coding agent the public Hue installation skill for TypeScript or Python, then verify a trace.
+  </Card>
+
+  <Card title="Install the SDK" href="/installation">
+    Get the TypeScript or Python package for your application.
+  </Card>
+
+  <Card title="Run your first evaluation" href="/evaluations/first-evaluation">
+    Compare outputs against a frozen dataset and preserve the evidence behind each result.
+  </Card>
+</CardGroup>
+
+## Choose your integration
+
+Use the [TypeScript SDK](/sdks/typescript) or [Python SDK](/sdks/python) for explicit tracing and local evaluation workflows. If your application already has OpenTelemetry, follow the [existing instrumentation guide](/integrations/opentelemetry) to add Hue without replacing your provider.
+
+Your application must emit telemetry. Calling a model API alone does not send data to Hue. Choose explicitly whether telemetry includes prompt and output content or only metadata.
+
+## Tracing and evaluation
+
+A **trace** records one execution. Its **spans** describe the model calls, tools and application steps within that execution. A **session** groups related executions, such as turns in one conversation.
+
+An **evaluation** assesses a stored output using a pinned scorer definition. Execution failure, scorer failure and a negative quality result are different outcomes. For example, a successful model call can still receive a `false` quality score.
+
+Install the TypeScript SDK from [npm](https://www.npmjs.com/package/@hue-run/sdk) or the Python SDK from [PyPI](https://pypi.org/project/hue-run/). Start with [installation](/installation) for commands and runtime requirements.

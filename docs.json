@@ -1,0 +1,127 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Hue",
+  "colors": {
+    "primary": "#1c4e88",
+    "light": "#96bce8",
+    "dark": "#1c4e88"
+  },
+  "favicon": "/images/hue-mark.png",
+  "navigation": {
+    "pages": [
+      {
+        "group": "Getting started",
+        "pages": [
+          "index",
+          "installation",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "For agents",
+        "pages": [
+          "agents/overview",
+          "agents/mcp-server",
+          "guides/agent-setup"
+        ]
+      },
+      {
+        "group": "SDKs",
+        "pages": [
+          "sdks/typescript",
+          "sdks/python",
+          "sdks/compatibility"
+        ]
+      },
+      {
+        "group": "Integrations",
+        "pages": [
+          "integrations/opentelemetry",
+          "integrations/reference-chatbot"
+        ]
+      },
+      {
+        "group": "Evaluations",
+        "pages": [
+          "evaluations/first-evaluation",
+          "evaluations/managed-runs"
+        ]
+      },
+      {
+        "group": "Guides",
+        "pages": [
+          "guides/project-keys",
+          "guides/troubleshooting",
+          "guides/production-safety"
+        ]
+      },
+      {
+        "group": "API reference",
+        "pages": [
+          "reference/typescript",
+          "reference/python"
+        ]
+      },
+      {
+        "group": "Getting Started",
+        "hidden": true,
+        "pages": []
+      }
+    ]
+  },
+  "logo": {
+    "light": "/images/hue-light.svg",
+    "dark": "/images/hue-dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "href": "https://hue.run",
+        "label": "Website"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Open Hue",
+      "href": "https://app.hue.run"
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view"
+    ]
+  },
+  "footer": {
+    "links": [
+      {
+        "header": "Hue",
+        "items": [
+          {
+            "label": "Website",
+            "href": "https://hue.run"
+          },
+          {
+            "label": "Open Hue",
+            "href": "https://app.hue.run"
+          }
+        ]
+      }
+    ]
+  },
+  "description": "Observability and evaluations for AI agents.",
+  "appearance": {
+    "default": "system",
+    "strict": false
+  },
+  "background": {
+    "color": {
+      "light": "#ffffff",
+      "dark": "#17181a"
+    }
+  },
+  "fonts": {
+    "family": "Inter"
+  }
+}

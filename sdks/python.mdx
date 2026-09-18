@@ -1,0 +1,123 @@
+---
+title: "Python SDK"
+description: "Trace Python applications with Hue helpers, explicit capture choices, and observable export failures."
+---
+
+Use the Hue Python SDK to trace your application with OpenTelemetry spans and correlated logs. Provider requests stay in your application.
+
+For option defaults and method signatures, see the [Python API reference](/reference/python). Check the [compatibility matrix](/sdks/compatibility), including the pinned OpenTelemetry versions, before adding Hue to an existing application.
+
+## Install
+
+Use Python 3.10 or later. [Install the Python SDK](/installation#python), then configure your key below. Tests cover Python 3.10 and 3.14.
+
+## Configure your project
+
+Create a project service key in **Settings → Integrations & API keys** and set `HUE_API_KEY` in your server environment. Keep it out of browser code and Git.
+
+Use a **Tracing only** key for ingestion and receipt verification. Choose **Tracing and evaluations** only for evaluation clients. See [project keys](/guides/project-keys) for access and rotation. The SDK connects to Hue Cloud by default. Other origins are covered in [connection settings](/guides/project-keys#connection-settings).
+
+## Send your first trace
+
+Save this as `trace.py`. It traces a deterministic addition tool without making a model call.
+
+```python
+import os
+from hue_sdk import Hue
+
+hue = Hue(
+    api_key=os.environ["HUE_API_KEY"],
+    service_name="addition-demo",
+    capture_content=False,  # Send timing and metadata without inputs or outputs.
+)
+
+try:
+    hue.validate_project()  # Verify which project the key belongs to.
+    # Keep related requests in the same conversation.
+    with hue.context(session_id="demo-session"):
+        with hue.span("demo.run") as run:
+            run.set_input({"a": 2, "b": 2})
+            with hue.tool("add") as tool:
+                tool.set_input({"a": 2, "b": 2})
+                result = 2 + 2
+                tool.set_output(result)
+            run.set_output(result)
+            print("Trace ID:", run.trace_id)
+
+    # Confirm delivery before the process exits.
+    if not hue.force_flush(timeout_millis=30_000):
+        print("Export counters:", hue.export_status)
+        raise RuntimeError("Hue did not acknowledge all telemetry.")
+finally:
+    hue.shutdown_safe(timeout_millis=1000)
+```
+
+Run it with your environment already configured:
+
+```sh
+.venv/bin/python trace.py
+```
+
+Open **Traces** in the project that owns the key. The root and tool spans share the printed trace ID. Their input and output are omitted because this example explicitly chooses metadata-only capture.
+
+## Choose what you capture
+
+`capture_content` is required. `False` omits content supplied through Hue's input, output, tool, and inference-log helpers before it enters an OpenTelemetry queue. `True` captures that content. Received content is stored by Hue; automatic telemetry expiry is not currently available.
+
+This setting controls Hue helpers. It does not scrub arbitrary attributes, span names, session IDs, third-party instrumentation, or another exporter. Configure an instrumentor's own content controls before enabling it.
+
+For helper content, `redactor(field, value)` receives a detached copy and can return a redacted JSON value before serialization. Mutating that copy does not change application inputs or results, even if the redactor then raises. Snapshotting accepts supported built-in containers and scalars under a conservative 1 MiB value budget, depth 64 and 65,536 visited values/keys. Hue applies it even without a redactor, and checks a redactor's returned value with a fresh snapshot under the same bounds before JSON encoding. Cycles, custom objects or subclasses, non-finite numbers, integers above 14,000 bits and over-budget input are omitted before the callback. These failures and redactor failures increment instrumentation failure counters without raising into application work. Final captured JSON is limited to 256 KiB. The callback must handle your nested data format and avoid side effects through globals or captured references; it is not applied to arbitrary external OpenTelemetry records.
+
+The helpers always exclude exception messages and stacks, retaining error type and status. A context manager records an escaping error and rethrows it.
+
+## Add model metadata and correlation
+
+Use `hue.model(model, provider=...)` for a model operation. Report known token counts with `span.set_usage(input_tokens=..., output_tokens=...)`; leave unavailable counts as `None`. Hue does not estimate missing usage.
+
+Use `hue.context(session_id=..., user_id=...)` around related helpers. These are observed application identifiers, not Hue account identities. `Hue.inject(headers)` and `Hue.extract(headers)` support W3C trace-context propagation across services.
+
+`span.log_inference(input=..., output=...)` emits a log correlated with that span. Use logs or span attributes for a given content event instead of storing identical copies in both. With capture enabled, explicit Python `None` is JSON null; it is not missing content.
+
+## Verify stored trace evidence
+
+Available in `hue-run` 0.1.1 and later. Finish a real application request and retain its trace ID and known span IDs. End its spans, flush the provider that owns them, then flush Hue. When borrowing a provider, flush that provider first. Verification does not run the app, invoke a model, or flush telemetry.
+
+```python
+if not hue.force_flush():
+    raise RuntimeError("Hue did not acknowledge the telemetry.")
+confirmation = hue.verify_trace(
+    request_trace_id,
+    expected_span_ids=[request_span_id],
+    required_fields=["model"],
+    timeout_millis=10_000,
+)
+if not confirmation.verified:
+    raise RuntimeError("Expected trace evidence did not arrive before the deadline.")
+print(confirmation.receipt.trace_url)
+```
+
+Only require fields the request should emit and your capture policy permits. Supported names are `input`, `output`, `model`, `usage`, and `session`; omit content fields for metadata-only capture and usage when the instrumentation does not report it.
+
+The receipt reports stored field presence, span counts, and missing expected spans. It contains no captured values. A successful result confirms the conditions you requested; inspect the trace in Hue to check the content and redaction. See the [verification API](/reference/python#trace-verification) for limits and failures.
+
+For serving requests, use [safe initialization, lifecycle deadlines and a kill switch](/guides/production-safety).
+
+## Handle flush and shutdown
+
+`force_flush()` drains both signals and returns a boolean. It returns `False` for a timeout or any recorded failed export batch, dropped record or instrumentation failure during this client's lifetime. Check `hue.export_status` for cumulative trace and log failure counts. HTTP errors, malformed acknowledgements, and OTLP partial rejections are failures; receiver error bodies are not echoed.
+
+A flush timeout bounds your wait, not the ongoing network request. Both signals share the remaining deadline, including time spent waiting behind another flush. Drain coordination is released when that budget expires, so a timed-out flush does not impose a fresh wait on later calls. Background exports and shutdown cleanup can continue.
+
+Before planned application shutdown, finish traced work and keep the process alive long enough to confirm completion. Repeated `shutdown()` calls wait for the same cleanup and report current failures and drops. Spans ending or external records emitted after Hue shuts down count as dropped, including records from a borrowed provider; new Hue helpers are no-ops. A context manager calls shutdown on exit, but you still need an explicit checked flush when your command's exit status must reflect delivery failure.
+
+The SDK uses official OTLP HTTP/protobuf exporters with their retry policy. Partial rejections are not retried wholesale. Queues are in memory, so process termination and overflow can lose records. A successful flush is not proof that every application operation was instrumented.
+
+## Use an existing provider
+
+Pass your OpenTelemetry SDK tracer provider as `tracer_provider=provider`. Hue adds its processor without setting the global provider. An instrumentor that accepts a provider can use `hue.tracer_provider` explicitly. Use one Hue client per provider lifecycle; OpenTelemetry has no public processor-removal API.
+
+Hue shutdown leaves a borrowed tracer provider and its other processors usable. Your application remains responsible for those providers and their instrumentations.
+
+## Run an agent from Hue
+
+Expose a protected route around your existing application function with the [managed target adapter](/evaluations/managed-runs). Hue dispatches frozen cases, saves real output files and verifies trace evidence; your application retains its provider, tools and existing telemetry. Local evaluation runners remain available.

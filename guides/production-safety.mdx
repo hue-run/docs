@@ -1,0 +1,118 @@
+---
+title: "Production safety"
+description: "Keep application behavior independent of telemetry availability, with bounded queues and explicit capture."
+---
+
+Keep tracing best effort in a serving application. A Hue outage should reduce observability without preventing your agent from answering. Hue follows OpenTelemetry's [runtime error containment](https://opentelemetry.io/docs/specs/otel/error-handling/) and [nonblocking, bounded-resource principles](https://opentelemetry.io/docs/specs/otel/performance/): preserve business behavior, drop telemetry when budgets are exhausted, and make the loss observable.
+
+The supported SDKs suppress OpenTelemetry instrumentation while exporting so an HTTP instrumentor does not recursively trace Hue's own uploads. Snapshot boundaries reject unsupported custom objects; TypeScript also rejects Proxies without invoking their traps, measures typed-byte values through native accessors, and copies them into a fixed-size allocation so concurrent shared-buffer growth cannot bypass the queue budget. These protections complement the limits below. Verify your application's actual dependency and instrumentor combination in CI; a successful trace is not by itself a failure-isolation test.
+
+<Note>
+The APIs below require TypeScript `@hue-run/sdk >= 0.1.5` or Python `hue-run >= 0.1.3`. Confirm the installed version before using them. Older SDKs can propagate capture or lifecycle errors.
+</Note>
+
+## Separate setup verification from serving requests
+
+Run the strict [quickstart](/quickstart), connection check and [trace receipt verification](/sdks/typescript#verify-stored-trace-evidence) during installation or a dedicated diagnostic command. These checks deliberately fail when Hue is unavailable. Do not make application readiness, a customer request or its response depend on them.
+
+Create one client per serving process. Use the safe constructor in application startup, leave background export enabled, and use safe lifecycle methods only at the appropriate lifecycle boundary. Do not catch and rerun the agent after a telemetry error: tools may already have caused side effects.
+
+<Tabs>
+<Tab title="TypeScript">
+```ts
+import { createHueSafe, type JsonValue } from "@hue-run/sdk";
+
+export const hue = createHueSafe({
+  apiKey: process.env.HUE_API_KEY ?? "",
+  serviceName: "customer-agent",
+  captureContent: process.env.HUE_CAPTURE_CONTENT === "true",
+  enabled: process.env.HUE_TRACING_ENABLED !== "false",
+  maxQueueBytes: 8 * 1024 * 1024,
+});
+
+// Call your existing agent exactly once. Preserve its result and exceptions.
+export async function handleRequest(input: JsonValue) {
+  return hue.withSpan("agent.request", async (span) => {
+    const result = await existingAgent(input);
+    span.setOutput(result);
+    return result;
+  }, { input });
+}
+
+// At process shutdown, after stopping new requests:
+export async function shutdownTracing() {
+  return hue.shutdownSafe({ timeoutMillis: 1000 });
+}
+// Register shutdownTracing in your shutdown hook; observe its result without throwing.
+```
+</Tab>
+<Tab title="Python">
+```python
+import os
+from hue_sdk import create_hue_safe
+
+# Initialize after fork, once per serving process.
+hue = create_hue_safe(
+    api_key=os.environ.get("HUE_API_KEY"),
+    service_name="customer-agent",
+    capture_content=os.environ.get("HUE_CAPTURE_CONTENT") == "true",
+    enabled=os.environ.get("HUE_TRACING_ENABLED") != "false",
+    max_queue_bytes=8 * 1024 * 1024,
+)
+
+def handle_request(inputs):
+    with hue.span("agent.request") as span:
+        span.set_input(inputs)
+        result = existing_agent(inputs)
+        span.set_output(result)
+        return result
+
+# At process shutdown, after stopping new requests:
+def shutdown_tracing():
+    return hue.shutdown_safe(timeout_millis=1000)
+# Register shutdown_tracing in your shutdown hook; observe its result without raising.
+```
+</Tab>
+</Tabs>
+
+`existingAgent` and `existing_agent` above stand for your current application function. Register the shutdown code in your process's shutdown hook; do not execute it immediately after client creation. For serverless requests, use `flushSafe` or `force_flush_safe` in the platform's supported after-response lifecycle, with a deadline that fits that lifecycle. Do not shut down a shared provider after each request.
+
+## Failure behavior
+
+Hue helpers omit content that cannot be safely captured, including oversized JSON or a failing redactor, and record an instrumentation failure. They preserve the business callback's return value and original error. Safe initialization returns a disabled client if configuration or provider setup fails. Disabled helpers still execute the application work.
+
+Python redactors receive detached copies of supported built-in content containers, so mutating the redactor's argument cannot change the application's inputs or results. Hue snapshots helper content even when no redactor is configured, and snapshots a redactor's return value again before serialization. Each snapshot has a conservative 1 MiB value budget, depth 64 and 65,536 visited values/keys. Cycles, custom objects or subclasses, non-finite numbers, integers above 14,000 bits and over-budget inputs are omitted and counted as instrumentation failures without calling the redactor. The final redacted JSON field still has a 256 KiB limit. Redactors must remain free of side effects through globals, captured references or external services; copying their argument cannot isolate those effects.
+
+The safe lifecycle methods return a failure result instead of raising. A timeout bounds the caller's wait; it is not proof of delivery and does not undo an in-flight request. Ordinary `createHue` / `Hue`, connection checks, verification methods, and strict lifecycle methods remain useful for diagnostics and can reject invalid configuration or report delivery failures.
+
+Queues have both record and byte limits, including in-flight records. TypeScript's default byte budget is 8 MiB shared by traces and logs; Python's is 8 MiB per signal. Byte accounting bounds queued telemetry, not total process RSS. OTel objects, serialization, dependency code and application payloads consume additional memory. Overflow drops telemetry and updates counters; it never retries the agent's business operation.
+
+Network export has a deadline and bounded retry work. Python limits retained network workers to one per signal; an OS-level blocked call can outlive the caller's wait and retain one encoded request of up to 1 MiB per signal outside the queue counters. Later records stay queued within their limits until that worker finishes. Shutdown counts queued records it must discard. A process kill, full queue, disabled client or exporter failure can lose telemetry. There is no disk spool or delivery guarantee.
+
+No library executing inside your process can promise immunity to process termination, out-of-memory conditions, an event-loop stall, or arbitrary third-party hooks. Keep redactors fast, deterministic and free of network calls. Existing instrumentors and other exporters retain their own behavior. Safe construction cannot catch a package import or dependency-resolution failure that happens before it is called; verify the dependency lockfile and application startup in CI. If tracing must be optional even when its package cannot load, place the import behind your application's guarded optional-integration loader and fall back to calling the existing agent directly.
+
+## Kill switch and monitoring
+
+The snippets explicitly read `HUE_TRACING_ENABLED`. Set it to `false` and restart the process to bypass Hue initialization and export without changing the application function. It is not an automatically polled remote flag. The strict constructors also accept `enabled: false` / `enabled=False`.
+
+Inspect TypeScript's `hue.transport.getReport()` and Python's `hue.export_status` for instrumentation failures, dropped records, pending bytes and failed exports. Failure and delivery counters are cumulative for a client lifetime; pending bytes and records are current queue gauges. Emit only counts and sanitized status; never log credentials, prompts, responses or raw provider exceptions. Do not route these health signals exclusively through Hue.
+
+Before rollout, test your real entry point against a loopback receiver that returns 503, rejects its key, delays its response and exceeds queue capacity. Verify that each tool runs once, results and errors match an uninstrumented request, and shutdown meets your deadline. Start with a small canary.
+
+## Capture, titles and retention
+
+Start with metadata-only capture until your team approves storing prompt and tool content. Configure third-party instrumentors separately, especially in Python. Custom names and arbitrary attributes are application-controlled.
+
+AI trace titles are off by default. An owner or admin can enable them in **Settings → Projects → Edit project**, which permits short excerpts of captured content to be sent to Google Gemini through Vercel AI Gateway. Turning the setting off stops new title requests; a request already in flight may finish. Existing titles remain.
+
+Telemetry does not expire automatically in the pilot. Agree a retention and deletion process with Hue before sending sensitive content; archiving a project does not delete its data. Project quotas provide admission protection, not a storage-retention policy.
+
+## Ingestion limits
+
+The default project allowance for customer telemetry uploads is 600 ingestion requests, 20,000 new records and 32 MiB of logical payload per one-minute window. Uploaded spans and logs share it. Hue's internally generated managed-evaluation root spans use a separate persistence path, so exhausting an upload allowance cannot prevent a completed managed job from recording its own orchestration evidence. That internal path retains tenant checks, transaction deadlines, trace limits and deduplication; an uploaded attribute or header cannot select it. The first window starts with an admitted request; after 60 seconds, the next request reservation or final evidence charge starts a new window. Requests count at admission; records and payload count at their final storage charge. Decoded authenticated attempts, including failed writes and exact retries, consume request allowance; exact retries do not consume additional record or payload allowance. Temporary admission limits return 429 or 503 with `Retry-After`; client queues can still overflow during a long outage.
+
+Tracing authentication and storage use a separate bounded database pool from ordinary application queries. Optional title work also uses that pool, with one background job per process, at most 30 trace IDs, one active title at a time, and bounded SQL/provider operations. Excess title schedules are skipped and repaired lazily on later page visits. This prevents completed uploads from accumulating an unbounded title queue.
+
+These are protective limits, not a throughput SLA. Ask Hue to size your project's allowance for your expected instances, requests per minute, spans per request and average payload. Measure latency and resource overhead with your application's expected payload and concurrency. Do not assume local benchmark results establish production capacity.
+
+If longer outage buffering is required, consider a separately operated OpenTelemetry Collector with explicit memory, queue and storage limits. A durable queue has its own disk and retention failure modes; it does not remove instrumentation overhead inside your application. See OpenTelemetry's [Collector resilience guidance](https://opentelemetry.io/docs/collector/resiliency/).

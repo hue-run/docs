@@ -1,0 +1,36 @@
+---
+title: "Project keys"
+description: "Configure server-side authentication and verify which project receives your data."
+---
+
+Use a project service key for SDK requests and OpenTelemetry exports. Create it in **Settings → Integrations & API keys** within the project you want to use.
+
+## Configure the application
+
+Store the key as `HUE_API_KEY` in your server environment or secret manager. Pass it to the SDK constructor, as shown in the [quickstart](/quickstart). Hue constructors do not automatically load environment files.
+
+For direct HTTP requests, authentication uses `Authorization: Bearer <project-service-key>`. The key determines the destination project. Resource attributes, observed user IDs and session IDs cannot select a different project.
+
+## Understand access
+
+New keys default to **Tracing only** (`telemetry_write`). They can ingest telemetry, check the destination project and verify exact known trace IDs. They cannot read or modify datasets, experiments, artifacts or environments, or start hosted evaluations.
+
+Choose **Tracing and evaluations** (`project_write`) explicitly when setting up an evaluation client. Choose **Coding agent (read-only)** (`project_read`) or **Coding agent (read + evaluations)** (`project_read` and `project_write`) for the [Hue MCP server](/agents/mcp-server): these keys let a coding agent read the project's traces, sessions, datasets and experiment results, and the second preset will also allow additive dataset writes once those tools ship. Configure a coding-agent key as `HUE_MCP_KEY` in the agent's MCP client, never in the application. Existing keys keep their access; creating a new restricted key does not narrow an older credential.
+
+Treat either key as a server credential. Keep it out of browser bundles, logs, source control and prompts. Owners and admins can create and revoke keys. A newly invited member needs an owner or admin to supply a key through the team's secret store.
+
+A service key does not represent a signed-in Hue user. Human review uses the application's authenticated user session. Trace browsing for coding agents goes through the [MCP server](/agents/mcp-server) with a coding-agent key; the SDKs do not expose a general trace-search API.
+
+## Verify and rotate
+
+Call `hue.checkConnection()` in TypeScript or `hue.validate_project()` in Python. These send a project lookup without a trace and return the project identity. Confirm it matches the project you intend to use before exporting data.
+
+When replacing a key, configure the replacement in the server's secret store, verify the connection, then revoke the old key in project settings. Never include either credential in a support report. A successful connection check validates project access; the first-trace check separately verifies instrumentation and delivery.
+
+## Connection settings
+
+Both SDKs default to `https://app.hue.run`. Omit `baseUrl` in TypeScript and `base_url` in Python for Hue Cloud. You do not need to choose or discover a different endpoint for a normal Hue Cloud integration.
+
+For local development or another configured Hue deployment, pass a different origin through `baseUrl` in TypeScript or `base_url` in Python. If your application uses `HUE_BASE_URL`, read it explicitly and pass it to the constructor. SDKs do not load environment files automatically.
+
+Supply an origin without credentials, an API path, query parameters or a fragment. HTTPS is required except for loopback HTTP. SDKs append their own paths; a standard OTLP exporter instead needs the full [signal endpoint](/integrations/opentelemetry).

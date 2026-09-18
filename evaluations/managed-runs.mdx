@@ -1,0 +1,167 @@
+---
+title: "Run an agent from Hue"
+sidebarTitle: "Managed runs"
+description: "Run a dataset version against your existing agent and inspect saved outputs, files, checks and traces."
+---
+
+Start an experiment in Hue, run your existing agent in your own environment, and inspect its saved output, generated files, checks and trace.
+
+Hue manages dataset versions, dispatch and scoring. Your application keeps its model provider, instructions, tools and telemetry. Local and CI [evaluation runners](/evaluations/first-evaluation) remain available.
+
+## 1. Wrap your existing function
+
+Install `@hue-run/sdk@0.1.5` for Node.js 24 or `hue-run==0.1.3` for Python 3.10+. First configure [tracing](/quickstart) in the same Hue project as the dataset.
+
+This guide creates a dedicated evaluation endpoint. Its delivery checks record whether evaluation evidence arrived; use [safe initialization and bounded lifecycle hooks](/guides/production-safety) for ordinary customer requests. A telemetry failure must not rerun the agent's business work.
+
+<Tabs>
+<Tab title="TypeScript">
+
+Expose a server-side POST route. This example uses your application's existing agent and Hue client:
+
+```ts
+import { createManagedTargetHandler } from "@hue-run/sdk/managed";
+
+// Next.js route options. Other hosts need an equivalent request limit.
+export const runtime = "nodejs";
+export const maxDuration = 120;
+
+export const POST = createManagedTargetHandler({
+  tracer: hue.tracer, // Use the same Hue provider as your application traces.
+  machineCredential: process.env.HUE_MANAGED_TARGET_SECRET!,
+  target: async ({ input, config, inputFiles, signal }) => {
+    // These are application functions, not additional Hue SDK methods.
+    const result = await existingAgent({ input, config, files: inputFiles, signal });
+    return {
+      output: { text: result.text },
+      files: result.files.map((file) => ({
+        filename: file.name,
+        contentType: file.contentType,
+        data: file.bytes, // Actual Uint8Array bytes, not a public download URL.
+        primary: file.isPrimary,
+      })),
+    };
+  },
+  flushTelemetry: () => hue.flush(), // Flush the existing traces and logs.
+});
+```
+
+Adapt the application function and result mapping to your existing code. The target must honor `signal`. If your application owns OpenTelemetry directly, supply its tracer and a flush callback that checks both trace and log delivery. Keep shared providers alive between requests.
+
+Your server also needs OpenTelemetry context propagation to keep child spans in the same trace across asynchronous work. Reuse the context manager initialized by your framework or NodeSDK.
+
+<Accordion title="Standalone Node.js without existing OpenTelemetry setup">
+  If your app uses only `createHue()`, initialize a context manager once during server startup, before handling managed requests. Skip this step when your framework or NodeSDK already provides one.
+
+  ```bash
+  npm install @opentelemetry/api @opentelemetry/context-async-hooks
+  ```
+
+  ```ts
+  import { context } from "@opentelemetry/api";
+  import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
+  
+  const manager = new AsyncLocalStorageContextManager().enable();
+  
+  if (!context.setGlobalContextManager(manager)) {
+    manager.disable(); // Dispose only this unused instance.
+    throw new Error(
+      "OpenTelemetry context is already configured; keep the existing setup.",
+    );
+  }
+  ```
+
+  This configures context propagation; keep using your existing Hue client and the `tracer: hue.tracer` option above.
+</Accordion>
+
+</Tab>
+<Tab title="Python">
+
+The Python handler accepts a synchronous application function:
+
+```python
+import os
+from hue_sdk.managed import ManagedTargetHandler, ManagedTargetResult, ManagedOutputFile
+
+def target(invocation):
+    result = existing_agent(
+        invocation.input,
+        config=invocation.config,
+        files=invocation.input_files,  # Verified bytes and original file metadata.
+        cancelled=invocation.cancelled,
+        deadline=invocation.deadline_monotonic,
+    )
+    return ManagedTargetResult(
+        output={"text": result.text},
+        files=tuple(
+            ManagedOutputFile(
+                filename=file.name,
+                content_type=file.content_type,
+                data=file.bytes,
+                primary=file.is_primary,
+            )
+            for file in result.files
+        ),
+    )
+
+handler = ManagedTargetHandler(
+    tracer=hue.tracer,  # Use the same Hue provider as your application traces.
+    machine_credential=os.environ["HUE_MANAGED_TARGET_SECRET"],
+    target=target,
+    flush_telemetry=hue.force_flush,  # False keeps telemetry pending.
+)
+```
+
+Your POST route calls `handler.handle(raw_body_bytes, request_headers)` and returns its JSON `body`, `status_code` and `headers`. Enforce a 1 MiB request-body limit before reading the body. Use `asyncio.to_thread` from an async route.
+
+The target must honor `cancelled` and `deadline_monotonic`; Python cannot forcibly stop a running callback. If you own the providers, check every trace/log flush result and raise on failure.
+
+</Tab>
+</Tabs>
+
+The helper defaults to Hue Cloud. An optional configured `baseUrl`/`base_url` supports another Hue deployment; never take a callback origin from a request.
+
+Use a 120-second host request limit for the default 90-second execution plus 30-second finalization allowance. V1 uses synchronous target requests. Work still running at the deadline remains uncertain; Hue does not automatically invoke it again.
+
+## 2. Register the target
+
+Create a dedicated random server credential in your normal secret manager. Configure it as `HUE_MANAGED_TARGET_SECRET` in your application.
+
+In Hue, save your dataset version, select **Run experiment**, then **Register target**. Enter:
+
+- A recognizable target name and its public HTTPS endpoint.
+- The same dedicated target credential. Keep your tracing `HUE_API_KEY` separate.
+- Capabilities your application actually implements, such as `input:docx`, `input:pptx`, `output:docx` and `output:pptx`.
+- A request timeout that fits your host, up to 120 seconds.
+
+Hue stores the credential encrypted and pins the target revision for each run. Changing an endpoint or credential requires a new target registration. Redirects and unsafe destinations are rejected.
+
+## 3. Run the dataset
+
+Dataset rows show a one-line input and the case's defined **Checks**. Hover or focus an icon for its name; `+N` lists additional requirements. Open the case to read its full input and expected output. Scores appear after a run.
+
+Choose the target, checks and application configuration in **Run experiment**. Review the case count and unsupported-case summary before selecting **Run**.
+
+A run keeps the dataset version it started with and covers all its cases, with one execution per supported case and at most two active or unresolved target calls per project. Cases with unsupported requirements remain visible and receive no fabricated quality score.
+
+This release runs built-in deterministic checks and configured document verifiers. Hosted AI judges, custom hosted code and manual evaluators are separate workflows.
+
+## Files and scoring
+
+Input files arrive as verified bytes with their original name, type, size, hash and role. Only permitted inputs reach the target; expected answers, grading specifications and evaluator-only files stay in Hue.
+
+Return actual generated file bytes. A message saying a document was created is not a file. At most one returned file may be primary. The adapter supports up to 16 files, 25 MiB each and 64 MiB total in each direction; your application may have stricter limits.
+
+Hue saves the outcome before the target finishes its response, then verifies declared telemetry and saves the evidence for scoring. Document checks read the verified stored output in a pinned, isolated environment. **Checks** preserves individual pass, fail, warn, skipped and error findings. A quality failure is distinct from an execution, upload or verifier failure.
+
+## Inspect and recover
+
+Use **Outputs** to inspect individual cases and **Charts** for results across the entire selected scoring run. Charts keep missing values, unsupported cases, execution failures and scorer errors separate. Hover or focus a chart for its counts, or expand its data table for exact values.
+
+Choose a baseline experiment to compare runs of the same dataset version. Metric comparisons require the same evaluator version on both sides. Higher values are not always better—for example, fewer failed checks is better. Missing evidence stays visible instead of becoming a zero or a pass.
+
+Open a result's **Output**, **Files**, **Checks** and **Trace** views. Downloads require current project access. Active runs update automatically while their tab is visible. Unresolved attempts refresh less frequently so a delayed outcome can appear without a reload. Completed runs stop refreshing; reloading never relaunches the agent.
+
+A saved outcome can recover from a lost HTTP response. Identical callbacks reuse the saved receipt; conflicting outcomes are rejected. If no outcome was saved, the attempt remains uncertain. Claimed unresolved calls still count against the two-call limit and require operator investigation; Hue does not force-release or replay them.
+
+Cancellation stops queued dispatch and preserves completed evidence. It cannot forcibly stop an already running customer function. Rescoring uses saved outputs without running the agent again.

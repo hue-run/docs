@@ -1,0 +1,77 @@
+---
+title: "Try the reference chatbot"
+description: "Run a streaming Vercel AI SDK chatbot, exercise a tool and a controlled error, and verify their traces in your own Hue project."
+---
+
+The SDK repository includes a small Node.js chatbot that streams a response, calls a text-statistics tool, and displays the request's trace ID. You can use a deterministic provider before spending model credits.
+
+## Prepare the example
+
+You need Node.js 22 or 24 (or Bun 1.4.2) and a clone of the [SDK repository](https://github.com/hue-run/hue-sdk); the example lives in `examples/reference-chatbot`. The [quickstart](/quickstart) does not need the repository.
+
+From the cloned repository:
+
+```sh
+cd examples/reference-chatbot
+bun install
+bun run build
+```
+
+`bun install` resolves the published `@hue-run/sdk` from npm. The repository's `verify-package.mjs` script can point the same example at a freshly packed, unpublished archive instead.
+
+## Configure your own project
+
+Sign in to [Hue](https://app.hue.run), select your project, and create a service key in **Settings → Integrations & API keys**. Keep this step in your own account. Configure the server through your secret manager or an ignored `.env` file; do not paste keys into an agent prompt.
+
+In the example directory, create `.env` and keep it out of Git:
+
+```dotenv
+HUE_API_KEY=your_project_service_key
+HUE_CAPTURE_CONTENT=true
+HUE_CHAT_MODE=synthetic
+PORT=3401
+```
+
+Use `true` to store this synthetic conversation's content, or `false` to send metadata only. Start the server:
+
+```sh
+node --env-file=.env dist/server.js
+```
+
+The server verifies the key's project at startup and prints its loopback address. The key stays in the server process. Open the printed address in your browser.
+
+## Verify a conversation
+
+Send a short text-analysis request, then use the controlled-error action. Keep the same session for both turns.
+
+In your Hue project, open **Traces** and match the trace IDs shown by the chatbot. Check:
+
+- The root, model and tool spans describe the request and its execution order.
+- Related turns share the session identifier.
+- Content appears when capture is enabled and is unavailable when capture is disabled.
+- The controlled error appears as an execution error.
+- Export failures are reported separately from model or tool failures.
+
+Restart with `HUE_CAPTURE_CONTENT=false` and repeat. A printed trace ID alone does not prove delivery. The reference app reports telemetry acceptance after both traces and logs are acknowledged; inspecting stored records verifies the connection.
+
+Synthetic mode uses the AI SDK's actual streaming and tool execution machinery with deterministic provider responses. It does not assess a live model's quality, and it leaves unknown token usage absent.
+
+## Use a live model
+
+When you want to test your own provider access, set `HUE_CHAT_MODE=live`, `AI_GATEWAY_API_KEY`, and `HUE_CHAT_MODEL` to an available provider/model identifier. The example uses the Vercel AI Gateway and your normal model charges apply. A provider failure is surfaced as an error; there is no synthetic fallback.
+
+The example runs locally and binds to loopback. Its README describes the request limits and lifecycle. Use your application's authentication and operational controls before adapting it into a hosted service.
+
+## Add tracing to an existing chatbot
+
+Inspect how your app initializes telemetry before adding a provider. For an application that already exports to another destination:
+
+1. Add Hue's span and log processors to the existing OpenTelemetry provider construction.
+2. Preserve the existing global AI SDK integration. A per-call integration can replace it for that call.
+3. Keep request spans open until the response stream and tools finish.
+4. Await flush in the framework's supported after-response lifecycle; keep the shared provider alive between requests.
+5. Exclude binary document bodies and unnecessary private content from custom attributes.
+
+Follow [existing OpenTelemetry](/integrations/opentelemetry) for the provider setup and [troubleshooting](/guides/troubleshooting) for delivery failures.
+
+For an existing application, start with the [OpenTelemetry integration guide](/integrations/opentelemetry), which uses the same provider and streaming-lifecycle approach. Verify a stored trace in your own project after configuring your key.

@@ -1,0 +1,227 @@
+---
+title: "Run your first local evaluation"
+description: "Freeze a dataset, score a deterministic target locally, and rescore its stored output without running the target again."
+---
+
+This example creates one dataset case, publishes an exact-match scorer, and evaluates a deterministic uppercase function. It then scores the same saved output in a new evaluation run. It makes no model call and consumes no hosted-judge allowance.
+
+[Install the SDK](/installation) for your language and set `HUE_API_KEY` to a [project service key](/guides/project-keys) created with **Tracing and evaluations** access. A **Tracing only** key cannot use evaluation APIs. Both SDKs connect to Hue Cloud by default.
+
+## Choose your content policy
+
+Telemetry capture and evaluation storage are separate choices:
+
+| Choice | This example | Effect |
+| --- | --- | --- |
+| `captureContent` / `capture_content` | `false` | Omit content from Hue telemetry helpers. |
+| `persistResultContent` / `persist_result_content` | `true` | Store the target output so a later run can rescore it. |
+
+Dataset inputs and reference answers are intentionally uploaded during setup. The second switch also controls target error messages, scorer evidence, arbitrary explanations, and their copies in local checkpoints. With it disabled, local scores can still be uploaded, but historical scorers skip unavailable output instead of invoking a callback on invented data. Declared metric values are always uploaded, including custom text metrics.
+
+## Create and run the experiment
+
+Choose one language. The program creates its setup once and saves its IDs locally. Subsequent invocations use the same experiment and checkpoint directories. Add the example's `.hue-first-evaluation-*` directory to `.gitignore`.
+
+<Tabs>
+<Tab title="TypeScript">
+Save this as `first-evaluation.ts`, then run `node first-evaluation.ts` with Node.js 24.
+
+```ts
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHue } from "@hue-run/sdk";
+import { builtins, createEvaluationClient, runExperiment, rescore } from "@hue-run/sdk/evals";
+
+const apiKey = process.env.HUE_API_KEY;
+if (!apiKey) throw new Error("Set HUE_API_KEY in your server environment.");
+const connection = {
+  apiKey,
+};
+const client = createEvaluationClient(connection);
+await client.checkConnection();
+const directory = ".hue-first-evaluation-ts";
+let fresh = false;
+try {
+  await mkdir(directory, { mode: 0o700 });
+  fresh = true;
+} catch (error) {
+  if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
+}
+
+if (fresh) {
+  const suffix = randomUUID().slice(0, 8);
+  const dataset = await client.createDataset({
+    name: "First uppercase evaluation",
+    slug: `uppercase-${suffix}`,
+  });
+  const draft = dataset.versions[0];
+  if (!draft) throw new Error("The dataset has no draft version.");
+  const changed = await client.addCase(draft.id, {
+    expectedRevision: draft.revision,
+    externalKey: "greeting",
+    inputs: "hello",
+    expected: "HELLO",
+  });
+  // Freeze the cases and publish a scorer version for repeatable comparisons.
+  const frozen = await client.freezeDatasetVersion(changed.version.id, changed.version.revision);
+  const scorer = await client.createScorer({ name: "Exact match", slug: `exact-${suffix}` });
+  const exact = await client.publishScorerVersion(scorer.id, builtins.exactMatch());
+  const request = {
+    idempotencyKey: randomUUID(),
+    name: "Uppercase baseline",
+    datasetVersionId: frozen.id,
+    scorerVersionIds: [exact.id],
+    config: { operation: "uppercase" },
+  };
+  await writeFile(`${directory}/creation-request.json`, JSON.stringify(request), {
+    flag: "wx", mode: 0o600,
+  });
+  const experiment = await client.createExperiment(request);
+  await writeFile(`${directory}/state.json`, JSON.stringify({
+    experimentId: experiment.id,
+    scorerVersionId: exact.id,
+    rescoreKey: randomUUID(),
+  }), { flag: "wx", mode: 0o600 });
+}
+
+const state = JSON.parse(await readFile(`${directory}/state.json`, "utf8")) as {
+  experimentId: string; scorerVersionId: string; rescoreKey: string;
+};
+const hue = createHue({ ...connection, serviceName: "local-evaluation", captureContent: false });
+try {
+  // Run the target locally and save its output for later scoring.
+  const report = await runExperiment({
+    client, hue, experimentId: state.experimentId,
+    checkpointDirectory: `${directory}/experiment`,
+    persistResultContent: true,
+    traceEvidence: { mode: "required" },
+    target: async (inputs) => {
+      if (typeof inputs !== "string") throw new TypeError("Expected a string dataset input.");
+      return inputs.toUpperCase();
+    },
+  });
+  // Score the saved output again without calling the target.
+  const historical = await client.createEvaluationRun({
+    idempotencyKey: state.rescoreKey,
+    name: "Rescore saved uppercase output",
+    subjectIds: report.subjectIds,
+    scorerVersionIds: [state.scorerVersionId],
+  });
+  await rescore({
+    client, runId: historical.id,
+    checkpointDirectory: `${directory}/rescore`,
+    persistResultContent: true,
+  });
+  console.log({ experimentId: state.experimentId, runId: report.runId, rescoreRunId: historical.id });
+} finally {
+  await hue.shutdown();
+}
+```
+</Tab>
+<Tab title="Python">
+Save this as `first_evaluation.py`, then run `.venv/bin/python first_evaluation.py`.
+
+```python
+import json
+import os
+from pathlib import Path
+from uuid import uuid4
+from hue_sdk import Hue
+from hue_sdk.evals import EvaluationClient, TraceEvidence, builtins, run_experiment, rescore
+
+api_key = os.environ["HUE_API_KEY"]
+client = EvaluationClient(api_key=api_key)
+client.check_connection()
+directory = Path(".hue-first-evaluation-py")
+fresh = False
+try:
+    directory.mkdir(mode=0o700)
+    fresh = True
+except FileExistsError:
+    pass
+
+def save_once(name, value):
+    descriptor = os.open(directory / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w") as file:
+        json.dump(value, file)
+
+if fresh:
+    suffix = uuid4().hex[:8]
+    dataset = client.create_dataset(name="First uppercase evaluation", slug=f"uppercase-{suffix}")
+    draft = dataset["versions"][0]
+    changed = client.add_case(
+        draft["id"], expected_revision=draft["revision"], external_key="greeting",
+        inputs="hello", expected="HELLO",
+    )
+    version = changed["version"]
+    # Freeze the cases and publish a scorer version for repeatable comparisons.
+    frozen = client.freeze_dataset_version(version["id"], version["revision"])
+    scorer = client.create_scorer(name="Exact match", slug=f"exact-{suffix}")
+    exact = client.publish_scorer_version(scorer["id"], builtins.exact_match())
+    request = dict(
+        idempotency_key=str(uuid4()), name="Uppercase baseline",
+        dataset_version_id=frozen["id"], scorer_version_ids=[exact["id"]],
+        config={"operation": "uppercase"},
+    )
+    save_once("creation-request.json", request)
+    experiment = client.create_experiment(**request)
+    save_once("state.json", dict(
+        experiment_id=experiment["id"], scorer_version_id=exact["id"], rescore_key=str(uuid4()),
+    ))
+
+state = json.loads((directory / "state.json").read_text())
+
+def target(inputs, context):
+    if not isinstance(inputs, str):
+        raise TypeError("Expected a string dataset input.")
+    return inputs.upper()
+
+hue = Hue(api_key=api_key, service_name="local-evaluation", capture_content=False)
+try:
+    # Run the target locally and save its output for later scoring.
+    report = run_experiment(
+        client=client, hue=hue, experiment_id=state["experiment_id"], target=target,
+        checkpoint_directory=str(directory / "experiment"), persist_result_content=True,
+        trace_evidence=TraceEvidence("required"),
+    )
+    # Score the saved output again without calling the target.
+    historical = client.create_evaluation_run(
+        idempotency_key=state["rescore_key"], name="Rescore saved uppercase output",
+        subject_ids=report.subject_ids, scorer_version_ids=[state["scorer_version_id"]],
+    )
+    rescore(
+        client=client, run_id=historical["id"], checkpoint_directory=str(directory / "rescore"),
+        persist_result_content=True,
+    )
+    print(dict(experiment_id=state["experiment_id"], run_id=report.run_id,
+               rescore_run_id=historical["id"]))
+finally:
+    if not hue.shutdown():
+        raise RuntimeError("Hue shutdown did not confirm successful delivery.")
+```
+</Tab>
+</Tabs>
+
+The setup directory is created before registry writes. If setup stops before `state.json` is written, the next invocation stops instead of silently creating another experiment. Inspect **Datasets**, **Scorers**, and **Experiments** before recovering setup. Registry mutations have no automatic retry. The saved creation request can recover an uncertain experiment acknowledgement with its original idempotency key and payload.
+
+## Read the result
+
+Open **Experiments** and select **Uppercase baseline**. The target should succeed and the exact-match metric should be true. The historical run uses the same immutable subject ID and saved output. The `rescore` API has no target callback, so it cannot invoke the uppercase function again.
+
+To compare a different target configuration, create a new experiment with the same frozen dataset version and published scorer version. Use a new checkpoint directory. Do not edit the existing experiment's frozen pins or reuse its checkpoint as a new attempt.
+
+## Preserve absence and quality failures
+
+Read presence flags such as `hasOutput` and `hasExpected` in API responses. Do not test value truthiness: JSON `null`, `false`, `0`, and `""` can all be present values. TypeScript target return `undefined` and Python's exported `MISSING` sentinel represent unavailable output. Python `None` is a present null.
+
+A failed quality verdict is still a scored result, typically with `passed: false`. Target execution errors and scorer errors have separate states. Missing evidence produces an explicit skipped result. Exact match preserves scalar types; false is not zero.
+
+## Resume without repeating side effects
+
+Keep the same experiment ID, content settings, and checkpoint directory when retrying an interrupted upload. The runner saves permitted completion and scoring payloads before upload and reuses their request keys. It will not automatically rerun a target whose outcome is uncertain.
+
+If the process crashes after invoking a target but before saving its outcome, the runner raises `UncertainExecutionError`. Inspect the execution and its side effects. Removing the checkpoint or its lock is not permission to run the target again. Checkpoints are private local files, not encrypted storage. Confirm the old process has stopped before explicitly removing a leftover `.lock`.
+
+The example requires trace evidence. The runner ends the root span and waits for trace/log acknowledgement before completing the execution. An export failure does not silently become omitted evidence, and a fresh exporter cannot prove that an earlier export succeeded. Explicit omission is a separate policy: TypeScript `{ mode: "omit", reason: "This local run does not retain a trace snapshot." }` or Python `TraceEvidence("omit", "This local run does not retain a trace snapshot.")`; supply a meaningful reason if you choose it.
+
+Local built-ins also include string inclusion and JSON Schema draft 2020-12. Custom callbacks run on your machine and have no claimed side-effect cancellation. Manual and hosted-judge scorer pins stay pending for their owning workflows; this example does not dispatch them or claim live hosted-model acceptance.

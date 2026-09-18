@@ -1,0 +1,189 @@
+---
+title: "Connect the Hue MCP server"
+sidebarTitle: "MCP server"
+description: "Give Claude Code, Cursor, Codex, VS Code and other MCP clients read-only access to your project's traces, sessions, datasets and experiment results."
+---
+
+The Hue MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://app.hue.run/api/mcp`. There is nothing to install: point an MCP client at the URL with a coding-agent key and the agent can search traces, inspect spans, verify delivery, read datasets and experiment results and search these docs, all scoped to one project. This release is read-only.
+
+## Create a coding-agent key
+
+An owner or admin opens **Settings → Integrations & API keys**, chooses the project and creates a key with the **Coding agent (read-only)** preset. Save it in your secret manager and expose it to the agent's machine as `HUE_MCP_KEY`.
+
+Keep this key separate from the application's `HUE_API_KEY`. Tracing and evaluation keys cannot read recorded data and are refused by the MCP server with a message that names the preset to create; the MCP key should never be wired into application code or committed. See [project keys](/guides/project-keys).
+
+<Note>
+  The server speaks Streamable HTTP and is stateless. It serves both current MCP protocol revisions, so Claude Code, Cursor, Codex, VS Code, Windsurf and Gemini CLI connect without extra flags. Clients that only support stdio need a remote-capable MCP client. `https://mcp.hue.run/mcp` becomes the canonical address once that host is live; `https://app.hue.run/api/mcp` stays valid for key authentication.
+</Note>
+
+## Connect your client
+
+Every snippet references the `HUE_MCP_KEY` environment variable; never paste a literal key into a configuration file that other people or tools can read.
+
+<Tabs>
+  <Tab title="Claude Code">
+    Add a project-scoped `.mcp.json` next to your application code. Claude Code expands `${HUE_MCP_KEY}` from the developer's environment and asks for approval before using a project-scoped server.
+
+    ```json .mcp.json
+    {
+      "mcpServers": {
+        "hue": {
+          "type": "http",
+          "url": "https://app.hue.run/api/mcp",
+          "headers": { "Authorization": "Bearer ${HUE_MCP_KEY}" }
+        }
+      }
+    }
+    ```
+
+    Or add it for all your projects from the command line. Single quotes keep the reference unexpanded in your settings file:
+
+    ```sh
+    claude mcp add --transport http --scope user hue https://app.hue.run/api/mcp \
+      --header 'Authorization: Bearer ${HUE_MCP_KEY}'
+    ```
+
+    Run `/mcp` inside Claude Code to confirm the connection. Tools appear as `mcp__hue__<tool>`.
+  </Tab>
+  <Tab title="Cursor">
+    Add the server to `.cursor/mcp.json` in the repository or to your global Cursor MCP settings:
+
+    ```json .cursor/mcp.json
+    {
+      "mcpServers": {
+        "hue": {
+          "url": "https://app.hue.run/api/mcp",
+          "headers": { "Authorization": "Bearer ${env:HUE_MCP_KEY}" }
+        }
+      }
+    }
+    ```
+
+    Cursor limits the number of tools it loads across servers; Hue registers thirteen.
+  </Tab>
+  <Tab title="Codex">
+    Codex reads the key from an environment variable at connection time:
+
+    ```sh
+    codex mcp add hue --url https://app.hue.run/api/mcp --bearer-token-env-var HUE_MCP_KEY
+    ```
+
+    The equivalent `~/.codex/config.toml` entry:
+
+    ```toml config.toml
+    [mcp_servers.hue]
+    url = "https://app.hue.run/api/mcp"
+    bearer_token_env_var = "HUE_MCP_KEY"
+    ```
+  </Tab>
+  <Tab title="VS Code">
+    VS Code prompts for the key once and stores it in its secret storage:
+
+    ```json .vscode/mcp.json
+    {
+      "servers": {
+        "hue": {
+          "type": "http",
+          "url": "https://app.hue.run/api/mcp",
+          "headers": { "Authorization": "Bearer ${input:hue-mcp-key}" }
+        }
+      },
+      "inputs": [
+        {
+          "type": "promptString",
+          "id": "hue-mcp-key",
+          "description": "Hue coding-agent key (read-only preset)",
+          "password": true
+        }
+      ]
+    }
+    ```
+  </Tab>
+  <Tab title="Copilot coding agent">
+    GitHub's cloud coding agent cannot use OAuth and stores secrets with a `COPILOT_MCP_` prefix. Use a read-only key, keep the server in read-only mode and list the tools explicitly:
+
+    ```json
+    {
+      "mcpServers": {
+        "hue": {
+          "type": "http",
+          "url": "https://app.hue.run/api/mcp?read_only=true",
+          "headers": { "Authorization": "Bearer $COPILOT_MCP_HUE_MCP_KEY" },
+          "tools": [
+            "get_project_context",
+            "search_traces",
+            "get_trace",
+            "get_span",
+            "list_sessions",
+            "verify_trace",
+            "list_experiments",
+            "get_experiment",
+            "search_hue_docs"
+          ]
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Windsurf and Gemini CLI">
+    Windsurf uses `serverUrl` in `~/.codeium/windsurf/mcp_config.json`:
+
+    ```json mcp_config.json
+    {
+      "mcpServers": {
+        "hue": {
+          "serverUrl": "https://app.hue.run/api/mcp",
+          "headers": { "Authorization": "Bearer ${env:HUE_MCP_KEY}" }
+        }
+      }
+    }
+    ```
+
+    Gemini CLI stores the expanded header, so run this only on a machine where the key may live in that settings file:
+
+    ```sh
+    gemini mcp add --transport http hue https://app.hue.run/api/mcp -H "Authorization: Bearer $HUE_MCP_KEY"
+    ```
+  </Tab>
+</Tabs>
+
+Other clients (Amp, Zed, JetBrains Junie, OpenCode) take the same `url` and `Authorization` header in their own configuration format. Hosted assistants that require OAuth, such as claude.ai connectors and ChatGPT, are not supported in this release.
+
+## Verify the connection
+
+Ask the agent:
+
+```text
+Use the Hue MCP: call get_project_context, then show my 5 most recent error traces with links.
+```
+
+`get_project_context` returns the project the key reaches, its capabilities and whether the connection is read-only. If it reports a different project than you expected, the key was created in the wrong project.
+
+## What you can do
+
+**Investigate a failure.** "Show the error traces from the last 24 hours", "open the slowest span of that trace", "what did the model see before it failed?" (recorded content requires `include_content: true` and the application must have captured it). Tools: `search_traces`, `get_trace`, `get_span`, `list_sessions`.
+
+**Confirm delivery.** "Did trace 0af7651916cd43dd8448eb211c80319c arrive with spans a and b, with model and usage recorded?" Tools: `verify_trace`.
+
+**Read evaluations.** "List my datasets", "show the cases in the latest version of the regression set", "summarize the last experiment and list the failing cases", "compare it against the baseline experiment". Tools: `list_datasets`, `get_dataset`, `list_scorers`, `list_experiments`, `get_experiment`.
+
+**Look things up.** "How do I flush spans in a Next.js streaming route?" Tools: `search_hue_docs`, `load_hue_guide` (`data-model`, `investigate`).
+
+Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or a Hue trace link. Time windows accept ISO-8601 or relative values such as `15m`, `24h` or `7d` (up to 90 days). Results are paginated with opaque cursors and bounded by `max_chars`; truncated results say so and suggest a narrower request.
+
+## Content and safety
+
+- Recorded prompts, outputs, tool arguments and raw attributes are omitted unless a tool is called with `include_content: true`. By default the server returns metadata (model, provider, usage, tool names, status, timing) and the names of recorded attributes. Content reads are recorded in the project's audit log.
+- Names, generated titles, session keys, metadata and judge explanations come from your application and its end users. They are length-capped, and every result that carries them starts with a notice that they are data, not instructions; recorded content is wrapped in delimited blocks.
+- Credential-shaped strings are redacted from results and from documentation queries before those leave Hue.
+- The key is the tenant. Ids from another project, and `projectId` parameters on pasted links, resolve to `not_found`.
+- Add `?read_only=true` to the URL to hide and reject any write tool regardless of the key. When write tools ship, configure your client to ask before running them and never auto-approve tools whose names start with `add_`.
+- Requests are limited to 1 MiB, ten failed authentications per minute for one key id return `429`, and a saturated server returns `503` with `Retry-After`.
+
+## Troubleshooting
+
+`401` means the key is missing, malformed, revoked or expired. `403` naming **Coding agent (read-only)** means the key is a tracing or evaluation key. `405` on `GET` and `404` for `Mcp-Session-Id` are expected: the server accepts stateless `POST` requests only. See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent).
+
+## What is next
+
+Additive dataset writes (`add_dataset_cases`, `add_trace_to_dataset`) and experiment comparison follow for keys with evaluation access, then OAuth sign-in for hosted assistants. Tool names stay stable; renamed tools keep their old name for at least ninety days.

@@ -1,0 +1,144 @@
+---
+title: "Use existing OpenTelemetry"
+description: "Send standard OTLP traces and correlated logs to Hue without changing how your application calls models."
+---
+
+If your application already emits OpenTelemetry, send those records to Hue through an OTLP HTTP exporter or collector. You do not need a Hue-specific model wrapper.
+
+## Configure the destination
+
+Use the project service key from **Settings → Integrations & API keys**. The key determines the destination project; a project ID inside an attribute does not grant access.
+
+| Setting | Value |
+| --- | --- |
+| Trace endpoint | `https://app.hue.run/api/v1/otlp/v1/traces` |
+| Log endpoint | `https://app.hue.run/api/v1/otlp/v1/logs` |
+| Transport | OTLP over HTTP, protobuf or standard OTLP JSON |
+| Authorization header | `Authorization: Bearer ` followed by your project service key |
+| Optional compression | gzip |
+
+Set the complete signal-specific endpoints in your exporter's configuration. Do not accidentally append another `/v1/traces` or `/v1/logs` to them. Store the authorization value in your server environment or secret manager.
+
+These routes accept the OpenTelemetry wire format, not arbitrary application JSON. Metrics ingestion and OTLP gRPC are not currently supported. Logs support trace-correlated evidence; this is not a general log-search service.
+
+## Attach Hue transport to JavaScript providers
+
+If you want Hue's content controls and export diagnostics while keeping provider ownership, attach its processors when you construct your providers. [Install the TypeScript package](/installation#typescript), then install these explicit provider dependencies:
+
+```sh
+bun add @opentelemetry/sdk-trace@2.11.0 @opentelemetry/sdk-logs@0.222.0 @opentelemetry/resources@2.11.0
+```
+
+Save the following as `otel.ts`. This standalone example owns the providers it creates. In an existing application, add the processors to your existing provider construction and retain your normal global registration and propagation setup.
+
+```ts
+import { createHue, createHueTransport } from "@hue-run/sdk";
+import { TracerProvider } from "@opentelemetry/sdk-trace";
+import { LoggerProvider } from "@opentelemetry/sdk-logs";
+import { resourceFromAttributes } from "@opentelemetry/resources";
+
+const apiKey = process.env.HUE_API_KEY;
+if (!apiKey) throw new Error("Set HUE_API_KEY in your server environment.");
+
+const transport = createHueTransport({
+  apiKey,
+  serviceName: "existing-otel-demo",
+  captureContent: false,
+});
+const resource = resourceFromAttributes({ "service.name": "existing-otel-demo" });
+// Add Hue processors when constructing your application's providers.
+const tracerProvider = new TracerProvider({
+  resource,
+  spanProcessors: [transport.spanProcessor],
+});
+const loggerProvider = new LoggerProvider({
+  resource,
+  processors: [transport.logRecordProcessor],
+});
+// Reuse these providers for Hue helpers and your existing instrumentation.
+const hue = createHue({ transport, tracerProvider, loggerProvider });
+
+try {
+  await hue.checkConnection();
+  const span = tracerProvider.getTracer("example.instrumentation").startSpan("example.work");
+  try {
+    span.setAttribute("example.operation", "verification");
+    console.log("Trace ID:", span.spanContext().traceId);
+  } finally {
+    span.end();
+  }
+  // Export after the span ends, then inspect the delivery counters.
+  console.log("Delivery counters:", await hue.flush());
+} finally {
+  try {
+    await hue.shutdown();
+  } finally {
+    await Promise.allSettled([tracerProvider.shutdown(), loggerProvider.shutdown()]);
+    await transport.shutdown();
+  }
+}
+```
+
+Run `node otel.ts` after setting your environment. An export rejection makes the command fail rather than reporting successful delivery. Hue does not register or replace a global tracer, logger, or context manager. An instrumentor that only uses global providers still needs your application's normal OpenTelemetry initialization.
+
+## Flush streamed responses in Next.js
+
+For an existing AI SDK 7 app, add Hue's processors to your existing OpenTelemetry providers at startup and retain a `hue` client around that transport and those providers. Keep these instances for the server's lifetime, including your existing exporters and normal provider registration.
+
+The standalone diagnostic above intentionally fails on setup errors. In a serving application, guard the optional Hue setup and use [production-safe initialization](/guides/production-safety). `createHueSafe({ transport, tracerProvider, loggerProvider })` cannot catch an error from an earlier `createHueTransport(...)` call; transport construction must also be inside that optional setup boundary.
+
+In the route, import `consumeStream` from `ai` and `after` from `next/server`, and import the server-lifetime `hue` client from your telemetry module. Replace a standalone `after(flushTelemetry)` with this option inside your existing `createAgentUIStreamResponse` call:
+
+```ts
+consumeSseStream: ({ stream }) => {
+  // Start reading immediately so generation can finish after the response returns.
+  const consumed = consumeStream({ stream });
+  after(async () => {
+    try {
+      // Wait for stream completion before exporting the final spans.
+      await consumed;
+    } finally {
+      const delivery = await hue.flushSafe({ timeoutMillis: 1000 });
+      if (!delivery.ok) {
+        // Diagnostics must also be unable to break application cleanup.
+        try {
+          console.warn("Hue telemetry flush incomplete", {
+            timedOut: delivery.timedOut,
+            ...delivery.report,
+          });
+        } catch {}
+      }
+    }
+  });
+},
+```
+
+The independent reader starts immediately and lets the AI SDK finish its completion or abort callbacks before exporting. Keep `request.signal` on generation, but do not pass it to this reader. Your agent and message-handling callbacks stay as they are.
+
+`hue.flushSafe()` flushes the borrowed providers and Hue transport, returns delivery counters without rejecting, and bounds the caller's wait to one second here. A timeout does not cancel a third-party provider's pending work. The raw `transport.flush()` remains a strict diagnostic API and has no `flushSafe()` method.
+
+The example logs only delivery counters. Use an independent, non-throwing monitoring sink for production diagnostics, with rate limiting appropriate to your traffic. Do not shut down a shared transport after each request. Hosting timeouts and process termination can still interrupt delivery. See the [AI SDK stream-abort guide](https://ai-sdk.dev/docs/troubleshooting/stream-abort-handling).
+
+## Map agent data without inventing it
+
+Hue preserves original resource, scope, status, events, links, dropped counts, typed attributes, and external trace/span IDs. It derives AI fields alongside those records using versioned normalization profiles.
+
+Supported profile families include generic OpenTelemetry, GenAI conventions, OpenInference, OpenLLMetry, and Vercel AI SDK 6/7. A profile family is not a guarantee that every package version or API surface has been tested. The TypeScript adapter is verified with AI SDK / OTel pairs `7.0.99 / 1.0.99` and `7.0.100 / 1.0.100`.
+
+Prefer current GenAI attributes when your instrumentation supports them, including `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, and `gen_ai.usage.output_tokens`. Preserve unavailable fields as absent. Do not submit `0` for unknown usage or `null` for an output that was never captured.
+
+A child can arrive before its parent, and a correlated log can arrive before its span. Preserve the same trace ID and the correct parent/span IDs across services. Root-span completion does not prove that the whole distributed trace has arrived. Evaluations use a pinned evidence revision.
+
+## Control content at its source
+
+When using an external exporter directly, configure capture and redaction in your instrumentation or collector. Hue stores the content it receives; it does not reconstruct missing prompts or apply an automatic retention timer.
+
+The TypeScript Hue transport filters recognized content when `captureContent` is false. Python's `capture_content` controls Hue helpers and does not filter arbitrary third-party instrumentors. Avoid sensitive values in custom metadata regardless of your chosen SDK.
+
+## Observe collector acknowledgements
+
+The request limit is 1 MiB on the wire and after decompression. An individual OTLP value is limited to 256 KiB, and a trace can contain at most 2,000 distinct spans. Oversized requests return HTTP 413.
+
+An otherwise valid batch can receive an OTLP partial-success response containing rejected-record counts. Configure your exporter monitoring to inspect that response; HTTP 200 alone does not prove that every record was accepted. Hue SDKs surface those failures through their flush APIs. Partial rejection must not trigger a blind replay of the whole batch.
+
+Exact completed-span replays are deduplicated within the project. A different payload for the same completed span ID is rejected. Logs have no universal event ID, so exact duplicate records collapse; include their actual timestamps and correlation data. These rules do not make the client's in-memory queue durable.

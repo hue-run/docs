@@ -1,0 +1,139 @@
+---
+title: "Send your first trace"
+description: "Install the TypeScript or Python SDK, send a trace with a tool span, and inspect it in Hue."
+---
+
+Send a real trace to Hue with a local text transformation. No model provider or model credits are needed.
+
+<Note>
+  This is a strict setup diagnostic: it intentionally fails if Hue is unavailable. For application request handlers and startup, use the [production safety guide](/guides/production-safety).
+</Note>
+
+## Before you start
+
+You need a Hue project and **Node.js 24** or **Python 3.10+**. Prefer to have your coding agent do the integration? Start with [For agents](/guides/agent-setup).
+
+In [Hue](https://app.hue.run), select your project and open **Settings → Integrations & API keys** to create a service key. Choose **Tracing only**; [project keys](/guides/project-keys) with evaluation access are unnecessary for this example. Keep the key in your server environment.
+
+## 1. Install the SDK
+
+Follow [installation](/installation) for your language. For a standalone example, create a new directory first; keep Python’s virtual environment active for the commands below.
+
+## 2. Configure your environment
+
+In the same terminal, set:
+
+```bash
+export HUE_API_KEY=your_project_service_key
+export HUE_CAPTURE_CONTENT=true
+```
+
+This example records only `Hello Hue` and `HELLO HUE`. Choose `true` to store that content or `false` to send metadata only. The programs read these variables explicitly; neither SDK automatically loads a `.env` file. External Python instrumentors have their own capture settings, covered in the [Python guide](/sdks/python).
+
+## 3. Record a request
+
+Both SDKs connect to Hue Cloud by default. Other origins are an [advanced configuration](/guides/project-keys#connection-settings).
+
+<Tabs>
+  <Tab title="TypeScript / JavaScript">
+    Create `first-trace.mjs`:
+
+    ```javascript
+    import { createHue } from "@hue-run/sdk";
+    
+    const apiKey = process.env.HUE_API_KEY;
+    const capture = process.env.HUE_CAPTURE_CONTENT;
+    if (!apiKey || !["true", "false"].includes(capture)) {
+      throw new Error("Set HUE_API_KEY and choose HUE_CAPTURE_CONTENT=true or false");
+    }
+    
+    const hue = createHue({
+      apiKey,
+      serviceName: "hue-first-trace",
+      captureContent: capture === "true", // Store inputs and outputs only when enabled.
+    });
+    
+    try {
+      await hue.checkConnection(); // Verify the key before sending a trace.
+      let traceId;
+      // Group the request and its tool call in one trace.
+      const output = await hue.withSpan(
+        "first-trace",
+        async (span) => {
+          traceId = span.traceId;
+          const result = await hue.tool("uppercase", "Hello Hue", () => "Hello Hue".toUpperCase());
+          span.setOutput(result);
+          return result;
+        },
+        { input: "Hello Hue", sessionId: "hue-quickstart" },
+      );
+      await hue.flush(); // Wait for Hue to acknowledge the trace.
+      console.log({ output, traceId });
+    } finally {
+      await hue.shutdownSafe({ timeoutMillis: 1000 }); // Do not replace the original diagnostic error.
+    }
+    ```
+
+    Run `node first-trace.mjs`.
+  </Tab>
+  <Tab title="Python">
+    Create `first_trace.py`:
+
+    ```python
+    import os
+    from hue_sdk import Hue
+    
+    api_key = os.environ.get("HUE_API_KEY")
+    capture = os.environ.get("HUE_CAPTURE_CONTENT")
+    if not api_key or capture not in ("true", "false"):
+        raise ValueError("Set HUE_API_KEY and choose HUE_CAPTURE_CONTENT=true or false")
+    
+    hue = Hue(
+        api_key=api_key,
+        service_name="hue-first-trace",
+        capture_content=capture == "true",  # Choose whether to store inputs and outputs.
+    )
+    
+    try:
+        hue.validate_project()  # Verify the key before sending a trace.
+        # Group the request and its tool call in one trace.
+        with hue.context(session_id="hue-quickstart"):
+            with hue.span("first-trace") as span:
+                span.set_input("Hello Hue")
+                with hue.tool("uppercase") as tool:
+                    tool.set_input("Hello Hue")
+                    output = "Hello Hue".upper()
+                    tool.set_output(output)
+                span.set_output(output)
+                trace_id = span.trace_id
+        # Wait for Hue to acknowledge the trace before exiting.
+        if not hue.force_flush():
+            raise RuntimeError("Hue export failed; inspect hue.export_status")
+        print({"output": output, "traceId": trace_id})
+    finally:
+        hue.shutdown_safe(timeout_millis=1000)  # Preserve any original diagnostic error.
+    ```
+
+    Run `python first_trace.py` in the activated environment.
+  </Tab>
+</Tabs>
+
+The program checks the key before sending data, prints `HELLO HUE` and a trace ID after a successful flush, then shuts down the SDK. A rejected export causes the program to fail.
+
+## 4. Inspect the trace
+
+In the same Hue project, open **Traces** and match the printed trace ID. You should see:
+
+- A root span named `first-trace` and an uppercase tool child. Python names the child `execute_tool uppercase`.
+- Session `hue-quickstart` and the recorded timing.
+- Input `Hello Hue` and output `HELLO HUE` when capture is enabled; unavailable content when disabled.
+
+Export acknowledgement confirms receiver acceptance. Inspecting the stored trace verifies the complete setup.
+
+## Next steps
+
+- Connect your application with [TypeScript](/sdks/typescript) or [Python](/sdks/python).
+- Add Hue to [existing OpenTelemetry instrumentation](/integrations/opentelemetry), or follow the [Vercel AI SDK recipe](/sdks/typescript#connect-vercel-ai-sdk).
+- [Run your first evaluation](/evaluations/first-evaluation).
+
+If the trace does not appear, follow [troubleshooting](/guides/troubleshooting).

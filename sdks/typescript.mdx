@@ -1,0 +1,136 @@
+---
+title: "TypeScript SDK"
+description: "Trace your Node.js application with explicit content capture and standard OpenTelemetry export."
+---
+
+Use the Hue TypeScript SDK to trace your server-side application, tools, and model integrations. Your application continues to call the model provider directly.
+
+For option defaults and method signatures, see the [TypeScript API reference](/reference/typescript). Check the [compatibility matrix](/sdks/compatibility) before adding Hue to an existing application.
+
+## Install
+
+Use Node.js 24. [Install the TypeScript SDK](/installation#typescript), then configure your key below. Check the [compatibility matrix](/sdks/compatibility) if your application already uses AI SDK or OpenTelemetry.
+
+## Configure your project
+
+Create a project service key in **Settings → Integrations & API keys**. Put it in your server environment as `HUE_API_KEY`. Keep environment files out of Git and never expose this key to a browser.
+
+Use a **Tracing only** key for ingestion and receipt verification. Choose **Tracing and evaluations** only for evaluation clients. See [project keys](/guides/project-keys) for access and rotation.
+
+Hue Cloud is the default destination; no base URL is needed. See [connection settings](/guides/project-keys#connection-settings) when using another origin.
+
+## Send your first trace
+
+Save this as `trace.ts`. It traces a deterministic uppercase tool; it makes no model call.
+
+```ts
+import { createHue, HueExportError } from "@hue-run/sdk";
+
+async function main() {
+  const apiKey = process.env.HUE_API_KEY;
+  if (!apiKey) throw new Error("Set HUE_API_KEY in your server environment.");
+
+  const hue = createHue({
+    apiKey,
+    serviceName: "uppercase-demo",
+    captureContent: false, // Send timing and metadata without prompt/output content.
+    onExportIssue: (issue) => {
+      console.error("Hue export issue", issue.kind, issue.signal, issue.count);
+    },
+  });
+
+  try {
+    await hue.checkConnection(); // Verify which project the key belongs to.
+    // The tool call becomes a child of this request span.
+    await hue.withSpan(
+      "demo.run",
+      async (run) => {
+        const result = await hue.tool("uppercase", "hello", () => "hello".toUpperCase());
+        run.setOutput(result);
+        console.log("Trace ID:", run.traceId);
+      },
+      { sessionId: "demo-session", input: "hello" },
+    );
+    const report = await hue.flush(); // Confirm delivery before the process exits.
+    console.log("Acknowledged spans:", report.acceptedSpans);
+  } finally {
+    await hue.shutdownSafe({ timeoutMillis: 1000 });
+  }
+}
+
+try {
+  await main();
+} catch (error) {
+  if (error instanceof HueExportError) {
+    console.error("Hue did not acknowledge all telemetry", error.report);
+  } else {
+    console.error("The example failed. Check your connection and server configuration.");
+  }
+  process.exitCode = 1;
+}
+```
+
+Run it with your environment already configured:
+
+```sh
+node trace.ts
+```
+
+Open **Traces** in the project that owns the key. The root and tool spans share the printed trace ID. With `captureContent: false`, the example sends timing and identity metadata while omitting its input and output content.
+
+## Choose what you capture
+
+You must supply `captureContent: true` or `false`.
+
+- `false` disables Hue helper content and removes recognized GenAI, Vercel, OpenInference, and OpenLLMetry content fields before Hue exports them. It also removes log bodies and exception text.
+- `true` captures content you provide to supported helpers and instrumentations. Hue stores received content; automatic telemetry expiry is not currently available.
+- `redact(value, path)` can transform supported strings before export. Redactor and capture failures omit unsafe content and increment instrumentation failure counters without changing application results.
+
+Queued records snapshot supported values when a span ends or a log is emitted, so later caller mutation cannot increase the retained queue size or change exported data. Resource attributes still awaiting detection are omitted with a sanitized warning; later records include them once detection finishes. Await resource detection before instrumentation if those attributes are required.
+
+Custom attribute names cannot be classified automatically. Keep secrets and unnecessary user content out of span names, identifiers, resource metadata, and arbitrary attributes. The setting applies to Hue's export path, not another exporter in your application.
+
+Missing usage stays missing: the SDK does not estimate tokens or cost. Captured JSON `null`, `false`, `0`, and an empty string remain distinct from absent content.
+
+## Connect Vercel AI SDK
+
+The SDK accepts compatible AI SDK 7 and OTel integration 1 versions. Installed-package tests cover pairs `7.0.99 / 1.0.99` and `7.0.100 / 1.0.100`. Install one matching pair when using the integration:
+
+```sh
+bun add ai@7.0.99 @ai-sdk/otel@1.0.99
+```
+
+Import `hueTelemetry` from `@hue-run/sdk/ai-sdk` and pass `telemetry: hueTelemetry(hue)` to your agent or generation call. The helper forwards your explicit content choice to `recordInputs` and `recordOutputs`. Consume a streaming response inside the surrounding `hue.withSpan` callback, then flush after it finishes. See the [reference chatbot](/integrations/reference-chatbot) for a complete streaming application.
+
+If your app already registers a global AI SDK integration, preserve it and attach Hue to the same OpenTelemetry provider. A per-call `telemetry` integration replaces the global AI SDK integration for that call. Follow [existing OpenTelemetry](/integrations/opentelemetry) when you need multiple exporters.
+
+## Verify stored trace evidence
+
+Available in `@hue-run/sdk` 0.1.3 and later. Finish a real application request and retain its trace ID and known span IDs. End its spans, flush the provider that owns them, then flush Hue. When borrowing a provider, flush that provider first. Verification does not run the app, invoke a model, or flush telemetry.
+
+```ts
+await hue.flush();
+const confirmation = await hue.verifyTrace(requestTraceId, {
+  expectedSpanIds: [requestSpanId],
+  requiredFields: ["model"],
+  timeoutMillis: 10_000,
+});
+if (!confirmation.verified) {
+  throw new Error("Expected trace evidence did not arrive before the deadline.");
+}
+console.log(confirmation.receipt?.traceUrl);
+```
+
+Only require fields the request should emit and your capture policy permits. Supported names are `input`, `output`, `model`, `usage`, and `session`; omit content fields for metadata-only capture and usage when the instrumentation does not report it.
+
+The receipt reports stored field presence, span counts, and missing expected spans. It contains no captured values. A successful result confirms the conditions you requested; inspect the trace in Hue to check the content and redaction. See the [verification API](/reference/typescript#trace-verification) for limits and failures.
+
+For serving requests, use [safe initialization, lifecycle deadlines and a kill switch](/guides/production-safety).
+
+## Handle delivery failures
+
+`flush()` drains traces and logs. Partial rejection, malformed acknowledgement, queue overflow, and export failure raise `HueExportError`. Its report contains cumulative accepted, rejected, failed, and pending counts; `hue.transport.getIssues()` returns recent sanitized issues.
+
+Temporary export failures use the OpenTelemetry retry policy. A partially rejected batch is not resent wholesale. A later successful flush does not erase earlier failures from cumulative counters. An acknowledgement confirms collector receipt, not that every span in a distributed trace has arrived.
+
+Stop starting operations before shutdown. End active spans, await `flush()`, and await `shutdown()` before the process exits. The queues are in memory and cannot recover records after process termination.

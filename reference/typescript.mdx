@@ -1,0 +1,302 @@
+---
+title: "TypeScript API reference"
+description: "Configuration, tracing, delivery and evaluation APIs in @hue-run/sdk 0.1.5."
+---
+
+This reference covers `@hue-run/sdk` **0.1.5** on Node.js 24. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+
+## Imports
+
+| Entry point | Use |
+| --- | --- |
+| `@hue-run/sdk` | `createHue`, `createHueSafe`, `HueClient`, `createHueTransport`, `HueTransport`, `HueConnectionError`, `HueExportError` and tracing types. |
+| `@hue-run/sdk/ai-sdk` | `hueTelemetry` for Vercel AI SDK 7. Requires the optional `ai` and `@ai-sdk/otel` peers. |
+| `@hue-run/sdk/evals` | Evaluation client, local runners, scorer definitions, evaluation errors and types. |
+
+The SDK runs on the server. It does not call a model provider for you or automatically instrument provider calls that emit no telemetry.
+
+## Create a tracing client
+
+```ts
+import { createHue } from "@hue-run/sdk";
+
+const hue = createHue({
+  apiKey: process.env.HUE_API_KEY!, // Read the key from server configuration.
+  serviceName: "my-agent",
+  captureContent: false, // Omit supported input/output content.
+});
+```
+
+`createHue(options: HueOptions | ExistingHueProviders): HueClient` and `new HueClient(options)` accept the same configuration.
+
+### HueOptions
+
+| Option | Type | Default and behavior |
+| --- | --- | --- |
+| `apiKey` | `string` | Required when enabled; omitted for `enabled: false`. Keep it in server-only configuration. |
+| `serviceName` | `string` | Required; 1–256 characters with non-whitespace content. Sets `service.name` on providers created by Hue. |
+| `enabled` | `boolean` | `true`; `false` creates a disabled client without attaching processors or requiring a key. |
+| `maxQueueBytes` | `number` | `8388608`; 1024–67108864. Shared estimated trace/log queue bytes, including in-flight work. Not total process RSS. |
+| `captureContent` | `boolean` | Required explicit choice; there is no default. |
+| `baseUrl` | `string` | `https://app.hue.run`. Supply an origin, without an API path, query, fragment or credentials. HTTPS is required except for loopback HTTP. |
+| `serviceVersion` | `string` | Optional `service.version` on providers created by Hue. |
+| `timeoutMillis` | `number` | `10000`; integer from `100` through `60000`. Configures transport requests and the project connection check; it is not an overall `flush()` deadline. |
+| `redact` | `(value: string, path: string) => string` | Optional string transformation on Hue's export path. See [content policy](#content-policy). |
+| `onExportIssue` | `(issue: ExportIssue) => void` | Optional callback for sanitized export diagnostics. |
+
+Invalid configuration throws `TypeError`. Environment variables are read by your application and passed to the client; these constructors do not automatically load an environment file.
+
+### ExistingHueProviders
+
+Use `createHueTransport(options: HueOptions): HueTransport` when your application owns OpenTelemetry setup. Attach its `spanProcessor` and `logRecordProcessor` during provider construction, then pass:
+
+```ts
+createHue({ transport, tracerProvider, loggerProvider });
+```
+
+Both providers must expose `forceFlush(): Promise<void>`. Your application owns their resources, registration and shutdown. Hue never replaces the global tracer provider, logger provider or context manager. See the complete [existing-provider recipe](/integrations/opentelemetry).
+
+## Trace application work
+
+The signatures below use types exported by `@hue-run/sdk` and standard OpenTelemetry types.
+
+```ts
+hue.withSpan<T>(
+  name: string,
+  callback: (span: HueSpan) => T | Promise<T>,
+  options?: SpanOptions,
+): Promise<T>
+
+hue.tool<T extends JsonValue | undefined>(
+  name: string,
+  input: JsonValue,
+  execute: () => T | Promise<T>,
+): Promise<T>
+
+hue.getContext(): Context
+hue.recordError(span: Span, error: unknown): void
+hue.recordMessages(
+  messages: { input?: JsonValue; output?: JsonValue },
+  explicitContext?: Context,
+): void
+```
+
+`withSpan` returns the callback's result, ends the span after the callback settles, and records then rethrows an escaping application error. Consume streams inside the callback if their work belongs to that span. A returned streaming `Response` is not evidence that the stream has finished.
+
+`tool` adds the standard `execute_tool` operation and tool name, captures its arguments/result according to your content policy, and returns the tool result. An `undefined` result omits result content.
+
+`recordMessages` emits a correlated inference-details log. With content capture enabled, it requires an active span or explicit span context. With capture disabled, it emits nothing. Use logs or span attributes for the same content event to avoid storing duplicate copies.
+
+### SpanOptions and context
+
+| Option | Default and behavior |
+| --- | --- |
+| `kind?: SpanKind` | `SpanKind.INTERNAL`. |
+| `attributes?: Attributes` | Additional OpenTelemetry attributes; arbitrary names and values are caller-owned. |
+| `input?: JsonValue` | Optional root input. Omitted when content capture is disabled. |
+| `sessionId?: string` | Inherits from the surrounding Hue callback; maps to `gen_ai.conversation.id`. |
+| `userId?: string` | Inherits from the surrounding Hue callback; maps to `user.id`. This is your application identity, not a Hue account. |
+| `parentContext?: Context` | Explicit parent, otherwise the surrounding Hue context or active OpenTelemetry context. |
+
+Session and user identifiers must contain 1–4096 valid characters. `hue.tracer` is an OpenTelemetry tracer that preserves Hue's local async context. `hue.getContext()` supplies that context to an integration that accepts an explicit parent. For distributed propagation, use your application's OpenTelemetry propagator.
+
+### HueSpan
+
+The callback receives `span` (the underlying OpenTelemetry span), `context`, `traceId`, `spanId`, `setInput(value: JsonValue)` and `setOutput(value: JsonValue)`.
+
+Use `span.setAttribute(...)`, `span.addEvent(...)` and the other standard OpenTelemetry APIs for additional metadata. Hue does not estimate absent token counts or cost. Captured JSON `null`, `false`, `0` and `""` remain present values; they are distinct from an omitted field. Helper content must serialize as JSON and fit within 256 KiB per field.
+
+## Vercel AI SDK adapter
+
+```ts
+import { hueTelemetry } from "@hue-run/sdk/ai-sdk";
+
+// Pass to an AI SDK agent or generation call:
+const telemetry = hueTelemetry(hue);
+```
+
+`hueTelemetry(hue: HueClient): TelemetryOptions` enables telemetry, sets `recordInputs` and `recordOutputs` from `hue.captureContent`, and configures the AI SDK OpenTelemetry integration with `hue.tracer` and usage reporting.
+
+Supported peer ranges are `ai@^7.0.99` and `@ai-sdk/otel@^1.0.99`. Installed-package tests cover pairs `7.0.99 / 1.0.99` and `7.0.100 / 1.0.100`; every later compatible release is not individually verified.
+
+The `hueTelemetry` adapter does **not** support AI SDK 6: its optional peer constraints require AI SDK 7 and `@ai-sdk/otel` 1. Do not upgrade an existing app's AI SDK just to install Hue. For an app that already emits OpenTelemetry spans, assess the [existing-provider path](/integrations/opentelemetry) and its installed OpenTelemetry versions using the [compatibility guide](/sdks/compatibility).
+
+AI SDK per-call integrations replace the global integrations for that call. If your app already has telemetry, preserve its setup and attach Hue to the existing provider. See [OpenTelemetry](/integrations/opentelemetry) and the [reference chatbot](/integrations/reference-chatbot).
+
+## Content policy
+
+- `captureContent: false` disables Hue helper content and removes recognized GenAI, Vercel, OpenInference and OpenLLMetry content, log bodies, status messages and exception text before Hue exports records. It does not classify every custom attribute name.
+- `captureContent: true` permits supplied content, including exception messages/stacks recorded by the TypeScript error helper. Received content is stored by Hue; the SDK does not set a retention timer.
+- `redact(value, path)` transforms supported strings in attributes, resources, event/link attributes and log bodies before Hue exports them. It must return a string. A redactor failure rejects the affected record and becomes an export issue.
+- This policy applies to Hue's export path. Another exporter and arbitrary span/scope names remain your application's responsibility.
+
+## Flush, shutdown and diagnostics
+
+```ts
+hue.checkConnection(): Promise<ProjectConnection>
+hue.flush(): Promise<ExportReport>
+hue.shutdown(): Promise<ExportReport>
+
+hue.transport.getReport(): ExportReport
+hue.transport.getIssues(): ExportIssue[]
+hue.transport.getFailureSequence(): number
+```
+
+`checkConnection()` returns `{ id, name, organizationId, slug }` for the project associated with the key. It throws `HueConnectionError`, with optional HTTP `status`, on rejected authentication, network failure or an invalid response. It sends no trace.
+
+`flush()` drains traces and logs. Concurrent callers receive serialized drains that include their preceding emissions. Rejections, failed exports, queue drops and invalid acknowledgements throw `HueExportError`, whose `issues` and `report` contain sanitized diagnostics. A later non-overlapping flush reports new failures; counters remain cumulative. Overlapping calls also observe failures from shared in-flight work.
+
+`ExportReport` contains `acceptedSpans`, `acceptedLogs`, `rejectedSpans`, `rejectedLogs`, `failedSpans`, `failedLogs`, `pendingSpans` and `pendingLogs`. The first six are cumulative counts; pending counts describe current queued/in-flight records. `getIssues()` returns the latest 128 issues with `sequence`, `signal`, `kind`, `count`, optional `status` and a sanitized `message`. Kinds are `rejected`, `failed`, `dropped`, `invalid` and `warning`. A warning with no rejection does not fail a flush.
+
+`shutdown()` stops new Hue helpers and flushes. It closes providers that Hue created; borrowed providers remain usable. Repeated calls share the same shutdown promise. If your application supplied the providers, close those providers and then call `transport.shutdown()` during process shutdown. Reuse a shared client across server requests.
+
+Queues are in memory and bounded to 2,048 records per signal, including exports in flight. Retryable failures use the OpenTelemetry retry policy; partial rejections are not retried wholesale. An acknowledgement means collector receipt, not that every span of a distributed trace has arrived. Stop producing spans before shutdown.
+
+## Trace verification
+
+```ts
+await hue.verifyTrace(traceId, {
+  expectedSpanIds: [requestSpanId],
+  requiredFields: ["model"],
+  timeoutMillis: 10_000,
+});
+```
+
+Returns `Promise<{ verified: boolean; receipt: TraceReceipt | null }>`. A receipt contains `traceId`, `spanCount`, `revision`, `fields`, `matchedSpanIds`, `missingSpanIds`, and `traceUrl`. `verified` requires a stored receipt, every supplied expected span, and every required field. Timeout returns `verified: false` with the latest partial receipt, or `null` if none arrived. Other failures throw exported `HueTraceVerificationError`, with `code` and optional HTTP `status`, without response bodies or credentials.
+
+Trace IDs are 32 lowercase hexadecimal characters; expected span IDs are 16. All IDs must be nonzero. Supply at most 100 unique expected span IDs and unique required field names. The timeout defaults to 10,000 ms and must be positive, finite, and at most 60,000 ms. The receipt response is limited to 64 KiB.
+
+Missing spans or required fields keep polling until the deadline. Only recognized trace-not-found responses, HTTP 429, and HTTP 503 are retried; connection failures, unsupported endpoints, redirects, and malformed responses raise a safe typed error. Verification reads stored normalized field presence across the trace, including supported correlated logs. It does not inspect values or prove that unlisted application operations were instrumented.
+
+[Flush the owning providers before verification](/sdks/typescript#verify-stored-trace-evidence); this method never flushes implicitly.
+
+## Evaluation client
+
+```ts
+import { createEvaluationClient } from "@hue-run/sdk/evals";
+
+const client = createEvaluationClient({ apiKey: process.env.HUE_API_KEY! });
+```
+
+`createEvaluationClient(options: EvaluationClientOptions): EvaluationClient` and `new EvaluationClient(options)` accept required `apiKey`, optional `baseUrl` (default `https://app.hue.run`) and optional `timeoutMillis` (default `10000`, range `100–60000`). `checkConnection()` returns the key's project. Registry writes require the key's `project_write` capability.
+
+Methods below return promises. `PageOptions` is `{ after?: string; limit?: number }`, with a supplied limit from 1 through 100. Paged responses are `{ items, nextCursor }`; pass a non-null cursor as the next `after`. IDs are UUIDs. `Identity` is `{ name, slug, description? }`.
+
+Evaluation responses are limited to **4 MiB**. `listCases(versionId, page?)` includes case content, so a valid row limit can still produce an oversized response when cases are large. Request a smaller page, such as `{ limit: 1 }`, and follow `nextCursor`; the client does not automatically split or retry an oversized page. Request bodies are limited to 1 MiB.
+
+### Datasets and scorer definitions
+
+| Method | Result or purpose |
+| --- | --- |
+| `createDataset(input: Identity)` | `Dataset`, including its initial `versions`. |
+| `getDataset(id)` / `listDatasets(page?)` | A dataset / a page of dataset summaries. |
+| `createDatasetVersion(datasetId, { fromVersionId? }?)` | A new editable `DatasetVersion`. |
+| `getDatasetVersion(versionId)` / `listCases(versionId, page?)` | A version / a page of cases. |
+| `addCase(versionId, input: CaseWrite)` | `{ item, version }`; retain the updated revision. |
+| `freezeDatasetVersion(versionId, expectedRevision)` | The frozen `DatasetVersion`. |
+| `createScorer(input: Identity)` / `getScorer(id)` / `listScorers(page?)` | Register or retrieve scorer identities. |
+| `publishScorerVersion(scorerId, definition: ScorerDefinition)` / `getScorerVersion(versionId)` | Publish or retrieve an immutable `ScorerVersion`. |
+
+`CaseWrite` requires `expectedRevision`, `externalKey` and `inputs`; `expected` and `metadata` are optional. Omit `expected` to declare no reference; `expected: null` is a present reference. Freeze the dataset and publish scorer definitions before creating an experiment.
+
+#### ScorerDefinition and metrics
+
+| Definition | Required fields |
+| --- | --- |
+| Built-in | Use `builtins.exactMatch()`, `builtins.includes(caseSensitive)` or `builtins.jsonSchema(schema)` to create the exact versioned declaration. |
+| Local code | `kind: "local_code"`, `language: "typescript"` or `"python"`, `entrypoint`, `sourceDigest`, `metrics`. `defineLocalScorer` creates the TypeScript declaration and binds the callback. |
+| Manual | `kind: "manual"`, `metrics`. Completion requires the platform's human workflow. |
+| Hosted judge | `kind: "llm_judge"`, `metrics`, `config`. Hosted dispatch is separate from a local run. |
+
+Each `MetricDefinition` has a `name` and `type`: `boolean`, `text`, `number` (optional `min`/`max`), or `category` (required `categories: string[]`). Returned metrics must match the pinned definitions exactly.
+
+Hosted `config` has required `model`, `provider`, `rubric`, `bindings` (an array of `{ name, path, required }`), `maxOutputTokens` and `timeoutMs`; `temperature` is optional. A declaration identifies the requested evaluation policy; the server validates supported values and project execution settings when it is used.
+
+### Experiments, saved subjects and results
+
+| Method | Required inputs and result |
+| --- | --- |
+| `createExperiment(input)` | `{ idempotencyKey, name, datasetVersionId, scorerVersionIds, config }` → `{ id, evaluationRunId }`. |
+| `getExperiment(id)` / `listExperimentItems(id, page?)` / `getExperimentCase(id, caseId)` | Read pinned configuration and cases. |
+| `startExecution(experimentId, caseId, input: StartExecution)` | Start or recover an attempt → `Execution`. |
+| `getExecution(id)` / `completeExecution(id, input: CompleteExecution)` | Read an attempt / acknowledge its terminal outcome → `Completion`. |
+| `finishExperiment(id, idempotencyKey)` | `{ id, finishedAt }`. |
+| `createEvaluationRun(input)` | `{ idempotencyKey, name, subjectIds, scorerVersionIds }` → `{ id }`. |
+| `getEvaluationRun(id)` / `listEvaluationItems(id, page?)` / `getSubject(subjectId)` | Read a run, its items and immutable saved evidence. |
+| `submitResults(runId, { idempotencyKey, results: Result[] })` | `{ ids }`. |
+| `listResults(runId, page?)` / `getResult(resultId)` | A page of summaries / the stored result. |
+
+`StartExecution` requires `idempotencyKey`; optional fields are `traceExternalId`, `previousExecutionId` and `allowUncertainRetry`. `CompleteExecution` requires `idempotencyKey` and terminal `state` (`succeeded`, `error` or `cancelled`); optional fields are `output`, `error`, `expectedTraceRevision`, `traceEvidence` (`required` or `omit`) and `omissionReason`. An `error` has `{ type, message? }`. `Completion` contains `executionId`, `subjectId`, nullable `traceSnapshotId` and `evaluationItemId`. Use these low-level methods only with a known recovery decision; see [recovery](#recovery-errors).
+
+Each submitted `Result` requires `evaluationItemId`, `scorerVersionId` and the `Score` fields described below; a local-code result also carries its `sourceDigest`. A scored result contains `metrics: [{ name, value, passed? }]` and a nonempty `explanation` or an `evidence` value. Error results contain `error: { type, message? }`; skipped results contain an `explanation`.
+
+Mutations do not retry implicitly. Reuse a saved idempotency key with the same intended mutation after a lost response. `HueApiError.status` distinguishes an HTTP rejection from a connection/response failure; errors do not echo server bodies.
+
+### Hosted judge jobs
+
+`getJudgeBudget()` reads configured allowance and availability. `createJudgeJobs(runId, { idempotencyKey, jobs: [{ evaluationItemId, scorerVersionId }] })` returns job IDs. Inspect with `listJudgeJobs(runId, page?)` or `getJudgeJob(jobId)`, and request cancellation with `cancelJudgeJob(jobId, reason)`.
+
+Submitting hosted jobs is an explicit platform operation and can consume the project's allowance. SDK method availability does not establish that a hosted provider or project budget is configured. Local runners leave hosted and manual scorer pins for their owning workflows.
+
+## Run locally and rescore
+
+```ts
+runExperiment(options: RunExperimentOptions): Promise<RunnerReport>
+rescore(options: RescoreOptions): Promise<RunnerReport>
+```
+
+Both functions are exported from `@hue-run/sdk/evals`.
+
+| Option | Required/default |
+| --- | --- |
+| `client` | Required `EvaluationClient`. |
+| `checkpointDirectory` | Required dedicated local directory for this run. Preserve it for upload recovery; keep it out of Git. |
+| `persistResultContent` | Required boolean, independent of telemetry capture. |
+| `scorers` | Optional array of bound `LocalScorer` definitions/callbacks. |
+| `concurrency` | Default `1`; integer `1–16`. |
+| `schemaTimeoutMillis` | Default `2000`; integer `100–60000`; applies to JSON Schema validation, not arbitrary callbacks. |
+
+`runExperiment` additionally requires `hue`, `experimentId`, `traceEvidence` and `target(inputs, { config, item, span })`. The target may return a JSON value, `undefined`, or a promise of either. Evidence must be `{ mode: "required" }` or `{ mode: "omit", reason: "..." }`. Telemetry and evaluation clients must use the same project and origin.
+
+`rescore` additionally requires `runId` and has **no target callback**. Create its evaluation run from existing subject IDs first. Both return `{ runId, subjectIds, resultIds, deferredScorerVersionIds }`.
+
+With `persistResultContent: false`, completions and checkpoints omit raw output, target error messages, scorer evidence and arbitrary explanations. Declared metric values remain stored, including text metrics. Already stored dataset inputs/references are independent of this setting. Historical scoring skips unavailable output; it does not rerun a target to reconstruct it.
+
+### Local scorer exports
+
+| Export | Behavior |
+| --- | --- |
+| `builtins.exactMatch()` | Publishable typed JSON equality definition. |
+| `builtins.includes(caseSensitive = true)` | Publishable string-inclusion definition. |
+| `builtins.jsonSchema(schema: JsonValue)` | Publishable JSON Schema draft 2020-12 definition. |
+| `defineLocalScorer({ source, entrypoint, metrics, score })` | Returns a `LocalScorer`; source is `string` or `Uint8Array`. |
+| `sourceDigest(source: string \| Uint8Array)` | SHA-256 declaration for supplied source bytes/text. |
+| `scoreLocally(version, context, { scorers?, schemaTimeoutMillis? }?)` | Computes `Promise<Score>` without uploading it. |
+
+`ScoreContext` contains `inputs`, `hasOutput`, `hasExpected`, optional `output`/`expected`, `metadata` and `executionState`. A `Score` is `scored` with declared metrics and explanation/evidence, `error` with a typed error, or `skipped` with an explanation. A failed quality metric is still `scored`, with `passed: false`.
+
+Custom callbacks run locally, without a general execution timeout or side-effect cancellation. The source digest is a caller declaration, not attestation of dependencies or closures. Hosted judge pins must be dispatched through judge jobs; `scoreLocally` does not execute them.
+
+### Recovery errors
+
+- `UncertainExecutionError` exposes `caseId` and optional `executionId`: no durable outcome is available, so the runner refuses to repeat potentially completed work.
+- `OutcomeSerializationError` exposes `executionId`: the target returned, but its outcome could not be saved as JSON. The runner does not invoke it again.
+- Required trace export failures surface through `HueExportError` or recovery checks. A new empty exporter cannot prove receipt of an earlier trace.
+
+Use one checkpoint directory per experiment or rescore run. Checkpoint files contain allowed result content and are private local files, not encrypted storage. After an upload failure, resume with the same run, directory and options so saved payloads and idempotency keys are reused. If a process crashes, confirm its recorded owner has stopped before removing the directory's `.lock` file. Removing a lock never authorizes another target invocation.
+
+When a target's outcome is uncertain, restarting the runner will not repeat it. Investigate side effects first. The low-level `startExecution` API requires an explicit `previousExecutionId` for a replacement attempt and `allowUncertainRetry: true` to replace a still-started attempt. The convenience runner does not automatically adopt an externally created attempt; use a new experiment for an intentional fresh target run. Required evidence never silently changes to omitted evidence after an export failure.
+
+For a runnable experiment and historical rescore, see the public [first evaluation guide](/evaluations/first-evaluation).
+
+## Managed target adapter
+
+`createManagedTargetHandler(options)` from `@hue-run/sdk/managed` returns `(request: Request) => Promise<Response>`. Required options are `machineCredential`, `target` and `flushTelemetry`; optional options are `tracer`, `baseUrl`, `maxExecutionMillis` (default 90000, at most 90000) and `finalizationMillis` (default 30000, at most 30000).
+
+The target receives verified input files, application input/configuration, execution identity, trace ID and an AbortSignal. It returns output JSON, actual file buffers, optional usage and a safe terminal outcome. The helper claims before execution and saves outcomes before returning. It never automatically reruns the agent. See [managed runs](/evaluations/managed-runs) for the full setup and recovery flow.
+
+## Safe serving lifecycle
+
+`createHueSafe(options)` accepts the same options as `createHue`, catches initialization failures and returns a disabled client with an instrumentation failure. Pass an empty string for an unset environment key if using TypeScript; the safe constructor handles the invalid configuration. `flushSafe({ timeoutMillis: 1000 })` and `shutdownSafe({ timeoutMillis: 1000 })` return `Promise<{ ok: boolean; timedOut: boolean; report: ExportReport }>` without rejecting. The caller deadline is 1–60000 ms and defaults to 1000 ms. A deadline does not cancel a borrowed provider.
+
+The report also exposes `pendingBytes`, `droppedSpans`, `droppedLogs` and `instrumentationFailures`. Dropped records are subsets of failed records; do not add those counts together. Safe `ok` reflects cumulative failures for the client lifetime. Capture/setup/cleanup failures in Hue helpers omit telemetry and preserve the original callback result/error. Async `onExportIssue` rejections are contained and callbacks are rate-limited. See [production safety](/guides/production-safety).

@@ -1,0 +1,32 @@
+---
+title: "Hue for coding agents"
+sidebarTitle: "Overview"
+description: "Choose between the Hue skill, the Hue MCP server and the SDKs for the task your coding agent is doing."
+---
+
+Hue gives a coding agent three surfaces. They are complementary: the skill teaches the agent how to integrate Hue well, the MCP server gives it live data inside your project, and the SDKs and REST API are the scriptable path for CI and shell-capable agents.
+
+| Surface | Use it when | It owns | It never does |
+| --- | --- | --- | --- |
+| [Hue skill](/guides/agent-setup) | The agent is adding or troubleshooting tracing in an application | How to install the SDK, choose a capture policy, keep serving requests independent of telemetry and verify a real request | Grant credentials, read your project's data |
+| [Hue MCP server](/agents/mcp-server) | The agent needs to read what happened: find failing traces, inspect a span, check a receipt, read datasets and experiment results | Project-scoped, read-only tools with pagination, deep links and documentation search | Key, member or project administration; human-review decisions; access to other projects |
+| [SDKs](/sdks/typescript) and REST | CI jobs and agents that can run a shell and prefer to filter data in code | Tracing, receipts, datasets, scorers, experiments and evaluation runs | Browse traces with a tracing key |
+
+## Which one to reach for
+
+- **The agent can run a shell and is changing application code.** Install the skill and let it use the SDK. Add the MCP server when the agent should also confirm what Hue stored without asking you to open the UI.
+- **The agent cannot run a shell**, for example a hosted assistant, **or you want several connected actions in one conversation** ("find yesterday's failing traces, show me the slowest span, compare the last two experiments"). Connect the MCP server.
+- **You are automating in CI.** Use the SDK evaluation clients and the receipt endpoint directly.
+
+## Keys
+
+Each surface uses a different key so that a leaked credential has the smallest possible blast radius:
+
+- The application's `HUE_API_KEY` is a **Tracing only** or **Tracing and evaluations** key. It can send telemetry and verify known trace ids; it can never read recorded content.
+- The agent's `HUE_MCP_KEY` is a **Coding agent (read-only)** key configured in the MCP client, never in application code. A **Coding agent (read + evaluations)** key will additionally allow additive dataset writes once those tools ship.
+
+See [project keys](/guides/project-keys) for the presets and rotation.
+
+## What the agent sees
+
+Everything the MCP server returns from your traced application is treated as data: names, generated titles, metadata and judge explanations are length-capped and labelled untrusted, recorded prompts and outputs appear only when a tool is called with `include_content: true`, and credential-shaped strings are redacted. Each result carries a link that opens the object in Hue for a signed-in member of the project.

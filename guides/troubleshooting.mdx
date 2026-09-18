@@ -1,0 +1,76 @@
+---
+title: "Troubleshoot tracing"
+description: "Diagnose project authentication, missing spans or content, streaming lifetime, and export failures."
+---
+
+Start by separating the application result from the telemetry result. A model request can succeed while its trace export fails, and a correctly recorded trace can contain an application error.
+
+## The connection check fails
+
+Confirm that the key belongs to the selected Hue project and has not been revoked. Use a project service key in the server process. Do not use a management token or place the key in browser code.
+
+Both SDKs default to `https://app.hue.run`. If you override `baseUrl` or `base_url`, supply an origin. Do not append `/api` or the OTLP endpoint. The SDK adds its own paths. Hosted origins require HTTPS; loopback HTTP is supported for local development.
+
+Report the error and project identity without printing the key or request authorization header.
+
+## No trace appears
+
+1. Verify the key with `checkConnection()` in TypeScript or `validate_project()` in Python.
+2. Confirm that the operation is instrumented. A direct provider call emits no telemetry unless its integration or a manual span records it.
+3. Finish the operation and await the SDK's flush before the process exits.
+4. Inspect the same project in Hue. A session ID groups requests; it does not select the destination project.
+5. Check exporter failures, rejected-record counts and queue limits.
+
+An existing OpenTelemetry application should add Hue to the provider it already owns. Creating a second global provider can leave some instrumentations attached to the first one. Follow the [provider integration guide](/integrations/opentelemetry).
+
+## A parent span is missing
+
+Spans can arrive in separate batches, and children may arrive before their parent. Flush every participating provider and allow ingestion to complete. A parent can also be sampled out, excluded by instrumentation, or sent to a different collector. Preserve the original parent ID when diagnosing this; changing it would change the trace relationship.
+
+An OpenTelemetry status of `Unset` means no explicit status was recorded. It is not itself an application failure.
+
+## Input or output is missing
+
+Check the explicit content setting. `captureContent: false` in TypeScript or `capture_content=False` in Python intentionally omits supported content fields in Hue helpers. Python third-party instrumentors need their own content controls.
+
+Content must also be supplied by the instrumentation. The SDK does not reconstruct prompts, invent an output or estimate missing usage. JSON `null` is a recorded value; an absent output is different.
+
+If you add third-party instrumentation, configure its own content controls too. Avoid placing private text in custom span names or arbitrary attributes, which cannot all be classified automatically.
+
+## Streaming spans end too early
+
+Keep the request span open while the stream is consumed, including tool execution and the final output. Awaiting only the initial stream object does not mean generation has finished.
+
+In a serverless application, await the telemetry flush in the framework's supported after-response lifecycle. Do not shut down a shared provider after every request. Shut it down when the application stops.
+
+## Flush reports a failure
+
+TypeScript `flush()` throws `HueExportError` for rejected or failed export work. Python `force_flush()` returns `False` for an observed export failure, dropped record, instrumentation omission or timeout. Use the bounded safe variants in serving application lifecycles; see [production safety](/guides/production-safety). Inspect their sanitized status reports; do not discard those results.
+
+Queues are bounded and held in memory. Process termination, queue overflow or sampling can lose records. A timeout does not prove the receiver rejected a request. Hue deduplicates exact completed-span and log replays, but rerunning application work or generating new IDs creates new records. Do not blindly retry an entire partially accepted batch; inspect its rejected-record counts and cause.
+
+The receiver accepts bounded OTLP requests. The SDK splits batches, but oversized helper content is omitted and recorded as an instrumentation failure. Application work still runs; raw external records remain subject to receiver limits. Keep binary files out of span attributes; file storage and document evaluation have a separate lifecycle.
+
+## Installation reports a dependency conflict
+
+Check the [compatibility matrix](/sdks/compatibility). TypeScript 0.1.5 core supports installation alongside AI SDK 6, but its `hueTelemetry` adapter requires AI SDK 7; older Hue versions can still conflict at install time. Python pins OpenTelemetry 1.44.0. Keep the application's existing instrumentation and use a standard OTLP exporter when its versions fall outside the tested SDK matrix; do not force an incompatible install.
+
+## Listing dataset cases fails for a large page
+
+Evaluation clients cap responses at 4 MiB. A valid page of full cases can exceed that cap when inputs or references are large. Request a smaller explicit page limit and follow `nextCursor`, for example `client.listCases(versionId, { limit: 10 })` or `client.list_cases(version_id, limit=10)`. The local runner reads summaries and individual cases and does not use this full-case page path.
+
+A response-size or connection failure does not prove that a mutation was rejected. Preserve its idempotency key and inspect the outcome before retrying application work.
+
+## The trace is present but the evaluation fails
+
+Check which outcome failed: the original application execution, the scorer's execution, or the quality assessment. A boolean `false` is a valid scored result. Historical rescoring assesses frozen evidence and does not rerun your application.
+
+## The MCP server rejects the agent
+
+The [Hue MCP server](/agents/mcp-server) authenticates with a project service key sent as `Authorization: Bearer …`. `401` means the key is missing, malformed, revoked or expired. `403` with a message naming **Coding agent (read-only)** means the key is a tracing or evaluation key: create a coding-agent key and configure it as `HUE_MCP_KEY` in the MCP client. `429` follows repeated failed authentications for one key id; wait for `Retry-After`. `503` means the server is momentarily saturated; retry after a second. A `405` or `404` answer to a `GET` or to a request carrying `Mcp-Session-Id` is expected: the server is stateless and accepts `POST` only.
+
+Results marked `truncated: true` were cut to the `max_chars` budget; lower `limit` or `max_spans`, raise `max_chars`, or fetch one object at a time. Recorded prompts and outputs are absent unless a tool is called with `include_content: true` and the application captured content. An empty search does not prove nothing happened; widen `since` or drop filters.
+
+## Tracing is disabled or data is being dropped
+
+Check `HUE_TRACING_ENABLED` if your integration uses the documented kill switch, installed package versions, initialization failure counters, and pending bytes/record counts. Safe initialization intentionally returns a disabled client when setup fails, so application success alone does not establish tracing. HTTP 429 means the project's minute allocation was exhausted; 503 can mean admission saturation, a timeout or unavailable persistence. Respect `Retry-After`; do not repeat business work to regenerate a trace. See [production safety](/guides/production-safety#ingestion-limits).

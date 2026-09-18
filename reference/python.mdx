@@ -1,0 +1,301 @@
+---
+title: "Python API reference"
+description: "Configuration, tracing, delivery and evaluation APIs in hue-run 0.1.3."
+---
+
+This reference covers `hue-run` **0.1.3** on Python 3.10 or later, tested on 3.10 and 3.14. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
+
+## Imports
+
+| Module | Public exports |
+| --- | --- |
+| `hue_sdk` | `Hue`, `create_hue_safe`, `HueSpan`, `Project`, `ProjectValidationError`, `Redactor`, `ExportStatus`. |
+| `hue_sdk.evals` | `EvaluationClient`, `HueApiError`, `run_experiment`, `rescore`, `builtins`, `define_local_scorer`, `score_locally`, `MISSING`, evaluation types and recovery errors. |
+
+The SDK sends OpenTelemetry traces and correlated logs. Your application remains responsible for provider calls and the instrumentation that observes them.
+
+## Create a tracing client
+
+```python
+import os
+from hue_sdk import Hue
+
+hue = Hue(
+    api_key=os.environ["HUE_API_KEY"],
+    capture_content=False,
+    service_name="my-agent",
+)
+```
+
+```python
+Hue(
+    base_url: str = "https://app.hue.run",
+    api_key: str | None = None,
+    *,
+    capture_content: bool,
+    service_name: str = "hue-python-agent",
+    tracer_provider: TracerProvider | None = None,
+    redactor: Redactor | None = None,
+    export_timeout_seconds: float = 10,
+    enabled: bool = True,
+    max_queue_size: int = 2048,
+    max_queue_bytes: int = 8388608,
+)
+```
+
+| Option | Behavior |
+| --- | --- |
+| `base_url` | Optional origin; defaults to `https://app.hue.run`. Do not append an API path. HTTPS is required except for loopback HTTP; credentials, query strings and fragments are rejected. |
+| `api_key` | Required project service key; keep it in the server environment. |
+| `capture_content` | Required explicit `True` or `False`; there is no default. |
+| `service_name` | Default `"hue-python-agent"`; configures resources for providers created by Hue. |
+| `tracer_provider` | Optional OpenTelemetry SDK `TracerProvider` to borrow. Hue adds its span processor without replacing the global provider. |
+| `redactor` | Optional `Callable[[str, Any], Any]`: receives a field name and helper content, and returns a JSON-serializable replacement. |
+| `export_timeout_seconds` | Default `10`; positive finite number. Configures export HTTP I/O and project validation; it is distinct from a flush wait budget. |
+| `enabled` | Default `True`; must be a boolean. `False` creates a disabled client without requiring a key or attaching to a supplied provider. |
+| `max_queue_size` | Default `2048`; positive integer limiting pending records per signal, including admissions and active export batches. |
+| `max_queue_bytes` | Default `8388608`; positive integer limiting encoded queue bytes per signal, including active export batches. |
+
+Use the `api_key=` keyword when omitting the origin. When enabled, the key is required and validated even though the signature permits `None` to preserve existing `Hue(base_url, api_key, ...)` calls. Disabled clients do not require a key. The constructor does not load environment variables or an environment file automatically. Invalid options raise `TypeError` or `ValueError`.
+
+Hue creates its own logger provider. With a borrowed tracer provider, your application owns that provider's resources and other processors. Use one Hue instance for its provider lifecycle; OpenTelemetry has no public processor-removal API. See [existing OpenTelemetry](/integrations/opentelemetry).
+
+## Spans and context
+
+Use `with` for the context managers below. They are ordinary synchronous context managers that may surround work inside an async function.
+
+```python
+with hue.context(session_id="conversation-1", user_id="application-user"):
+    with hue.span("request") as run:
+        with hue.tool("uppercase") as tool:
+            tool.set_input("hello")
+            result = "hello".upper()
+            tool.set_output(result)
+        run.set_output(result)
+```
+
+| Method | Parameters and behavior |
+| --- | --- |
+| `hue.context(*, session_id=None, user_id=None)` | Adds task-local identifiers inherited by nested Hue helpers. Maps to `gen_ai.conversation.id` and `user.id`; does not modify global baggage. |
+| `hue.span(name, *, attributes=None, kind=SpanKind.INTERNAL, parent_context=None)` | Yields `HueSpan`, activates its OpenTelemetry context and ends it on exit. Explicit attributes override inherited attributes with the same name. |
+| `hue.model(model, *, provider, operation="chat", name=None)` | Yields a client span with model/provider/operation attributes. Default name is `"{operation} {model}"`. It does not invoke a model or estimate usage. |
+| `hue.tool(name, *, call_id=None)` | Yields a tool span named `"execute_tool {name}"`, with an optional tool-call identifier. |
+| `Hue.inject(headers)` | Adds the active W3C trace context to a mutable string mapping. Does not insert the Hue key or baggage. |
+| `Hue.extract(headers)` | Returns an OpenTelemetry `Context` to pass as `parent_context`. |
+
+An exception escaping a Hue span records error type/status, then propagates unchanged. Python helpers always omit exception messages and stacks, including when capture is enabled. Initialize the client once, keep spans open until their work ends, and shut down when the process stops.
+
+### HueSpan
+
+| Member | Behavior |
+| --- | --- |
+| `trace_id` / `span_id` | Hexadecimal OpenTelemetry identifiers. |
+| `otel_span` | Underlying OpenTelemetry span for standard attributes, events and context APIs. |
+| `set_attribute(name, value)` | Sets caller-owned OpenTelemetry metadata. |
+| `set_input(value)` / `set_output(value)` | Captures JSON helper content according to `capture_content` and the redactor. Model/tool helpers choose their corresponding GenAI field names. |
+| `set_usage(*, input_tokens=None, output_tokens=None)` | Sets known nonnegative integer token counts. `None` omits a count; booleans and negative counts are rejected. |
+| `record_error(error)` | Records error type and status without exception text. Does not raise the supplied error itself. |
+| `log_inference(...)` | Accepts optional keyword-only `input` and `output`. Emits an inference-details log correlated to this span, even outside its active scope. Omit either keyword for absent content; passing `None` records JSON null when capture is enabled. |
+
+Choose logs or span attributes for the same content event to avoid duplicate storage. `log_inference` still emits a metadata-only correlated log when content capture is disabled. `hue.tracer`, `hue.tracer_provider` and `hue.logger_provider` expose the configured OpenTelemetry objects for integrations that accept explicit instances.
+
+## Content policy
+
+`capture_content=False` omits input/output content from Hue's helpers **before it enters an OpenTelemetry queue**. `True` permits that helper content. The policy does not scrub arbitrary attributes, span names, session identifiers, external instrumentors or other exporters. Configure an external instrumentor's own content policy before enabling it.
+
+`redactor(field, value)` receives a bounded, detached content snapshot before helper JSON serialization. Supported inputs are ordinary built-in JSON-compatible scalars, dictionaries and lists, plus built-in tuples and scalar dictionary keys accepted by Python's JSON encoder. Container shape and nested values are preserved without sharing mutable application containers. Custom objects and subclasses, cycles, non-finite numbers, integers above 14,000 bits, depth beyond 64, more than 65,536 visited values/keys, or a conservative value budget above 1 MiB are rejected before the callback. The budget counts UTF-8 string bytes plus value overhead; it is not a process-memory limit. The initial snapshot also runs when no redactor is configured. A redactor's returned value passes through a fresh snapshot with the same independent bounds before JSON encoding, so oversized nested output or custom serialization hooks cannot bypass this check.
+
+A snapshot, redaction or serialization failure omits that field and increments `export_status.instrumentation_failures` without raising into application work. A redactor may mutate its copy without changing application inputs or results, but must not mutate globals or objects obtained through captured references. Final captured fields are limited to 256 KiB of UTF-8 JSON. JSON `None`, `False`, `0` and `""` remain distinct from omitted content. Received content is stored by Hue; the SDK does not set a retention timer.
+
+## Delivery and shutdown
+
+```python
+hue.validate_project() -> Project
+hue.force_flush(timeout_millis: int = 30_000) -> bool
+hue.shutdown(timeout_millis: int = 30_000) -> bool
+hue.export_status -> ExportStatus
+```
+
+`validate_project()` returns a frozen `Project` with `id`, `name`, `slug` and `organization_id`. Authentication, connection or invalid-response failures raise `ProjectValidationError`; the exception does not contain the key. Validation sends no trace.
+
+`force_flush()` drains traces and logs. It returns `False` on timeout, a processor failure, a closed client, or **any recorded failed export batch, dropped record or instrumentation failure during this client's lifetime**. Inspect `export_status.failed_trace_batches`, `failed_log_batches` and `ok`; these are cumulative batch failure counters, not accepted-span counts.
+
+A flush timeout bounds how long the caller waits; it does not cancel network work already running in the background. Timeout values must be positive integers. Queues are bounded and in memory; termination or overflow can lose telemetry. A successful flush does not prove that every operation was instrumented or that all parents have arrived.
+
+`shutdown()` stops new helpers, drains and closes Hue-owned resources. Borrowed tracer providers and their other processors remain usable. A timeout returns `False` while shutdown continues; repeated calls wait for the same shutdown work. A `with Hue(...) as hue:` block calls `shutdown_safe(timeout_millis=1000)` on exit, but does not raise if that boolean is false. Use a checked flush when command success must require delivery:
+
+```python
+if not hue.force_flush():
+    raise RuntimeError("Hue did not acknowledge all telemetry.")
+```
+
+Exports use the official OTLP HTTP/protobuf exporters and their retry policy. HTTP errors, malformed acknowledgements and OTLP partial rejections count as failed batches. Partial rejections are not resent as a whole batch. Stop producing spans before shutdown; shared server clients should remain alive between requests.
+
+## Trace verification
+
+```python
+confirmation = hue.verify_trace(
+    trace_id,
+    expected_span_ids=[request_span_id],
+    required_fields=["model"],
+    timeout_millis=10_000,
+)
+```
+
+Returns a typed `TraceVerificationResult` with `verified` and `receipt: TraceReceipt | None`. A receipt has `trace_id`, `span_count`, `revision`, `fields`, `matched_span_ids`, `missing_span_ids`, and `trace_url`. `verified` requires a stored receipt, every supplied expected span, and every required field. Timeout returns `verified=False` with the latest partial receipt, or `None` if none arrived. Other failures raise exported `TraceVerificationError`, with `code` and optional `status_code`, without response bodies or credentials.
+
+`expected_span_ids` and `required_fields` accept sequences. Field names are `input`, `output`, `model`, `usage`, and `session`.
+
+Trace IDs are 32 lowercase hexadecimal characters; expected span IDs are 16. All IDs must be nonzero. Supply at most 100 unique expected span IDs and unique required field names. The timeout defaults to 10,000 ms and must be positive, finite, and at most 60,000 ms. The receipt response is limited to 64 KiB.
+
+Missing spans or required fields keep polling until the deadline. Only recognized trace-not-found responses, HTTP 429, and HTTP 503 are retried; connection failures, unsupported endpoints, redirects, and malformed responses raise a safe typed error. Verification reads stored normalized field presence across the trace, including supported correlated logs. It does not inspect values or prove that unlisted application operations were instrumented.
+
+[Flush the owning providers before verification](/sdks/python#verify-stored-trace-evidence); this method never flushes implicitly. An in-flight network read may finish in the background after the caller times out.
+
+## Evaluation client
+
+```python
+from hue_sdk.evals import EvaluationClient
+
+client = EvaluationClient(
+    api_key=os.environ["HUE_API_KEY"],
+    timeout_seconds=10,
+)
+```
+
+`EvaluationClient(base_url: str = "https://app.hue.run", api_key: str | None = None, *, timeout_seconds: float = 10)` requires a valid project service key. Use `api_key=` for Hue Cloud or retain `EvaluationClient(base_url, api_key)` for an explicit origin; timeouts must be positive and finite. Registry writes require the key's `project_write` capability.
+
+Client methods are synchronous and return dictionaries. **Arguments use snake_case; response fields and low-level completion payloads use HTTP camelCase.** `check_connection()` returns the current project. List methods accept keyword-only `after=None, limit=100`; limits are 1–100. Responses contain `items` and `nextCursor`.
+
+Evaluation responses are limited to **4 MiB**. `list_cases(version_id, ...)` includes case content, so a valid row limit can still produce an oversized response when cases are large. Request a smaller page, such as `limit=1`, and pass each non-null `nextCursor` as `after`. The client does not automatically split or retry an oversized page.
+
+### Datasets and scorer definitions
+
+| Method | Parameters and result |
+| --- | --- |
+| `create_dataset(*, name, slug, description="")` | Dataset with initial `versions`. |
+| `get_dataset(dataset_id)` / `list_datasets(...)` | Retrieve a dataset / page of summaries. |
+| `create_dataset_version(dataset_id, *, from_version_id=None)` | New editable version. |
+| `get_dataset_version(version_id)` / `list_cases(version_id, ...)` | Retrieve a version / page of cases. |
+| `add_case(version_id, *, expected_revision, external_key, inputs, expected=MISSING, metadata=None)` | `{ "item": ..., "version": ... }`; retain the updated revision. |
+| `freeze_dataset_version(version_id, expected_revision)` | Frozen dataset version. |
+| `create_scorer(*, name, slug, description="")` / `get_scorer(scorer_id)` / `list_scorers(...)` | Register or retrieve scorer identities. |
+| `publish_scorer_version(scorer_id, definition)` / `get_scorer_version(version_id)` | Publish or retrieve an immutable scorer version. |
+
+Use `MISSING` or omit `expected` to declare no reference. `None` is a present JSON-null reference. Freeze the dataset and publish scorer definitions before creating an experiment.
+
+#### Scorer declarations and metrics
+
+Scorer `definition` dictionaries use **camelCase** keys, even when supplied to a Python method.
+
+| Definition | Required fields |
+| --- | --- |
+| Built-in | Use `builtins.exact_match()`, `builtins.includes(case_sensitive)` or `builtins.json_schema(schema)` for the exact versioned declaration. |
+| Local code | `kind: "local_code"`, `language: "python"` or `"typescript"`, `entrypoint`, `sourceDigest`, `metrics`. `define_local_scorer` creates the Python declaration and binds the callback. |
+| Manual | `kind: "manual"`, `metrics`. Completion requires the platform's human workflow. |
+| Hosted judge | `kind: "llm_judge"`, `metrics`, `config`. Hosted dispatch is separate from a local run. |
+
+Each metric definition has a `name` and `type`: `boolean`, `text`, `number` (optional `min`/`max`), or `category` (required `categories`, a list of strings). Results must match the pinned definitions exactly.
+
+Hosted `config` requires `model`, `provider`, `rubric`, `bindings` (a list of dictionaries with `name`, `path`, `required`), `maxOutputTokens` and `timeoutMs`; `temperature` is optional. The declaration states the requested policy; the server validates supported values and project execution settings when it is used.
+
+### Experiments, saved subjects and results
+
+| Method | Parameters and result |
+| --- | --- |
+| `create_experiment(*, idempotency_key, name, dataset_version_id, scorer_version_ids, config)` | `{ "id": ..., "evaluationRunId": ... }`. |
+| `get_experiment(experiment_id)` / `list_experiment_items(experiment_id, ...)` / `get_experiment_case(experiment_id, case_id)` | Read pinned configuration and cases. |
+| `start_execution(experiment_id, case_id, *, idempotency_key, trace_external_id=None, previous_execution_id=None, allow_uncertain_retry=False)` | Start or recover an execution attempt. |
+| `get_execution(execution_id)` / `complete_execution(execution_id, payload)` | Retrieve an attempt / acknowledge its terminal outcome. |
+| `finish_experiment(experiment_id, idempotency_key)` | `{ "id": ..., "finishedAt": ... }`. |
+| `create_evaluation_run(*, idempotency_key, name, subject_ids, scorer_version_ids)` | `{ "id": ... }` for rescoring saved subjects. |
+| `get_evaluation_run(run_id)` / `list_evaluation_items(run_id, ...)` / `get_subject(subject_id)` | Read a run, its items and immutable saved evidence. |
+| `submit_results(run_id, *, idempotency_key, results)` | `{ "ids": [...] }`. |
+| `list_results(run_id, ...)` / `get_result(result_id)` | Result summaries / a stored result. |
+
+`complete_execution` accepts a camelCase payload: required `idempotencyKey` and terminal `state` (`succeeded`, `error` or `cancelled`), with optional `output`, `error`, `expectedTraceRevision`, `traceEvidence` (`required` or `omit`) and `omissionReason`. It returns `executionId`, `subjectId`, `traceSnapshotId` and `evaluationItemId`.
+
+Each submitted result requires `evaluationItemId`, `scorerVersionId` and the `Score` fields described below; a local-code result also carries `sourceDigest`. A scored result has `metrics` entries with `name`, `value` and optional `passed`, plus a nonempty `explanation` or an `evidence` value. Error results contain `error` with `type` and optional `message`; skipped results contain an `explanation`.
+
+Mutations do not retry implicitly. Preserve idempotency keys and returned IDs across retries after a lost response. `HueApiError.status` is the HTTP status when available; errors do not echo server bodies. The client rejects invalid JSON before writes, does not follow redirects, and limits request/response bodies to 1 MiB/4 MiB.
+
+Runner target outputs and built-in JSON Schema declarations are limited to 200,000 serialized bytes. JSON validation also enforces nesting depth 32 and 20,000 nodes; for an HTTP write, those structural limits apply to the complete request body. Values must use finite JSON numbers, valid Unicode without NUL, string dictionary keys, lists and dictionaries without cycles. Python integers outside `-(2**53 - 1)` through `2**53 - 1` are rejected; use strings for larger exact integers. The server can apply additional field-specific limits.
+
+### Hosted judge jobs
+
+`get_judge_budget()` reads configured allowance and availability. Call `create_judge_jobs(run_id, *, idempotency_key, jobs)` with `jobs` entries containing `evaluationItemId` and `scorerVersionId`; the result contains `ids`. Inspect `list_judge_jobs(run_id, ...)` or `get_judge_job(job_id)`, and request cancellation with `cancel_judge_job(job_id, *, reason)`.
+
+Submitting hosted jobs is explicit and can consume the project's allowance. Method availability does not establish that the project has a configured provider or budget. Local runners leave hosted and manual pins for their owning workflows.
+
+## Run locally and rescore
+
+```python
+run_experiment(
+    *, client, hue, experiment_id, target,
+    checkpoint_directory, persist_result_content, trace_evidence,
+    scorers=None, concurrency=1, schema_timeout_millis=2000,
+) -> RunnerReport
+
+rescore(
+    *, client, run_id, checkpoint_directory, persist_result_content,
+    scorers=None, concurrency=1, schema_timeout_millis=2000,
+) -> RunnerReport
+```
+
+Both are exported from `hue_sdk.evals` and are synchronous entry points. They support sync or async target/scorer callbacks inside worker threads. From an async application, call the runner through `asyncio.to_thread`.
+
+| Option | Behavior |
+| --- | --- |
+| `checkpoint_directory` | Required `str` or `Path`, dedicated to this run. Preserve it for upload recovery; keep it out of Git. Checkpoint guarantees require a POSIX filesystem with private permissions and no-follow opens. |
+| `persist_result_content` | Required boolean, independent of telemetry capture. |
+| `trace_evidence` | Required for `run_experiment`: `TraceEvidence("required")` or `TraceEvidence("omit", "reason")`. |
+| `target` | Receives `(inputs, TargetContext)` and returns the output or an awaitable. `TargetContext` has `config`, `item` and `span`. |
+| `scorers` | Optional list of bound `LocalScorer` objects. |
+| `concurrency` | Default `1`; integer `1–16`. |
+| `schema_timeout_millis` | Default `2000`; integer `100–60000`; bounds JSON Schema validation, not arbitrary callbacks. |
+
+Telemetry and evaluation clients must use the same project and origin. `rescore` requires an evaluation run created from saved subject IDs and has **no target callback**. `RunnerReport` exposes `run_id`, `subject_ids`, `result_ids` and `deferred_scorer_version_ids`.
+
+Returning `MISSING` means unavailable output; returning `None` is JSON null. With `persist_result_content=False`, completions and local checkpoints omit raw output, target error messages, scorer evidence and arbitrary explanations. Typed metric values, including custom text values, remain stored. Existing dataset inputs/references are independent of this setting. Historical scoring skips unavailable output without invoking a scorer callback.
+
+### Local scorer exports
+
+| Export | Behavior |
+| --- | --- |
+| `builtins.exact_match()` | Publishable typed JSON equality definition. |
+| `builtins.includes(case_sensitive=True)` | Publishable string-inclusion definition. |
+| `builtins.json_schema(schema)` | Publishable JSON Schema draft 2020-12 definition. |
+| `define_local_scorer(*, source, entrypoint, metrics, score)` | Returns `LocalScorer`; source is text or bytes. |
+| `score_locally(version, context, *, scorers=None, schema_timeout_millis=2000)` | Returns `Score` without uploading it. |
+
+`ScoreContext` contains `inputs`, `has_output`, `has_expected`, optional `output`/`expected`, `metadata` and `execution_state`. A `Score` is `scored` with declared metrics and explanation/evidence, `error` with a typed error, or `skipped` with an explanation. A false quality verdict remains a scored result, with `passed: False`.
+
+The source digest binds an explicitly supplied source declaration to the local scorer; it does not attest closures or installed dependencies. Custom callbacks have no general execution timeout or side-effect cancellation. JSON Schema uses an isolated subprocess with a deadline and no remote schema fetches. Hosted pins require judge-job dispatch; `score_locally` does not run a hosted judge.
+
+### Recovery errors
+
+| Error | Meaning |
+| --- | --- |
+| `UncertainExecutionError` | No durable outcome is available. Exposes `case_id` and optional `execution_id`; the runner refuses to repeat potentially completed work. |
+| `OutcomeSerializationError` | The target returned, but its outcome could not be saved as JSON. Exposes `execution_id`; the runner does not invoke the target again. |
+| `TelemetryExportError` | A saved target outcome lacks required trace acknowledgement. Exposes `execution_id`; a new empty exporter cannot prove prior receipt. |
+
+Use one checkpoint directory per experiment or rescore run. Checkpoint files contain allowed result content and are private local files, not encrypted storage. Resume an upload failure with the same run, directory and options so saved payloads and idempotency keys are reused. After a process crash, confirm its recorded owner has stopped before removing `.lock`; removing the lock never authorizes another target invocation.
+
+For uncertain work, investigate side effects before starting another attempt. The low-level `start_execution` method requires the latest `previous_execution_id` for a replacement attempt and `allow_uncertain_retry=True` to replace a still-started attempt. Restarting a runner does not grant either permission or automatically adopt an externally created attempt. Use a new experiment for an intentional fresh target run after investigating.
+
+Required evidence waits for both signals after the root span ends. Omission is an explicit policy, never an automatic fallback after export failure. For a runnable example, see the public [first evaluation guide](/evaluations/first-evaluation).
+
+## Managed target adapter
+
+`ManagedTargetHandler` from `hue_sdk.managed` requires `machine_credential`, a synchronous `target` callback and `flush_telemetry`. Optional arguments are `tracer`, `base_url`, `max_execution_millis` (default 90000, at most 90000) and `finalization_millis` (default 30000, at most 30000).
+
+`handle(payload, headers)` accepts bounded raw JSON bytes or a dictionary and returns `ManagedResponse` with `status_code`, `body` and `headers`. The target receives `ManagedTargetContext` and returns `ManagedTargetResult`; generated files use `ManagedOutputFile`. Calls use the existing tracing providers. A false flush result leaves telemetry pending. See [managed runs](/evaluations/managed-runs) for framework integration, cancellation and recovery.
+
+## Safe serving lifecycle
+
+Import `create_hue_safe` from `hue_sdk`. It accepts the same constructor arguments as `Hue`, catches ordinary initialization failures and returns a disabled client with an instrumentation failure. `enabled=False` needs no API key and does not attach to a supplied provider. Initialize once per serving process after fork; inherited clients no-op instead of reusing parent worker locks.
+
+`force_flush_safe(timeout_millis=1000)` and `shutdown_safe(timeout_millis=1000)` return booleans without raising. Observe `export_status`; it now includes `instrumentation_failures`, `dropped_trace_records`, `dropped_log_records`, `queued_trace_records`, `queued_log_records`, `queued_trace_bytes` and `queued_log_bytes`. Queued counts include in-flight records; health is cumulative.
+
+Constructor options `max_queue_size=2048` and `max_queue_bytes=8388608` bound each signal's retained telemetry. Encoded bytes are not total process RSS. HTTP acknowledgements are capped at 64 KiB; 429 and Retry-After are honored within the transport budget. One retained network worker per signal bounds blocked network work, although Python cannot forcibly cancel every blocked system call. After a request timeout, that worker may retain up to 1 MiB of encoded request data per signal outside queue counters. Later batches stay queued within their limits until transport recovery; shutdown counts any queued records it must discard. See [production safety](/guides/production-safety).
