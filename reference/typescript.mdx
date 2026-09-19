@@ -1,9 +1,9 @@
 ---
 title: "TypeScript API reference"
-description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.2.2."
+description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.3.0."
 ---
 
-This reference covers `@hue-run/sdk` **0.2.2** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+This reference covers `@hue-run/sdk` **0.3.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -11,7 +11,7 @@ This reference covers `@hue-run/sdk` **0.2.2** on Node.js 22 or 24 and Bun 1.4. 
 | --- | --- |
 | `@hue-run/sdk` | `createHue`, `createHueSafe`, `HueClient`, `createHueTransport`, `HueTransport`, `hueExperimentalTelemetry`, `contentPrefixes`, `HueConnectionError`, `HueExportError`, `HueTraceVerificationError` and the tracing types below. |
 | `@hue-run/sdk/ai-sdk` | `hueTelemetry` for Vercel AI SDK 7. Requires the optional `ai` and `@ai-sdk/otel` peers. |
-| `@hue-run/sdk/evals` | Evaluation client, local runners including `runSimulation`, scorer definitions, attempt-preflight validators, evaluation errors and types. Requires the optional `zod` peer (4.6.5 or later). |
+| `@hue-run/sdk/evals` | Evaluation client, local runners including `runSimulation` and `runLocalAgent`, scorer definitions, attempt-preflight validators, evaluation errors and types. Requires the optional `zod` peer (4.6.5 or later). |
 | `@hue-run/sdk/environment` | `createEnvironmentClient`, `EnvironmentClient`, `bindEnvironmentTools`, `HueEnvironmentError` and the simulated-environment types. |
 | `@hue-run/sdk/managed` | `createManagedTargetHandler` and the managed-target types. |
 
@@ -381,6 +381,34 @@ When a target's outcome is uncertain, restarting the runner will not repeat it. 
 
 For a runnable experiment and historical rescore, see the public [first evaluation guide](/evaluations/first-evaluation).
 
+## Run a local agent worker
+
+```ts
+runLocalAgent(options: RunLocalAgentOptions): Promise<void>
+```
+
+`runLocalAgent` starts an outbound-only worker for one fixed local TypeScript agent entry point. Hue chooses only the registered key and revision; no command or source is received from the cloud. The worker is exported from `@hue-run/sdk/evals` and uses the same provider-aware world lifecycle as `runSimulation`. A matching Hue API deployment is required. Official Gmail and Slack registrations remain inactive.
+
+Register the process first with `registerLocalAgent(input: LocalAgentRegistration)`, which returns a `RegisteredLocalAgent`. The worker then claims queued runs as a `LocalAgentClaim`. Candidate callbacks receive a `LocalAgentTargetContext`: case identity and cloned task inputs only, not expected criteria, case metadata or environment pins.
+
+### RunLocalAgentOptions
+
+| Option | Required/default |
+| --- | --- |
+| `client` | Required `EvaluationClient` for the worker project. |
+| `environmentClient` | Required `EnvironmentClient` for the same Hue origin and project. |
+| `hue` | Required `HueClient` used for target and tool spans. |
+| `checkpointDirectory` | Required private directory for worker identity and execution checkpoints. |
+| `agent` | Required `LocalAgentRegistration`: `key`, `name`, `revision`, optional `capabilities` and `scorerDigests`. |
+| `target(inputs, tools, context)` | Required. Invokes the existing local agent with isolated `EnvironmentTool`s and a `LocalAgentTargetContext`. |
+| `scorers` | Optional `LocalScorer[]` matching published source digests. |
+| `concurrency` | Default `1`; integer `1–16`. |
+| `pollIntervalMillis` | Default `2000`; integer `250–60000`. |
+| `signal` | Optional `AbortSignal`; stops polling cooperatively and does not cancel an active callback. |
+| `maxRuns` | Optional. Useful for one-shot jobs; omit to keep polling. |
+| `actualAgentManifest` / `requestedProviders` / `mcpSurface` | Optional V2 provider-profile preflight, validated together before the worker polls. |
+| `onCompleted(report)` | Optional callback after the experiment and queue completion are acknowledged. |
+
 ## Run a simulation
 
 ```ts
@@ -424,7 +452,7 @@ Provider-profile preflight is a control-plane contract. The provider-facade rout
 | Kind | Fields |
 | --- | --- |
 | `{ kind: "experiment", experimentId }` | Selects an existing app-authored immutable experiment template. Each completed invocation clones its frozen dataset version, configuration and scorer-version pins into a fresh experiment. |
-| `{ kind: "repository", name, slug, description?, environment, cases, scorers, config? }` | Publishes and resolves the definition. `slug` is the stable dataset slug used for immutable version resolution; `environment` is an `EnvironmentIdentity` plus its `definition: EnvironmentDefinition`; `config` is passed to every target callback. At least one case and one scorer are required, and case keys must be unique. |
+| `{ kind: "repository", name, slug, description?, environment, cases, scorers, config? }` | Publishes and resolves the definition. `slug` is the stable dataset slug used for immutable version resolution; `environment` is an `EnvironmentIdentity` plus its `definition: PublishableEnvironmentDefinition`; `config` is passed to every target callback. At least one case and one scorer are required, and case keys must be unique. |
 
 `RepositorySimulationCase` is `{ externalKey, inputs, expected?, metadata? }`: a stable key unique within the scenario dataset, the JSON inputs passed to the target, an optional reference output and optional caller-owned metadata. `RepositorySimulationScorer` is an `Identity` plus `scorer`, a `ScorerDefinition` to publish or a `LocalScorer` bound to its source digest. Stable slugs reuse matching immutable content digests; changed definitions publish new versions. Unsupported or server-only scorer kinds throw `TypeError` before any write.
 
@@ -511,14 +539,14 @@ Run mutations retry on transport failure and on HTTP 408, 429, 500, 502, 503 and
 | --- | --- |
 | `createEnvironment(input: EnvironmentIdentity)` | `EnvironmentSummary`. Creates an environment identity; not retried. |
 | `listEnvironments(page?: EnvironmentPageOptions)` / `getEnvironment(id)` | An `EnvironmentPage` of active identities / an `Environment` with its immutable version summaries. |
-| `publishVersion(environmentId, definition: EnvironmentDefinition)` | `EnvironmentVersionSummary`. Publishes an immutable definition; not retried. |
+| `publishVersion(environmentId, definition: PublishableEnvironmentDefinition)` | `EnvironmentVersionSummary`. Publishes an immutable definition; not retried. |
 | `getVersion(id)` | The full `EnvironmentVersion` with its generated action catalog. |
 
 `EnvironmentIdentity` is `{ name, slug, description? }`; `EnvironmentSummary` adds `id` and `archivedAt` (`null` while active), and `Environment` adds `versions`. `EnvironmentVersionSummary` is `{ id, version, contentDigest, createdAt }`, where `contentDigest` is the canonical digest of the stored, defaulted definition; `EnvironmentVersion` adds `environmentId`, the stored `definition` and the generated `actions`. `EnvironmentPage` is `{ items, nextCursor }` and `EnvironmentPageOptions` is `{ after?, limit? }` with a limit from 1 through 100.
 
 #### EnvironmentDefinition
 
-`EnvironmentDefinition` is the complete V1 authored-world document stored as an immutable version.
+`EnvironmentDefinition` is the complete V1 authored-world document stored as an immutable version. `EnvironmentDefinitionV1` is that same V1 document. `publishVersion` and `EnvironmentVersion.definition` accept a `PublishableEnvironmentDefinition`, the union of `EnvironmentDefinitionV1` and `EnvironmentDefinitionV2`. Narrow `definition.schemaVersion === 1` before reading V1-only fields. Use `EnvironmentDefinitionV2` only when supplying `providerInstances`.
 
 | Field | Meaning |
 | --- | --- |
@@ -533,6 +561,8 @@ Run mutations retry on transport failure and on HTTP 408, 429, 500, 502, 503 and
 Each `EnvironmentActionDeclaration` has a unique `name`, an optional agent-visible `description`, flat `params`, `semantics` and an optional `observation` whose only V1 `projection` is `"identity"`. An `EnvironmentActionParameter` has `name`, `type` (`"string"`, `"number"`, `"boolean"` or `"string[]"`), `required` (default `true`), optional `description` and optional `enum`. `semantics.entry` is a `SemanticEntry`, a versioned deterministic semantic implemented by Hue's environment kernel: `hue.collection.get@1`, `hue.collection.list@1`, `hue.collection.search@1`, `hue.collection.create@1`, `hue.collection.update@1`, `hue.gmail.search_messages@1`, `hue.gmail.get_message@1`, `hue.gmail.get_thread@1`, `hue.gmail.create_draft@1`, `hue.gmail.update_draft@1`, `hue.slack.search@1`, `hue.slack.read_channel@1`, `hue.slack.read_thread@1`, `hue.slack.draft@1` or `hue.slack.destination@1`. `semantics.config` is an `EnvironmentSemanticConfig`: the primary `collection` plus optional `draftsCollection`, `slackActorId`, `slackWorkspaceId`, `mailboxAddress`, `idParam`, `queryParam`, `fields`, `filter` (`{ field, param }`), `limit`, `set`, `setFromParams`, `idPrefix`, `guards` (`{ field, equals, error }` entries, default `[]`) and `notFoundError` (default `"not_found"`).
 
 Publishing generates one `ActionDefinition` per action: `name`, `description?` and `inputSchema`, an `ActionSchema`. That is the JSON Schema subset `{ type: "object", properties, required, additionalProperties: false }` whose properties are scalar types with an optional `enum` or bounded string arrays with `maxItems` and item `maxLength`. Unknown action arguments are rejected.
+
+`EnvironmentDefinitionV2` extends that V1 document with `schemaVersion: 2` and `providerInstances: GmailProviderInstance[]`. Each `GmailProviderInstance` is `{ providerInstanceKey, providerId: "google.gmail", syntheticPrincipalId, configuration: { kind: "gmail_mailbox/v1", messagesCollection, draftsCollection, mailboxAddress } }`. Hue canonicalizes `syntheticPrincipalId` to a lowercase UUID. These bindings are immutable attempt-profile inputs; they do not establish hosted Gmail calls.
 
 ### Runs, actions and journals
 
