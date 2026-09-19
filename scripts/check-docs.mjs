@@ -56,6 +56,23 @@ function canonicalCompatibility(publicCompatibility) {
 const config = readJson("docs.json");
 const platform = readJson("contracts/fern-public-docs.json");
 const sdk = readJson("contracts/sdk-docs.json");
+const mintIgnore = new Set(
+  read(".mintignore")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#")),
+);
+for (const repositoryOnlyPath of [
+  "AGENTS.md",
+  "contracts/",
+  "scripts/",
+  "docs-contract.json",
+  "package.json",
+  "bun.lock",
+]) {
+  if (!mintIgnore.has(repositoryOnlyPath))
+    fail(`.mintignore must exclude repository-only ${repositoryOnlyPath}`);
+}
 const pages = navigationPages(config);
 const mdxFiles = filesBelow(root).filter((path) => path.endsWith(".mdx")).sort();
 const expectedMdxFiles = pages.map((page) => `${page}.mdx`).sort();
