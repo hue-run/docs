@@ -61,7 +61,7 @@
         "project_read",
         "project_write"
       ],
-      "use": "Read project data and author datasets, scorers, experiments and environments through Hue's product MCP server."
+      "use": "Read and write project data through Hue's product MCP server. Billing stays in the app."
     }
   ],
   "packages": {
@@ -121,6 +121,66 @@
           "readOnlyHint": true,
           "destructiveHint": false,
           "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_api_keys",
+        "title": "Hue: list API keys",
+        "toolset": "project",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "add_api_key",
+        "title": "Hue: add API key",
+        "toolset": "project",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "revoke_api_key",
+        "title": "Hue: revoke API key",
+        "toolset": "project",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_members",
+        "title": "Hue: list members",
+        "toolset": "project",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "update_project",
+        "title": "Hue: update project",
+        "toolset": "project",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
           "openWorldHint": false
         }
       },
@@ -365,6 +425,30 @@
         }
       },
       {
+        "name": "archive_dataset",
+        "title": "Hue: archive dataset",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "archive_scorer",
+        "title": "Hue: archive scorer",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
         "name": "list_experiments",
         "title": "Hue: list experiments",
         "toolset": "evals",
@@ -391,6 +475,126 @@
       {
         "name": "add_experiment",
         "title": "Hue: add experiment",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_experiment_items",
+        "title": "Hue: list experiment items",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_experiment_item",
+        "title": "Hue: get experiment item",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_experiment_execution",
+        "title": "Hue: get experiment execution",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "start_experiment_case",
+        "title": "Hue: start experiment case",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "complete_experiment_case",
+        "title": "Hue: complete experiment case",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "finish_experiment",
+        "title": "Hue: finish experiment",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_evaluation_runs",
+        "title": "Hue: list evaluation runs",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_evaluation_run",
+        "title": "Hue: get evaluation run",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "add_evaluation_run",
+        "title": "Hue: add evaluation run",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "add_evaluation_results",
+        "title": "Hue: add evaluation results",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -449,6 +653,330 @@
         }
       },
       {
+        "name": "archive_environment",
+        "title": "Hue: archive environment",
+        "toolset": "environments",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_review_queues",
+        "title": "Hue: list review queues",
+        "toolset": "review",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_review_queue",
+        "title": "Hue: get review queue",
+        "toolset": "review",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "add_review_queue",
+        "title": "Hue: add review queue",
+        "toolset": "review",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "update_review_queue",
+        "title": "Hue: update review queue",
+        "toolset": "review",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_review_items",
+        "title": "Hue: list review items",
+        "toolset": "review",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_review_item",
+        "title": "Hue: get review item",
+        "toolset": "review",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "enqueue_review",
+        "title": "Hue: enqueue review",
+        "toolset": "review",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "claim_review",
+        "title": "Hue: claim review",
+        "toolset": "review",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "submit_review",
+        "title": "Hue: submit review",
+        "toolset": "review",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_intent_taxonomy",
+        "title": "Hue: get intent taxonomy",
+        "toolset": "intents",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "save_intent_taxonomy",
+        "title": "Hue: save intent taxonomy",
+        "toolset": "intents",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_intent_summary",
+        "title": "Hue: get intent summary",
+        "toolset": "intents",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_intent_traces",
+        "title": "Hue: list intent traces",
+        "toolset": "intents",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_managed_targets",
+        "title": "Hue: list managed targets",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "add_managed_target",
+        "title": "Hue: add managed target",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "preflight_managed_run",
+        "title": "Hue: preflight managed run",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "launch_managed_run",
+        "title": "Hue: launch managed run",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_managed_run",
+        "title": "Hue: get managed run",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "cancel_managed_run",
+        "title": "Hue: cancel managed run",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_local_agents",
+        "title": "Hue: list local agents",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "launch_local_run",
+        "title": "Hue: launch local run",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_local_run",
+        "title": "Hue: get local run",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_artifacts",
+        "title": "Hue: list artifacts",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_artifact",
+        "title": "Hue: get artifact",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_judge_budget",
+        "title": "Hue: get judge budget",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "add_judge_jobs",
+        "title": "Hue: add judge jobs",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
         "name": "search_hue_docs",
         "title": "Hue: search documentation",
         "toolset": "docs",
@@ -473,7 +1001,7 @@
         }
       }
     ],
-    "catalogSha256": "998232441388104ff4a66cdf263ccfae6d606e2f1f98d49fc1d6f6b82f102d73",
+    "catalogSha256": "131b1ce0c937fdbd75493ee93217b52623f63395d12127b80d8b2088396c09c0",
     "installSnippets": {
       "claudeCodeProjectJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "claudeCodeCli": "claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp \\\n  --header 'Authorization: Bearer ${HUE_MCP_KEY}'",
@@ -482,7 +1010,7 @@
       "codexCli": "codex mcp add hue --url https://mcp.hue.run/mcp --bearer-token-env-var HUE_MCP_KEY",
       "codexToml": "[mcp_servers.hue]\nurl = \"https://mcp.hue.run/mcp\"\nbearer_token_env_var = \"HUE_MCP_KEY\"",
       "vscodeJson": "{\n  \"servers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${input:hue-mcp-key}\"\n      }\n    }\n  },\n  \"inputs\": [\n    {\n      \"type\": \"promptString\",\n      \"id\": \"hue-mcp-key\",\n      \"description\": \"Hue coding-agent key\",\n      \"password\": true\n    }\n  ]\n}",
-      "copilotCloudJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp?read_only=true\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $COPILOT_MCP_HUE_MCP_KEY\"\n      },\n      \"tools\": [\n        \"get_project_context\",\n        \"search_traces\",\n        \"get_trace\",\n        \"get_span\",\n        \"list_sessions\",\n        \"verify_trace\",\n        \"list_datasets\",\n        \"get_dataset\",\n        \"list_scorers\",\n        \"get_scorer\",\n        \"list_experiments\",\n        \"get_experiment\",\n        \"list_environments\",\n        \"get_environment\",\n        \"search_hue_docs\"\n      ]\n    }\n  }\n}",
+      "copilotCloudJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp?read_only=true\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $COPILOT_MCP_HUE_MCP_KEY\"\n      },\n      \"tools\": [\n        \"get_project_context\",\n        \"search_traces\",\n        \"get_trace\",\n        \"get_span\",\n        \"list_sessions\",\n        \"verify_trace\",\n        \"list_datasets\",\n        \"get_dataset\",\n        \"list_scorers\",\n        \"get_scorer\",\n        \"list_experiments\",\n        \"get_experiment\",\n        \"list_environments\",\n        \"get_environment\",\n        \"list_review_queues\",\n        \"get_review_queue\",\n        \"get_intent_taxonomy\",\n        \"get_intent_summary\",\n        \"list_managed_targets\",\n        \"list_local_agents\",\n        \"list_artifacts\",\n        \"list_api_keys\",\n        \"list_members\",\n        \"search_hue_docs\"\n      ]\n    }\n  }\n}",
       "windsurfJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"serverUrl\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${env:HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "geminiCli": "gemini mcp add --transport http hue https://mcp.hue.run/mcp -H \"Authorization: Bearer $HUE_MCP_KEY\"",
       "verifyPrompt": "Use the Hue MCP: call get_project_context, then show my 5 most recent error traces with links."

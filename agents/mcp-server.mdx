@@ -1,10 +1,10 @@
 ---
 title: "Connect the Hue MCP server"
 sidebarTitle: "MCP"
-description: "Give Claude Code, Codex, Cursor, Windsurf, Gemini CLI and other MCP clients project-scoped access to traces, evaluations and environments."
+description: "Give Claude Code, Codex, Cursor, Windsurf, Gemini CLI and other MCP clients project-scoped access to traces, evaluations, review and settings."
 ---
 
-The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install: point an MCP client at the URL with a coding-agent key. A **Coding agent (read-only)** key can search traces, inspect spans, verify delivery, read datasets, scorers, experiments and environments, and search these docs. A **Coding agent (read + evaluations)** key also lists write tools so the agent can author those objects, all scoped to one project.
+The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install: point an MCP client at the URL with a coding-agent key. A **Coding agent (read-only)** key can search traces, inspect spans, verify delivery, read evaluations, review, intents, managed and local runs, artifacts, members and keys, and search these docs. A **Coding agent (read + evaluations)** key also lists write tools for those same surfaces, all scoped to one project. Billing and plan changes stay in Settings.
 
 The project-data server is a dynamic Node.js route in Hue's main web application, not a separate data service. `https://app.hue.run/api/mcp` remains a supported compatibility alias. The separate Mintlify-hosted endpoint at `https://docs.hue.run/mcp` serves public documentation only; it cannot read a Hue project. The `search_hue_docs` tool delegates documentation searches to that endpoint without changing the project-data server's authentication boundary.
 
@@ -131,11 +131,21 @@ Use the Hue MCP: call get_project_context, then show my 5 most recent error trac
 
 **Confirm delivery.** "Did trace 0af7651916cd43dd8448eb211c80319c arrive with spans a and b, with model and usage recorded?" Tools: `verify_trace`.
 
-**Read evaluations.** "List my datasets", "show the cases in the latest version of the regression set", "summarize the last experiment and list the failing cases", "compare it against the baseline experiment". Tools: `list_datasets`, `get_dataset`, `list_scorers`, `get_scorer`, `list_experiments`, `get_experiment`, `list_environments`, `get_environment`.
+**Read evaluations.** "List my datasets", "show the cases in the latest version of the regression set", "summarize the last experiment and list the failing cases", "compare it against the baseline experiment". Tools: `list_datasets`, `get_dataset`, `list_scorers`, `get_scorer`, `list_experiments`, `get_experiment`, `list_experiment_items`, `get_experiment_item`, `get_experiment_execution`, `list_evaluation_runs`, `get_evaluation_run`, `list_environments`, `get_environment`.
 
-**Author evaluations.** Requires **Coding agent (read + evaluations)** without `?read_only=true`. Create a dataset (`add_dataset`), add cases (`add_dataset_cases`) or promote a trace (`add_trace_to_dataset`), edit a draft (`update_dataset`, `update_dataset_case`, `delete_dataset_case`, `add_dataset_draft`), freeze it (`freeze_dataset_version`), then pin scorers (`add_scorer`, `publish_scorer`, `copy_scorer`) and create an experiment (`add_experiment`). Case execution stays with the SDK, a managed run, or a local agent. Ask before any write; never auto-approve `add_*`, `update_*`, `delete_*`, `publish_*`, `freeze_*` or `copy_*`.
+**Author evaluations.** Requires **Coding agent (read + evaluations)** without `?read_only=true`. Create a dataset (`add_dataset`), add cases (`add_dataset_cases`) or promote a trace (`add_trace_to_dataset`), edit a draft (`update_dataset`, `update_dataset_case`, `delete_dataset_case`, `add_dataset_draft`), freeze it (`freeze_dataset_version`), then pin scorers (`add_scorer`, `publish_scorer`, `copy_scorer`) and create an experiment (`add_experiment`). Record scoring results with `add_evaluation_run` and `add_evaluation_results`. Hide retired identities with `archive_dataset`, `archive_scorer` or `archive_environment`. Case execution can stay with the SDK, a managed run, a local agent, or `start_experiment_case` / `complete_experiment_case` / `finish_experiment`. Ask before any write; never auto-approve `add_*`, `update_*`, `delete_*`, `publish_*`, `freeze_*`, `archive_*` or `copy_*`.
 
 **Author environments.** `add_environment` and `publish_environment_version` create a simulated world a case can pin.
+
+**Review.** Inspect queues and items with `list_review_queues`, `get_review_queue`, `list_review_items` and `get_review_item`. Creating or updating a queue (`add_review_queue`, `update_review_queue`) and `enqueue_review` require the key's creating owner or admin. `claim_review` and `submit_review` bind to that same verified member.
+
+**Intents.** Read the taxonomy and buckets with `get_intent_taxonomy`, `get_intent_summary` and `list_intent_traces`. `save_intent_taxonomy` republishes categories and requires an owner or admin creator.
+
+**Managed and local runs.** List and inspect with `list_managed_targets`, `preflight_managed_run`, `get_managed_run`, `list_local_agents` and `get_local_run`. `add_managed_target` stores an encrypted credential and requires an owner or admin creator. Launch or cancel with `launch_managed_run`, `cancel_managed_run` and `launch_local_run`.
+
+**Artifacts and hosted judges.** `list_artifacts` and `get_artifact` return metadata only; bytes stay on HTTP. `get_judge_budget` reports hosted-judge usage. `add_judge_jobs` enqueues scoring jobs.
+
+**Keys, members and settings.** `list_api_keys` and `list_members` are reads. `add_api_key`, `revoke_api_key` and `update_project` require the key's creating owner or admin. Minted tokens appear once. Billing and plan changes are not on this server.
 
 **Look things up.** "How do I flush spans in a Next.js streaming route?" Tools: `search_hue_docs`, `load_hue_guide` (`data-model`, `investigate`, `author`).
 
@@ -156,4 +166,4 @@ Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or
 
 ## What is next
 
-OAuth sign-in for hosted assistants is not in this release. Tool names stay stable; renamed tools keep their old name for at least ninety days. This server does not mint API keys, change members, submit human review, ingest OTLP, or run experiment cases.
+OAuth sign-in for hosted assistants is not in this release. Tool names stay stable; renamed tools keep their old name for at least ninety days. This server does not change billing or plans, ingest OTLP payloads, invite members or change roles, or return artifact bytes.
