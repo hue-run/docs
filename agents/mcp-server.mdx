@@ -4,16 +4,18 @@ sidebarTitle: "MCP"
 description: "Give Claude Code, Codex, Cursor, Windsurf, Gemini CLI and other MCP clients read-only access to your project's traces, sessions, datasets and experiment results."
 ---
 
-The Hue MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://app.hue.run/api/mcp`. There is nothing to install: point an MCP client at the URL with a read-only key and the agent can search traces, inspect spans, verify delivery, read datasets and experiment results and search these docs, all scoped to one project. This release is read-only.
+The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install: point an MCP client at the URL with a **Coding agent (read-only)** key and the agent can search traces, inspect spans, verify delivery, read datasets and experiment results and search these docs, all scoped to one project. This release is read-only.
 
-## Create a read-only key
+The project-data server is a dynamic Node.js route in Hue's main web application, not a separate data service. `https://app.hue.run/api/mcp` remains a supported compatibility alias. The separate Mintlify-hosted endpoint at `https://docs.hue.run/mcp` serves public documentation only; it cannot read a Hue project. The `search_hue_docs` tool delegates documentation searches to that endpoint without changing the project-data server's authentication boundary.
 
-An owner or admin opens **Settings → Integrations & API keys**, chooses the project and creates a key with the **Read-only** scope. Save it in your secret manager and expose it to the agent's machine as `HUE_MCP_KEY`.
+## Create a Coding agent (read-only) key
 
-Keep this key separate from the application's `HUE_API_KEY`, which is a **Read and write** key. A read-only key cannot send telemetry, change datasets or start evaluation runs, so a leaked agent key cannot alter your project. It should never be wired into application code or committed. See [project keys](/guides/project-keys).
+An owner or admin opens **Settings → Integrations & API keys**, chooses the project and creates a **Coding agent (read-only)** key. Save it in your secret manager and expose it to the agent's machine as `HUE_MCP_KEY`.
+
+Keep this key separate from the application's `HUE_API_KEY`, which normally uses **Tracing only** or **Tracing and evaluations**. A **Coding agent (read-only)** key cannot send telemetry, change datasets or start evaluation runs, so a leaked agent key cannot alter your project. It should never be wired into application code or committed. See [project keys](/guides/project-keys).
 
 <Note>
-  The server speaks Streamable HTTP and is stateless. It serves both current MCP protocol revisions, so Claude Code, Codex, Cursor, Windsurf and Gemini CLI connect without extra flags. Clients that only support stdio need a remote-capable MCP client. `https://mcp.hue.run/mcp` becomes the canonical address once that host is live; `https://app.hue.run/api/mcp` stays valid for key authentication.
+  The server speaks Streamable HTTP and is stateless. It serves both current MCP protocol revisions, so Claude Code, Codex, Cursor, Windsurf and Gemini CLI connect without extra flags. Clients that only support stdio need a remote-capable MCP client. Use the canonical `https://mcp.hue.run/mcp` address for new configurations.
 </Note>
 
 ## Connect your client
@@ -23,7 +25,7 @@ Paste this into your coding agent. It connects the server and confirms the conne
 ```text
 Connect me to the Hue MCP server.
 
-It is a remote MCP server (Streamable HTTP) at https://app.hue.run/api/mcp.
+It is a remote MCP server (Streamable HTTP) at https://mcp.hue.run/mcp.
 Authenticate with a bearer token read from the HUE_MCP_KEY environment
 variable — reference the variable, do not write the key into a config file.
 
@@ -42,7 +44,7 @@ Prefer to set it up yourself? Every snippet below references the `HUE_MCP_KEY` e
       "mcpServers": {
         "hue": {
           "type": "http",
-          "url": "https://app.hue.run/api/mcp",
+          "url": "https://mcp.hue.run/mcp",
           "headers": { "Authorization": "Bearer ${HUE_MCP_KEY}" }
         }
       }
@@ -52,7 +54,7 @@ Prefer to set it up yourself? Every snippet below references the `HUE_MCP_KEY` e
     Or add it for all your projects from the command line. Single quotes keep the reference unexpanded in your settings file:
 
     ```sh
-    claude mcp add --transport http --scope user hue https://app.hue.run/api/mcp \
+    claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp \
       --header 'Authorization: Bearer ${HUE_MCP_KEY}'
     ```
 
@@ -62,14 +64,14 @@ Prefer to set it up yourself? Every snippet below references the `HUE_MCP_KEY` e
     Codex reads the key from an environment variable at connection time:
 
     ```sh
-    codex mcp add hue --url https://app.hue.run/api/mcp --bearer-token-env-var HUE_MCP_KEY
+    codex mcp add hue --url https://mcp.hue.run/mcp --bearer-token-env-var HUE_MCP_KEY
     ```
 
     The equivalent `~/.codex/config.toml` entry:
 
     ```toml config.toml
     [mcp_servers.hue]
-    url = "https://app.hue.run/api/mcp"
+    url = "https://mcp.hue.run/mcp"
     bearer_token_env_var = "HUE_MCP_KEY"
     ```
   </Tab>
@@ -80,7 +82,7 @@ Prefer to set it up yourself? Every snippet below references the `HUE_MCP_KEY` e
     {
       "mcpServers": {
         "hue": {
-          "url": "https://app.hue.run/api/mcp",
+          "url": "https://mcp.hue.run/mcp",
           "headers": { "Authorization": "Bearer ${env:HUE_MCP_KEY}" }
         }
       }
@@ -96,7 +98,7 @@ Prefer to set it up yourself? Every snippet below references the `HUE_MCP_KEY` e
     {
       "mcpServers": {
         "hue": {
-          "serverUrl": "https://app.hue.run/api/mcp",
+          "serverUrl": "https://mcp.hue.run/mcp",
           "headers": { "Authorization": "Bearer ${env:HUE_MCP_KEY}" }
         }
       }
@@ -106,7 +108,7 @@ Prefer to set it up yourself? Every snippet below references the `HUE_MCP_KEY` e
     Gemini CLI stores the expanded header, so run this only on a machine where the key may live in that settings file:
 
     ```sh
-    gemini mcp add --transport http hue https://app.hue.run/api/mcp -H "Authorization: Bearer $HUE_MCP_KEY"
+    gemini mcp add --transport http hue https://mcp.hue.run/mcp -H "Authorization: Bearer $HUE_MCP_KEY"
     ```
   </Tab>
 </Tabs>
@@ -146,8 +148,8 @@ Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or
 
 ## Troubleshooting
 
-`401` means the key is missing, malformed, revoked or expired. `403` means the key has no read access: create a key with the **Read-only** scope. `405` on `GET` and `404` for `Mcp-Session-Id` are expected: the server accepts stateless `POST` requests only. See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent).
+`401` means the key is missing, malformed, revoked or expired. `403` means the key has no read access: create a **Coding agent (read-only)** key. `405` on `GET` and `404` for `Mcp-Session-Id` are expected: the server accepts stateless `POST` requests only. See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent).
 
 ## What is next
 
-This release has no write tools. Additive dataset writes (`add_dataset_cases`, `add_trace_to_dataset`) and experiment comparison come later, then OAuth sign-in for hosted assistants. Tool names stay stable; renamed tools keep their old name for at least ninety days.
+This release has no write tools. Additive dataset writes (`add_dataset_cases`, `add_trace_to_dataset`) come later, then OAuth sign-in for hosted assistants. Tool names stay stable; renamed tools keep their old name for at least ninety days.

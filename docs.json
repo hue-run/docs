@@ -5,7 +5,7 @@
   "colors": {
     "primary": "#1c4e88",
     "light": "#96bce8",
-    "dark": "#1c4e88"
+    "dark": "#96bce8"
   },
   "favicon": "/images/hue-mark.png",
   "navigation": {
@@ -63,11 +63,6 @@
           "reference/typescript",
           "reference/python"
         ]
-      },
-      {
-        "group": "Getting Started",
-        "hidden": true,
-        "pages": []
       }
     ]
   },

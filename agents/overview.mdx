@@ -6,6 +6,8 @@ description: "Choose between the Hue skill, the Hue MCP server and the SDKs for 
 
 Hue gives a coding agent three surfaces. They are complementary: the skill teaches the agent how to integrate Hue well, the MCP server gives it live data inside your project, and the SDKs and REST API are the scriptable path for CI and shell-capable agents.
 
+The installable project-data server runs at `https://mcp.hue.run/mcp`. A separate documentation-only MCP runs at `https://docs.hue.run/mcp`; it cannot read your Hue project. Simulations can also provide an execution-scoped MCP connection for one disposable world. That short-lived connection is passed to the simulation callback and is not a replacement for the project-data server.
+
 | Surface | Use it when | It owns | It never does |
 | --- | --- | --- | --- |
 | [Hue skill](/guides/agent-setup) | The agent is adding or troubleshooting tracing in an application | How to install the SDK, choose a capture policy, keep serving requests independent of telemetry and verify a real request | Grant credentials, read your project's data |
@@ -22,10 +24,10 @@ Hue gives a coding agent three surfaces. They are complementary: the skill teach
 
 Each surface uses a different key so that a leaked credential has the smallest possible blast radius:
 
-- The application's `HUE_API_KEY` is a **Read and write** key. It sends telemetry, modifies datasets and starts evaluation runs.
-- The agent's `HUE_MCP_KEY` is a **Read-only** key configured in the MCP client, never in application code. It cannot send or change anything, so a leaked agent key cannot alter your project.
+- The application's `HUE_API_KEY` uses **Tracing only** for telemetry and known-trace receipts. Use **Tracing and evaluations** only when that process also manages datasets, scorers, experiments, simulations, environments, or managed runs.
+- The agent's `HUE_MCP_KEY` uses **Coding agent (read-only)** and is configured in the MCP client, never in application code. It cannot send or change anything, so a leaked agent key cannot alter your project.
 
-See [project keys](/guides/project-keys) for the scopes and rotation.
+See [project keys](/guides/project-keys) for the presets and rotation.
 
 ## What the agent sees
 

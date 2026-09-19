@@ -10,7 +10,7 @@ Hue manages dataset versions, dispatch and scoring. Your application keeps its m
 
 ## 1. Wrap your existing function
 
-Install `@hue-run/sdk@0.2.2` for Node.js 22 or 24 or `hue-run==0.2.2` for Python 3.10+. First configure [tracing](/quickstart) in the same Hue project as the dataset.
+Install `@hue-run/sdk@0.2.2` for Node.js 22 or 24 or `hue-run==0.2.2` for Python 3.10+. Configure a **Tracing and evaluations** key in the same Hue project as the dataset, then set up [tracing](/quickstart).
 
 This guide creates a dedicated evaluation endpoint. Its delivery checks record whether evaluation evidence arrived; use [safe initialization and bounded lifecycle hooks](/guides/production-safety) for ordinary customer requests. A telemetry failure must not rerun the agent's business work.
 

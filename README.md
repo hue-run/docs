@@ -1,55 +1,31 @@
-# Mintlify Starter Kit
+# Hue documentation
 
-Use the starter kit to get your docs deployed and ready to customize.
+This repository publishes the customer documentation at [docs.hue.run](https://docs.hue.run). It mirrors released SDK contracts from [`hue-run/hue-sdk`](https://github.com/hue-run/hue-sdk) and customer-safe platform behavior from the private Hue application repository.
 
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
+## Local checks
 
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
+Use Bun 1.3.9 and Node.js 24:
 
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
-
-## AI-assisted writing
-
-Set up your AI coding tool to work with Mintlify:
-
-```bash
-npx skills add https://mintlify.com/docs
+```sh
+bun install --frozen-lockfile
+bun run check
 ```
 
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
+`bun run check` validates the Mintlify build, links and anchors, accessibility, navigation, product terminology, endpoints, SDK versions, and the checked-in producer contracts. Run `bun run dev` for a local preview. Mintlify's media accessibility check runs with its cross-theme contrast heuristic disabled; the deterministic contract check instead enforces WCAG AA contrast against each theme's actual background.
 
-See the [AI tools guides](/ai-tools) for tool-specific setup.
+The Mintlify CLI is an exact development dependency. Update it deliberately and commit the resulting `bun.lock`; do not use `mint update` in CI.
 
-## Development
+## Sources of truth
 
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
+- `contracts/sdk-docs.json` and `contracts/fern-public-docs.json` snapshot the generated SDK and platform documentation contracts. `contracts/sources.json` records each producer revision and snapshot digest.
+- `sdks/compatibility.mdx` mirrors the SDK compatibility contract with site-relative links.
+- `skill.md` mirrors the SDK-owned Hue skill with Mintlify frontmatter adaptations only.
+- The Hue platform repository owns service-key presets, MCP endpoints, and release-state boundaries; `contracts/fern-public-docs.json` is its customer-safe projection.
 
-```
-npm i -g mint
-```
+Update source repositories first. Then refresh their snapshots here, reconcile every affected page, and run the checks above. Dated evidence and historical release records remain historical; do not rewrite them as current product behavior.
 
-Run the following command at the root of your documentation, where your `docs.json` is located:
+## Public boundaries
 
-```
-mint dev
-```
+Document only released customer behavior. Never publish secrets, private infrastructure identifiers, internal runbooks, customer data, or unreleased provider capabilities. Clearly distinguish the project-data MCP server at `https://mcp.hue.run/mcp` from the documentation-only MCP endpoint at `https://docs.hue.run/mcp`.
 
-View your local preview at `http://localhost:3000`.
-
-## Publishing changes
-
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
-
-## Need help?
-
-### Troubleshooting
-
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
-
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+Changes merged to the default branch are deployed by the configured Mintlify integration. Confirm the ordinary, unversioned deployed pages after release; a cache-busted response alone is not acceptance evidence.

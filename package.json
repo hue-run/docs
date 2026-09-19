@@ -1,0 +1,19 @@
+{
+  "name": "@hue-run/docs",
+  "private": true,
+  "packageManager": "bun@1.3.9",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "mint dev",
+    "docs:contract": "node scripts/generate-docs-contract.mjs",
+    "docs:contract:check": "node scripts/generate-docs-contract.mjs --check",
+    "check:contract": "node scripts/check-docs.mjs",
+    "check:mint": "mint validate && mint broken-links --check-anchors && mint a11y --skip-contrast",
+    "check": "bun run check:contract && bun run check:mint"
+  },
+  "devDependencies": {
+    "mint": "4.2.905"
+  }
+}
