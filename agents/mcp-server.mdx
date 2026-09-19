@@ -1,18 +1,18 @@
 ---
 title: "Connect the Hue MCP server"
 sidebarTitle: "MCP"
-description: "Give Claude Code, Codex, Cursor, Windsurf, Gemini CLI and other MCP clients read-only access to your project's traces, sessions, datasets and experiment results."
+description: "Give Claude Code, Codex, Cursor, Windsurf, Gemini CLI and other MCP clients project-scoped access to traces, evaluations and environments."
 ---
 
-The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install: point an MCP client at the URL with a **Coding agent (read-only)** key and the agent can search traces, inspect spans, verify delivery, read datasets and experiment results and search these docs, all scoped to one project. This release is read-only.
+The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install: point an MCP client at the URL with a coding-agent key. A **Coding agent (read-only)** key can search traces, inspect spans, verify delivery, read datasets, scorers, experiments and environments, and search these docs. A **Coding agent (read + evaluations)** key also lists write tools so the agent can author those objects, all scoped to one project.
 
 The project-data server is a dynamic Node.js route in Hue's main web application, not a separate data service. `https://app.hue.run/api/mcp` remains a supported compatibility alias. The separate Mintlify-hosted endpoint at `https://docs.hue.run/mcp` serves public documentation only; it cannot read a Hue project. The `search_hue_docs` tool delegates documentation searches to that endpoint without changing the project-data server's authentication boundary.
 
-## Create a Coding agent (read-only) key
+## Create a coding-agent key
 
-An owner or admin opens **Settings → Integrations & API keys**, chooses the project and creates a **Coding agent (read-only)** key. Save it in your secret manager and expose it to the agent's machine as `HUE_MCP_KEY`.
+An owner or admin opens **Settings → Integrations & API keys**, chooses the project and creates a **Coding agent (read-only)** or **Coding agent (read + evaluations)** key. Save it in your secret manager and expose it to the agent's machine as `HUE_MCP_KEY`.
 
-Keep this key separate from the application's `HUE_API_KEY`, which normally uses **Tracing only** or **Tracing and evaluations**. A **Coding agent (read-only)** key cannot send telemetry, change datasets or start evaluation runs, so a leaked agent key cannot alter your project. It should never be wired into application code or committed. See [project keys](/guides/project-keys).
+Keep this key separate from the application's `HUE_API_KEY`, which normally uses **Tracing only** or **Tracing and evaluations**. A **Coding agent (read-only)** key cannot send telemetry or change project data, so a leaked read-only agent key cannot alter your project. Do not auto-approve write tools. The key should never be wired into application code or committed. See [project keys](/guides/project-keys).
 
 <Note>
   The server speaks Streamable HTTP and is stateless. It serves both current MCP protocol revisions, so Claude Code, Codex, Cursor, Windsurf and Gemini CLI connect without extra flags. Clients that only support stdio need a remote-capable MCP client. Use the canonical `https://mcp.hue.run/mcp` address for new configurations.
@@ -89,7 +89,7 @@ Prefer to set it up yourself? Every snippet below references the `HUE_MCP_KEY` e
     }
     ```
 
-    Cursor limits the number of tools it loads across servers; Hue registers thirteen.
+    Cursor limits the number of tools it loads across servers. Prefer one Hue server per project.
   </Tab>
   <Tab title="Windsurf and Gemini CLI">
     Windsurf uses `serverUrl` in `~/.codeium/windsurf/mcp_config.json`:
@@ -123,7 +123,7 @@ Ask the agent:
 Use the Hue MCP: call get_project_context, then show my 5 most recent error traces with links.
 ```
 
-`get_project_context` returns the project the key reaches, its capabilities and whether the connection is read-only. If it reports a different project than you expected, the key was created in the wrong project.
+`get_project_context` returns the project the key reaches, its capabilities, `can_write`, and whether the connection is read-only. If it reports a different project than you expected, the key was created in the wrong project.
 
 ## What you can do
 
@@ -131,11 +131,15 @@ Use the Hue MCP: call get_project_context, then show my 5 most recent error trac
 
 **Confirm delivery.** "Did trace 0af7651916cd43dd8448eb211c80319c arrive with spans a and b, with model and usage recorded?" Tools: `verify_trace`.
 
-**Read evaluations.** "List my datasets", "show the cases in the latest version of the regression set", "summarize the last experiment and list the failing cases", "compare it against the baseline experiment". Tools: `list_datasets`, `get_dataset`, `list_scorers`, `list_experiments`, `get_experiment`.
+**Read evaluations.** "List my datasets", "show the cases in the latest version of the regression set", "summarize the last experiment and list the failing cases", "compare it against the baseline experiment". Tools: `list_datasets`, `get_dataset`, `list_scorers`, `get_scorer`, `list_experiments`, `get_experiment`, `list_environments`, `get_environment`.
 
-**Look things up.** "How do I flush spans in a Next.js streaming route?" Tools: `search_hue_docs`, `load_hue_guide` (`data-model`, `investigate`).
+**Author evaluations.** Requires **Coding agent (read + evaluations)** without `?read_only=true`. Create a dataset (`add_dataset`), add cases (`add_dataset_cases`) or promote a trace (`add_trace_to_dataset`), edit a draft (`update_dataset`, `update_dataset_case`, `delete_dataset_case`, `add_dataset_draft`), freeze it (`freeze_dataset_version`), then pin scorers (`add_scorer`, `publish_scorer`, `copy_scorer`) and create an experiment (`add_experiment`). Case execution stays with the SDK, a managed run, or a local agent. Ask before any write; never auto-approve `add_*`, `update_*`, `delete_*`, `publish_*`, `freeze_*` or `copy_*`.
 
-Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or a Hue trace link. Time windows accept ISO-8601 or relative values such as `15m`, `24h` or `7d` (up to 90 days). Results are paginated with opaque cursors and bounded by `max_chars`; truncated results say so and suggest a narrower request.
+**Author environments.** `add_environment` and `publish_environment_version` create a simulated world a case can pin.
+
+**Look things up.** "How do I flush spans in a Next.js streaming route?" Tools: `search_hue_docs`, `load_hue_guide` (`data-model`, `investigate`, `author`).
+
+Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or a Hue trace link. Time windows accept ISO-8601 or relative values such as `15m`, `24h` or `7d` (up to 90 days). Results are paginated with opaque cursors and bounded by `max_chars`; truncated results say so and suggest a narrower request. Draft writes take `expected_revision` from `get_dataset`.
 
 ## Content and safety
 
@@ -148,8 +152,8 @@ Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or
 
 ## Troubleshooting
 
-`401` means the key is missing, malformed, revoked or expired. `403` means the key has no read access: create a **Coding agent (read-only)** key. `405` on `GET` and `404` for `Mcp-Session-Id` are expected: the server accepts stateless `POST` requests only. See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent).
+`401` means the key is missing, malformed, revoked or expired. `403` means the key has no read access: create a **Coding agent (read-only)** or **Coding agent (read + evaluations)** key. `405` on `GET` and `404` for `Mcp-Session-Id` are expected: the server accepts stateless `POST` requests only. See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent).
 
 ## What is next
 
-This release has no write tools. Additive dataset writes (`add_dataset_cases`, `add_trace_to_dataset`) come later, then OAuth sign-in for hosted assistants. Tool names stay stable; renamed tools keep their old name for at least ninety days.
+OAuth sign-in for hosted assistants is not in this release. Tool names stay stable; renamed tools keep their old name for at least ninety days. This server does not mint API keys, change members, submit human review, ingest OTLP, or run experiment cases.

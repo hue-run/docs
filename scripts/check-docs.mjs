@@ -152,7 +152,9 @@ if ((allPublicText.match(new RegExp(aliasMcp.replaceAll(".", "\\."), "g")) ?? []
   fail("the application-host MCP alias must appear once, as compatibility information only");
 }
 if (!publicText["agents/mcp-server.mdx"].includes(docsMcp)) fail("MCP guide must distinguish the documentation MCP endpoint");
-if (platform.mcp.tools.length !== 13) fail(`expected 13 product MCP tools, found ${platform.mcp.tools.length}`);
+if (!Array.isArray(platform.mcp.tools) || platform.mcp.tools.length === 0) {
+  fail("platform contract has no product MCP tools");
+}
 for (const { name } of platform.mcp.tools) {
   if (!publicText["agents/mcp-server.mdx"].includes(name)) fail(`MCP guide is missing tool ${name}`);
 }
@@ -181,8 +183,17 @@ for (const [variant, status] of Object.entries({
 }
 
 const combinedPresetFiles = publicFiles.filter((path) => publicText[path].includes("Coding agent (read + evaluations)"));
-if (JSON.stringify(combinedPresetFiles) !== JSON.stringify(["guides/project-keys.mdx"])) {
-  fail("Coding agent (read + evaluations) must appear only in the combined-use project-key guide");
+const allowedCombined = [
+  "agents/mcp-server.mdx",
+  "agents/overview.mdx",
+  "guides/project-keys.mdx",
+  "guides/troubleshooting.mdx",
+];
+for (const path of combinedPresetFiles) {
+  if (!allowedCombined.includes(path)) fail(`Coding agent (read + evaluations) is not allowed in ${path}`);
+}
+for (const path of ["agents/mcp-server.mdx", "guides/project-keys.mdx"]) {
+  if (!combinedPresetFiles.includes(path)) fail(`${path} must name Coding agent (read + evaluations)`);
 }
 
 const requirements = {
@@ -198,9 +209,9 @@ const requirements = {
   "evaluations/managed-runs.mdx": ["Tracing and evaluations"],
   "reference/typescript.mdx": ["Tracing only", "Tracing and evaluations"],
   "reference/python.mdx": ["Tracing only", "Tracing and evaluations"],
-  "agents/overview.mdx": ["Tracing only", "Tracing and evaluations", "Coding agent (read-only)"],
-  "agents/mcp-server.mdx": ["Coding agent (read-only)"],
-  "guides/troubleshooting.mdx": ["Tracing only", "Tracing and evaluations", "Coding agent (read-only)"],
+  "agents/overview.mdx": ["Tracing only", "Tracing and evaluations", "Coding agent (read-only)", "Coding agent (read + evaluations)"],
+  "agents/mcp-server.mdx": ["Coding agent (read-only)", "Coding agent (read + evaluations)"],
+  "guides/troubleshooting.mdx": ["Tracing only", "Tracing and evaluations", "Coding agent (read-only)", "Coding agent (read + evaluations)"],
   "guides/project-keys.mdx": expectedPresetNames,
   "skill.md": ["Tracing only", "Tracing and evaluations", "Coding agent (read-only)"],
 };

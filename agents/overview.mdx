@@ -11,7 +11,7 @@ The installable project-data server runs at `https://mcp.hue.run/mcp`. A separat
 | Surface | Use it when | It owns | It never does |
 | --- | --- | --- | --- |
 | [Hue skill](/guides/agent-setup) | The agent is adding or troubleshooting tracing in an application | How to install the SDK, choose a capture policy, keep serving requests independent of telemetry and verify a real request | Grant credentials, read your project's data |
-| [Hue MCP server](/agents/mcp-server) | The agent needs to read what happened: find failing traces, inspect a span, check a receipt, read datasets and experiment results | Project-scoped, read-only tools with pagination, deep links and documentation search | Key, member or project administration; human-review decisions; access to other projects |
+| [Hue MCP server](/agents/mcp-server) | The agent needs live project data: find failing traces, inspect a span, check a receipt, read or author datasets and experiments | Project-scoped tools with pagination, deep links and documentation search. Writes appear only for a **Coding agent (read + evaluations)** key | Key, member or project administration; human-review decisions; OTLP ingest; access to other projects |
 | [SDKs](/sdks/typescript) and REST | CI jobs and agents that can run a shell and prefer to filter data in code | Tracing, receipts, datasets, scorers, experiments and evaluation runs | Browse traces — the clients expose no trace-search API |
 
 ## Which one to reach for
@@ -25,7 +25,7 @@ The installable project-data server runs at `https://mcp.hue.run/mcp`. A separat
 Each surface uses a different key so that a leaked credential has the smallest possible blast radius:
 
 - The application's `HUE_API_KEY` uses **Tracing only** for telemetry and known-trace receipts. Use **Tracing and evaluations** only when that process also manages datasets, scorers, experiments, simulations, environments, or managed runs.
-- The agent's `HUE_MCP_KEY` uses **Coding agent (read-only)** and is configured in the MCP client, never in application code. It cannot send or change anything, so a leaked agent key cannot alter your project.
+- The agent's `HUE_MCP_KEY` uses **Coding agent (read-only)** for inspection, or **Coding agent (read + evaluations)** when it should also author datasets, scorers, experiments and environments. Configure it in the MCP client, never in application code.
 
 See [project keys](/guides/project-keys) for the presets and rotation.
 

@@ -19,14 +19,14 @@ Choose the preset that matches one caller:
 | --- | --- | --- |
 | **Tracing only** | Application telemetry, connection checks, and known-trace receipts | Sends traces and logs. It cannot browse project data or use evaluation APIs. |
 | **Tracing and evaluations** | An application or CI process that traces and also manages datasets, scorers, experiments, simulations, environments, or managed runs | Includes tracing plus evaluation-family API access. It cannot browse arbitrary traces. |
-| **Coding agent (read-only)** | The current [Hue MCP server](/agents/mcp-server) | Reads project traces, spans, sessions, datasets, scorers, and experiment results. It cannot send telemetry or change project data. |
-| **Coding agent (read + evaluations)** | One trusted process that needs MCP reads and direct evaluation API access | Combines coding-agent reads with tracing and evaluation-family API access. The current MCP server still exposes no write tools. |
+| **Coding agent (read-only)** | The [Hue MCP server](/agents/mcp-server) | Reads project traces, spans, sessions, datasets, scorers, experiments, and environments. It cannot send telemetry or change project data. |
+| **Coding agent (read + evaluations)** | A trusted MCP client that should also author evaluations | Combines coding-agent reads with MCP writes (datasets, scorers, experiments, environments) and evaluation-family API access. Append `?read_only=true` to hide writes. |
 
-Choose **Tracing only** for an application that only exports telemetry and store it as `HUE_API_KEY`. Choose **Tracing and evaluations** only when that process also uses evaluation APIs. Create a separate **Coding agent (read-only)** key for the MCP server and configure it as `HUE_MCP_KEY` in the agent's MCP client, never in the application. Existing keys keep their access; creating a new restricted key does not narrow an older credential.
+Choose **Tracing only** for an application that only exports telemetry and store it as `HUE_API_KEY`. Choose **Tracing and evaluations** only when that process also uses evaluation APIs. Create a separate coding-agent key for the MCP server and configure it as `HUE_MCP_KEY` in the agent's MCP client, never in the application. Use **Coding agent (read-only)** unless the agent should author evaluations; then use **Coding agent (read + evaluations)**. Existing keys keep their access; creating a new restricted key does not narrow an older credential.
 
 Treat either key as a server credential. Keep it out of browser bundles, logs, source control and prompts. Owners and admins can create and revoke keys. A newly invited member needs an owner or admin to supply a key through the team's secret store.
 
-A service key does not represent a signed-in Hue user. Human review uses the application's authenticated user session. Trace browsing for coding agents goes through the [MCP server](/agents/mcp-server) with a **Coding agent (read-only)** key; the SDKs do not expose a general trace-search API.
+A service key does not represent a signed-in Hue user. Human review uses the application's authenticated user session. Trace browsing for coding agents goes through the [MCP server](/agents/mcp-server) with a coding-agent key; the SDKs do not expose a general trace-search API.
 
 ## Verify and rotate
 
