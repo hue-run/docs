@@ -48,7 +48,7 @@ Hue(
 | Option | Behavior |
 | --- | --- |
 | `base_url` | Optional origin; defaults to `https://app.hue.run`. Do not append an API path. HTTPS is required except for loopback HTTP; credentials, query strings and fragments are rejected. |
-| `api_key` | Required project service key; keep it in the server environment. |
+| `api_key` | Required project service key. Use **Tracing only** for tracing and known-trace receipts; use **Tracing and evaluations** when this process also calls evaluation APIs. Keep it in the server environment. |
 | `capture_content` | Required explicit `True` or `False`; there is no default. |
 | `service_name` | Default `"hue-python-agent"`; configures the resource when Hue creates both providers. |
 | `tracer_provider` | Optional OpenTelemetry SDK `TracerProvider` to borrow. Hue adds its span processor without replacing the global provider. |
@@ -166,7 +166,7 @@ client = EvaluationClient(
 )
 ```
 
-`EvaluationClient(base_url: str = "https://app.hue.run", api_key: str | None = None, *, timeout_seconds: float = 10)` requires a valid project service key. Use `api_key=` for Hue Cloud or retain `EvaluationClient(base_url, api_key)` for an explicit origin; a bare key in the first position raises `TypeError` naming `api_key=`. Timeouts must be positive and finite. Registry writes require a **Read and write** key.
+`EvaluationClient(base_url: str = "https://app.hue.run", api_key: str | None = None, *, timeout_seconds: float = 10)` requires a valid **Tracing and evaluations** project service key. Use `api_key=` for Hue Cloud or retain `EvaluationClient(base_url, api_key)` for an explicit origin; a bare key in the first position raises `TypeError` naming `api_key=`. Timeouts must be positive and finite.
 
 Client methods are synchronous and return dictionaries. **Arguments use snake_case; response fields and low-level completion payloads use HTTP camelCase.** `check_connection()` returns the current project. List methods accept keyword-only `after=None, limit=100`; limits are 1–100. Responses contain `items` and `nextCursor`.
 

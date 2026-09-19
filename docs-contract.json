@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/hue-run/docs",
+  "sources": {
+    "platform": {
+      "repository": "hue-run/fern",
+      "commit": "da34a1928419eef64aedf03ae0561fc883bbc028",
+      "contractFile": "contracts/fern-public-docs.json",
+      "sha256": "sha256:ef23816092b87ed560160b30fa99cd0ebf7d63baa792b13b25c806692d517844"
+    },
+    "sdk": {
+      "repository": "https://github.com/hue-run/hue-sdk",
+      "commit": "8c7747e69ce5d3ebd866378ee45127db0856d4b3",
+      "contractFile": "contracts/sdk-docs.json",
+      "sha256": "sha256:44f76af0e1cdef273504973518f1050df26d919b0a7425cea24e13de4ce65b07"
+    }
+  },
+  "site": {
+    "origin": "https://docs.hue.run",
+    "projectMcpUrl": "https://mcp.hue.run/mcp",
+    "projectMcpAlias": "https://app.hue.run/api/mcp",
+    "docsMcpUrl": "https://docs.hue.run/mcp",
+    "skillUrl": "https://docs.hue.run/skill.md",
+    "pageCount": 20
+  },
+  "serviceKeyPresets": [
+    {
+      "id": "telemetry_write",
+      "name": "Tracing only",
+      "capabilities": [
+        "telemetry_write"
+      ],
+      "use": "Send OpenTelemetry traces and verify known trace IDs."
+    },
+    {
+      "id": "project_write",
+      "name": "Tracing and evaluations",
+      "capabilities": [
+        "project_write"
+      ],
+      "use": "Send traces and manage evaluation, artifact, and simulated-environment workflows."
+    },
+    {
+      "id": "agent_read",
+      "name": "Coding agent (read-only)",
+      "capabilities": [
+        "project_read"
+      ],
+      "use": "Read project data through Hue's product MCP server."
+    },
+    {
+      "id": "agent_read_write",
+      "name": "Coding agent (read + evaluations)",
+      "capabilities": [
+        "project_read",
+        "project_write"
+      ],
+      "use": "Combine product MCP reads with evaluation and simulation authoring."
+    }
+  ],
+  "packages": {
+    "typescript": {
+      "name": "@hue-run/sdk",
+      "version": "0.2.2",
+      "entrypoints": [
+        "@hue-run/sdk",
+        "@hue-run/sdk/ai-sdk",
+        "@hue-run/sdk/environment",
+        "@hue-run/sdk/evals",
+        "@hue-run/sdk/managed"
+      ]
+    },
+    "python": {
+      "name": "hue-run",
+      "version": "0.2.2",
+      "modules": [
+        "hue_sdk",
+        "hue_sdk.evals",
+        "hue_sdk.managed"
+      ]
+    }
+  },
+  "skill": {
+    "version": "0.2.3",
+    "sha256": "sha256:d36e7748cc6683316ef07cf09c17a22c4a6c8db567def8aab2aeae6a9fdec08d",
+    "sdkSourceSha256": "sha256:4c65166dc2706a92abcccb817afd2e3efd0de8cc6338bd7975ac422370ab95d5"
+  },
+  "mcp": {
+    "transport": "Streamable HTTP",
+    "authentication": "Bearer project service key",
+    "tools": [
+      "get_project_context",
+      "search_traces",
+      "get_trace",
+      "get_span",
+      "list_sessions",
+      "verify_trace",
+      "list_datasets",
+      "get_dataset",
+      "list_scorers",
+      "list_experiments",
+      "get_experiment",
+      "search_hue_docs",
+      "load_hue_guide"
+    ],
+    "catalogSha256": "1ab7f4712b2d8a557eeef2ea59f5d29555878d4ab12a45af22e5f24964e90fc5"
+  },
+  "pages": [
+    "index",
+    "installation",
+    "quickstart",
+    "agents/overview",
+    "agents/mcp-server",
+    "guides/agent-setup",
+    "sdks/typescript",
+    "sdks/python",
+    "sdks/compatibility",
+    "integrations/opentelemetry",
+    "integrations/reference-chatbot",
+    "evaluations/first-evaluation",
+    "evaluations/simulations",
+    "evaluations/managed-runs",
+    "guides/project-keys",
+    "guides/troubleshooting",
+    "guides/production-safety",
+    "reference/typescript",
+    "reference/python",
+    "skill.md"
+  ]
+}

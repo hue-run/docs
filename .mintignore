@@ -5,3 +5,11 @@
 # Draft content
 drafts/
 *.draft.mdx
+
+# Repository-only contract and validation files
+AGENTS.md
+contracts/
+scripts/
+docs-contract.json
+package.json
+bun.lock

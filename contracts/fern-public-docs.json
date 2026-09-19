@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "repository": "hue-run/fern",
+  "sources": [
+    "packages/config/src/ecosystem.ts",
+    "apps/web/src/server/mcp/catalog.ts",
+    "apps/web/src/server/mcp/install-snippets.ts",
+    "tests/fixtures/sdk-compat.json"
+  ],
+  "endpoints": {
+    "application": {
+      "production": "https://app.hue.run",
+      "staging": "https://staging.hue.run"
+    },
+    "productMcp": {
+      "production": {
+        "origin": "https://mcp.hue.run",
+        "endpoint": "https://mcp.hue.run/mcp",
+        "applicationAlias": "https://app.hue.run/api/mcp"
+      },
+      "staging": {
+        "origin": "https://mcp.staging.hue.run",
+        "endpoint": "https://mcp.staging.hue.run/mcp",
+        "applicationAlias": "https://staging.hue.run/api/mcp"
+      }
+    },
+    "documentation": {
+      "origin": "https://docs.hue.run",
+      "mcpEndpoint": "https://docs.hue.run/mcp"
+    }
+  },
+  "serviceKeyPresets": [
+    {
+      "id": "telemetry_write",
+      "name": "Tracing only",
+      "capabilities": [
+        "telemetry_write"
+      ],
+      "use": "Send OpenTelemetry traces and verify known trace IDs."
+    },
+    {
+      "id": "project_write",
+      "name": "Tracing and evaluations",
+      "capabilities": [
+        "project_write"
+      ],
+      "use": "Send traces and manage evaluation, artifact, and simulated-environment workflows."
+    },
+    {
+      "id": "agent_read",
+      "name": "Coding agent (read-only)",
+      "capabilities": [
+        "project_read"
+      ],
+      "use": "Read project data through Hue's product MCP server."
+    },
+    {
+      "id": "agent_read_write",
+      "name": "Coding agent (read + evaluations)",
+      "capabilities": [
+        "project_read",
+        "project_write"
+      ],
+      "use": "Combine product MCP reads with evaluation and simulation authoring."
+    }
+  ],
+  "packages": {
+    "typescript": {
+      "name": "@hue-run/sdk",
+      "version": "0.2.2"
+    },
+    "python": {
+      "name": "hue-run",
+      "version": "0.2.2"
+    }
+  },
+  "mcp": {
+    "transport": "Streamable HTTP",
+    "authentication": "Bearer project service key",
+    "variants": {
+      "product": {
+        "status": "released",
+        "owner": "hue-run/fern",
+        "runtime": "dynamic Node.js route in the Fern Vercel application",
+        "canonical": {
+          "production": "https://mcp.hue.run/mcp",
+          "staging": "https://mcp.staging.hue.run/mcp"
+        },
+        "aliases": {
+          "production": "https://app.hue.run/api/mcp",
+          "staging": "https://staging.hue.run/api/mcp"
+        }
+      },
+      "documentation": {
+        "status": "released",
+        "owner": "hue-run/docs",
+        "runtime": "Mintlify documentation MCP",
+        "endpoint": "https://docs.hue.run/mcp",
+        "consumedByProductTool": "search_hue_docs"
+      },
+      "simulation": {
+        "status": "released",
+        "owner": "hue-run/fern",
+        "runtime": "run-scoped Fern route",
+        "route": "/api/v1/simulation-mcp/{runId}"
+      },
+      "providerFacade": {
+        "status": "deployed_inactive",
+        "owner": "hue-run/fern",
+        "route": "/api/v1/provider-facades/{bindingId}/{grantId}/[[...suffix]]",
+        "releaseBoundary": "The route is mounted, but official production provider registrations are empty; Gmail and Slack are not released capabilities."
+      }
+    },
+    "tools": [
+      {
+        "name": "get_project_context",
+        "title": "Hue: project context",
+        "toolset": "project",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "search_traces",
+        "title": "Hue: search traces",
+        "toolset": "traces",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_trace",
+        "title": "Hue: get trace",
+        "toolset": "traces",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_span",
+        "title": "Hue: get span",
+        "toolset": "traces",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_sessions",
+        "title": "Hue: list sessions",
+        "toolset": "traces",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "verify_trace",
+        "title": "Hue: verify trace delivery",
+        "toolset": "traces",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_datasets",
+        "title": "Hue: list datasets",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_dataset",
+        "title": "Hue: get dataset",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_scorers",
+        "title": "Hue: list scorers",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_experiments",
+        "title": "Hue: list experiments",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_experiment",
+        "title": "Hue: get experiment",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "search_hue_docs",
+        "title": "Hue: search documentation",
+        "toolset": "docs",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "load_hue_guide",
+        "title": "Hue: load workflow guide",
+        "toolset": "docs",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      }
+    ],
+    "catalogSha256": "1ab7f4712b2d8a557eeef2ea59f5d29555878d4ab12a45af22e5f24964e90fc5",
+    "installSnippets": {
+      "claudeCodeProjectJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
+      "claudeCodeCli": "claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp \\\n  --header 'Authorization: Bearer ${HUE_MCP_KEY}'",
+      "cursorJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${env:HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
+      "cursorDeeplink": "cursor://anysphere.cursor-deeplink/mcp/install?name=hue&config=eyJ1cmwiOiJodHRwczovL21jcC5odWUucnVuL21jcCIsImhlYWRlcnMiOnsiQXV0aG9yaXphdGlvbiI6IkJlYXJlciAke2VudjpIVUVfTUNQX0tFWX0ifX0=",
+      "codexCli": "codex mcp add hue --url https://mcp.hue.run/mcp --bearer-token-env-var HUE_MCP_KEY",
+      "codexToml": "[mcp_servers.hue]\nurl = \"https://mcp.hue.run/mcp\"\nbearer_token_env_var = \"HUE_MCP_KEY\"",
+      "vscodeJson": "{\n  \"servers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${input:hue-mcp-key}\"\n      }\n    }\n  },\n  \"inputs\": [\n    {\n      \"type\": \"promptString\",\n      \"id\": \"hue-mcp-key\",\n      \"description\": \"Hue coding-agent key (read-only preset)\",\n      \"password\": true\n    }\n  ]\n}",
+      "copilotCloudJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp?read_only=true\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $COPILOT_MCP_HUE_MCP_KEY\"\n      },\n      \"tools\": [\n        \"get_project_context\",\n        \"search_traces\",\n        \"get_trace\",\n        \"get_span\",\n        \"list_sessions\",\n        \"verify_trace\",\n        \"list_experiments\",\n        \"get_experiment\",\n        \"search_hue_docs\"\n      ]\n    }\n  }\n}",
+      "windsurfJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"serverUrl\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${env:HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
+      "geminiCli": "gemini mcp add --transport http hue https://mcp.hue.run/mcp -H \"Authorization: Bearer $HUE_MCP_KEY\"",
+      "verifyPrompt": "Use the Hue MCP: call get_project_context, then show my 5 most recent error traces with links."
+    }
+  }
+}

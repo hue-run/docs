@@ -5,6 +5,8 @@ description: "Keep application behavior independent of telemetry availability, w
 
 Keep tracing best effort in a serving application. A Hue outage should reduce observability without preventing your agent from answering. Hue follows OpenTelemetry's [runtime error containment](https://opentelemetry.io/docs/specs/otel/error-handling/) and [nonblocking, bounded-resource principles](https://opentelemetry.io/docs/specs/otel/performance/): preserve business behavior, drop telemetry when budgets are exhausted, and make the loss observable.
 
+Use a **Tracing only** project service key for these serving examples. A **Tracing and evaluations** key is necessary only when the same process also calls evaluation APIs.
+
 The supported SDKs suppress OpenTelemetry instrumentation while exporting so an HTTP instrumentor does not recursively trace Hue's own uploads. If an OpenTelemetry release in Python's accepted range stops exposing its suppression key, Hue warns once and exports without suppression while its own queues still ignore its export work. Snapshot boundaries reject unsupported custom objects; TypeScript also rejects Proxies without invoking their traps, measures typed-byte values through native accessors, and copies them into a fixed-size allocation so concurrent shared-buffer growth cannot bypass the queue budget. These protections complement the limits below. Verify your application's actual dependency and instrumentor combination in CI; a successful trace is not by itself a failure-isolation test.
 
 <Note>

@@ -16,7 +16,7 @@ Importing `@hue-run/sdk/evals` needs the optional `zod` peer (4.6.5 or later). I
 npm install @hue-run/sdk@0.2.2 zod
 ```
 
-Set `HUE_API_KEY` to a [project service key](/guides/project-keys) with **Read and write** access. The evaluation client and the environment client must use the same Hue origin.
+Set `HUE_API_KEY` to a [project service key](/guides/project-keys) created with the **Tracing and evaluations** preset. The evaluation client and the environment client must use the same Hue origin.
 
 ## What a simulated world is
 
@@ -173,7 +173,7 @@ An experiment whose configuration carries an immutable `attemptBaselineV2` can r
 
 On a ready decision, `context.connectionBundle` contains the selected provider surfaces with attempt-scoped endpoints and bearers, and `context.mcp` remains the projection of the selected MCP surface. Endpoints, bearers, expiry and credential generation stay in callback memory: the runner does not write them to checkpoints or progress events, and it never mutates `process.env`. A durable `environment_incomplete` decision skips both the callback and scoring; the `attempt_prepared` progress event carries its stable finding codes. If a ready response or the world seal cannot be confirmed, the checkpoint stays uncertain and a resume neither reacquires credentials nor invokes the callback again.
 
-This is currently a control-plane contract. Hue can issue provider endpoints, but a provider data-plane facade call has not yet been proven by the released integration. The generic Hue MCP capability remains the runnable hosted-tool path; do not read preparation or local-tool tests as evidence of a hosted Gmail or Slack MCP call.
+This is currently a control-plane contract. The provider-facade route is deployed, but official Gmail and Slack provider registrations remain inactive. Hue has not released hosted Gmail or Slack provider calls. The simulation MCP remains the runnable hosted-tool path; do not treat preparation, issued endpoints, or local-tool tests as evidence of provider parity.
 
 ## Direct environment tools
 
