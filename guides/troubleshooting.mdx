@@ -5,6 +5,20 @@ description: "Diagnose project authentication, missing spans or content, streami
 
 Start by separating the application result from the telemetry result. A model request can succeed while its trace export fails, and a correctly recorded trace can contain an application error.
 
+## One-command setup returns `action.required`
+
+This is a safe stop, not a successful installation. Read the structured reason and bounded next action. Setup refuses to guess when it finds an ambiguous repository, unsupported runtime or dependency, multiple package managers, an unknown application entry point, an unsafe verification request, edited managed files, or conflicting telemetry ownership.
+
+Resolve the reported condition, then rerun the same command. It resumes the same installation identity when one already exists. Do not delete local state, force a dependency, choose a framework on the application's behalf, or report success from a package install, setup-only probe, or connection check. Integration succeeds only after one actual application request produces the exact expected stored receipt.
+
+## Account linkage does not complete
+
+Run `claim` or `status` from the same repository. Public status and Agent events expose only a non-secret handoff descriptor; the short-lived bearer handoff remains in an ignored owner-only local file and must never appear in logs, prompts, screenshots, shell history, or a URL opened by an agent.
+
+An interrupted retry reuses the persisted request safely, and status never rotates or opens it. A consumed handoff with a still-live browser session is preserved. If Hue reports that the private handoff can no longer be used and offers restart, a human owner can run `npx --yes @hue-run/sdk@latest claim --restart --format human` with both standard input and standard output attached to a terminal. Agent mode rejects restart. Do not restart merely because a browser response is slow: restarting invalidates the previous handoff.
+
+After the browser adopts or transfers the installation, rerun the local command to reconcile. Completion requires the previously verified application receipt to remain attached to the same project and the old anonymous credential to be refused by `/api/v1/setup/traces/{traceId}/receipt`. The generic `/api/v1/traces/{traceId}/receipt` rejects setup credentials and is not revocation evidence. Reconciliation does not replay the application request. If the old value still works, treat linkage as incomplete and keep both credentials out of support output.
+
 ## The connection check fails
 
 Confirm that the key belongs to the selected Hue project and has not been revoked. Use **Tracing only** for tracing and known-trace receipts, or **Tracing and evaluations** when this process also calls evaluation APIs. Keep the project service key in the server process. Do not use a management token or place the key in browser code.

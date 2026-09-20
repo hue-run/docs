@@ -1,71 +1,102 @@
 ---
-title: "For agents"
-description: "Give your coding agent the public Hue installation skill for TypeScript, Python or existing OpenTelemetry."
-sidebarTitle: "Install with the skill"
+title: "Set up Hue with an agent"
+description: "Give a coding agent one prompt to install Hue, verify a real application request, and link an account later."
+sidebarTitle: "One-command setup"
 ---
 
-The public Hue installation skill covers TypeScript, Python and existing OpenTelemetry setups. It is maintained in the [SDK repository](https://github.com/hue-run/hue-sdk) and mirrored here.
+Give any shell-capable coding agent one prompt. Hue detects a supported TypeScript or Python repository, installs the compatible SDK, adds metadata-only instrumentation, and verifies one real application request. You can start without an account and link one after you have used Hue.
 
-## Start your coding agent
+## Give the agent one prompt
 
-Open your application in Codex, Claude Code, Cursor, or your preferred coding agent, then paste:
+Open your application in Codex, Claude Code, Cursor, or another shell-capable coding agent, then paste:
 
 ```text
-Read https://docs.hue.run/skill.md?v=0.2.3 and use the Hue installation skill to add
-tracing to this application. Also read https://docs.hue.run/guides/production-safety
-and https://docs.hue.run/quickstart, then read the compatibility
-and integration guides for this app's stack. Preserve app behavior,
-model providers, streaming lifetime, and existing OpenTelemetry ownership.
-
-Use TypeScript SDK 0.3.0 or Python 0.2.2. Verify the installed package;
-do not use unreleased APIs or force incompatible dependency installation.
-Initialize one safe client per serving process and wire an environment kill
-switch. Start with metadata-only capture unless our team has already approved
-content capture. Preserve existing redaction and third-party capture controls.
-Use the project's Tracing only key from the server secret store. Never print it.
-
-Keep connection checks and strict receipt verification in a separate setup
-command. Do not block application readiness or responses on Hue, or rerun
-business operations when tracing fails. Use bounded safe lifecycle methods.
-Test a collector outage, oversized capture, failed redactor and original agent
-error: outputs/errors must be preserved and tools must execute exactly once.
-
-Run relevant checks, exercise a real app request, flush its owning providers,
-and verify its trace, known spans and expected field presence with the receipt API.
-Inspect captured content/redaction in Hue if available; otherwise give me the
-trace link. Report test evidence, installed versions, capture choice and any
-remaining configuration or integration limits.
+Run `npx --yes @hue-run/sdk@latest setup --agent` in this repository and follow its structured instructions. Do not guess past an action.required result or expose a Hue credential or account-link handoff.
 ```
 
-Hue is currently invite-only: your organization is provisioned by Hue, and its owner accepts the invitation, signs up and verifies their email. An owner or admin then creates a **Tracing only** key in **Settings → Integrations & API keys**. Configure `HUE_API_KEY` through your normal [secret workflow](/guides/project-keys); do not paste it into chat.
+Agent mode writes append-only, versioned JSONL events. It never reads an interactive answer or opens a browser. A successful terminal event means the repository dependency and instrumentation are installed, an actual application request ran exactly once, and Hue verified the matching receipt. A setup-only probe, connection check, successful package install, or locally created span is not enough.
 
-## Install the skill for future sessions
+If the repository type, package manager, dependency compatibility, application entry point, or safe request is ambiguous, setup returns `action.required` and stops before changing the repository or provisioning a trial. The agent should show you the bounded next action exactly as reported. It must not choose a framework, force an incompatible dependency, invent a request, or report partial progress as success.
 
-From your application directory, run:
+The first automated release deliberately supports a narrow matrix: Express with npm, Express with Bun, and Flask with uv. Other JavaScript
+package managers, Python environment managers, frameworks, monorepo roots, and
+ambiguous entry points stop with `action.required`; the command does not guess.
 
-```bash
+## Run it yourself in a terminal
+
+The default mode shows interactive progress in a terminal:
+
+```sh
+npx --yes @hue-run/sdk@latest setup
+```
+
+The Terminal and Agent paths enforce the same repository detection, compatibility, instrumentation, real-request, and receipt checks. Use Agent mode for machine-readable progress and the default Terminal mode for interactive progress and private browser handoffs.
+
+## What setup changes
+
+For a supported repository, setup:
+
+1. Detects the existing runtime, package manager, lockfile, framework, and OpenTelemetry ownership without importing application code.
+2. Installs the exact compatible TypeScript or Python SDK through that package manager. It does not merely write an unreferenced helper.
+3. Adds one server-side, metadata-only Hue integration while preserving the application's model provider, streaming lifetime, request result, existing instrumentation, and unrelated files.
+4. Stores its credential and installation proof only in an ignored local file with owner-only permissions. It never prints or emits those values.
+5. Starts or invokes the application's safe verification path once, flushes the providers that own its telemetry, and checks `/api/v1/setup/traces/{traceId}/receipt` for that request's exact trace and expected spans. The generic `/api/v1/traces/{traceId}/receipt` rejects a setup credential.
+
+Review the diff and the structured evidence. Setup does not enable content capture, create an evaluation, Scenario, simulation, managed run, or remote worker. The application still owns its business operation and provider credentials. Only exercise a request that is safe to run once; a telemetry failure never authorizes the agent to repeat business work.
+
+## Start without an account
+
+The initial credential belongs to a bounded metadata-only trial. It can send setup traces and read receipts only for its installation; Hue rejects setup log export. It cannot capture prompts or outputs, browse arbitrary traces, use the Hue MCP server, call evaluation APIs, change project settings, invite members, or alter billing. The command and status output report the non-secret state and remaining limits without exposing a bearer credential.
+
+The trial accepts at most 100 traces, 1,000 spans, and 2 MiB of logical
+telemetry during its 24-hour ingestion window. Linking preserves the project.
+Otherwise Hue revokes ingestion at expiry and purges the unclaimed trial after
+the following seven-day retention period. Retention does not extend the trial's
+ingestion or claim eligibility.
+
+Run setup again after an interruption. It resumes the same locally persisted installation and idempotency identity; it does not silently create a second trial. Expired, revoked, purged, or exhausted installations fail closed and explain the available owner action.
+
+## Link an account after setup
+
+You can defer linkage until after the application has sent useful telemetry. Start from the same repository so the command can authenticate with the local installation proof. If setup used a custom `--origin`, use that same origin for linkage and status:
+
+```sh
+npx --yes @hue-run/sdk@latest claim --format human
+```
+
+This human-mode command creates a short-lived, single-use browser handoff,
+valid for 10 minutes, in an ignored owner-only local file and opens that local
+file. Its exchanged browser session lasts at most 30 minutes. It does not print
+the bearer handoff, put it in shell history, or expose it through Agent events,
+logs, telemetry, screenshots, issue text, or an agent-opened URL. Public status
+contains only a non-secret handoff descriptor.
+
+Only this private claim flow can admit a new identity; generic Hue signup remains closed. A new user must verify their email or use a verified sign-in, then explicitly adopt the trial project. An existing user must explicitly choose an organization where they are an owner or admin; an ordinary member cannot transfer the project into that organization. The adoption or transfer preserves the installation identity, accepted telemetry, and receipt history.
+
+When the browser finishes, rerun `claim` or `status` from the same repository. The claim operation atomically revokes the complete pre-claim credential lineage across Hue, and setup installs the linked setup-scoped credential atomically. Before reporting linkage complete, the CLI separately confirms that the pre-claim credential is refused by `/api/v1/setup/traces/{traceId}/receipt`; that endpoint check alone is not proof about every Hue route. It does not replay the application request during linkage; the receipt already verified before linkage remains attached to the same project. Linkage does not widen the setup credential into a content, MCP, evaluation, project-settings, or administration key.
+
+Status never rotates or opens a handoff. Retrying the same command reuses the persisted request safely; a consumed handoff with a still-live browser session is preserved, not reopened. If the command reports that the private handoff can no longer be used, a human owner can explicitly restart it from an interactive terminal:
+
+```sh
+npx --yes @hue-run/sdk@latest claim --restart --format human
+```
+
+Restart requires both standard input and standard output to be terminals. It invalidates the previous handoff and creates a new one. Agent mode rejects restart and never opens a browser. An agent should report the required action, not restart linkage on its own.
+
+## Install the Hue skill for future sessions
+
+The setup command includes the released integration workflow. You can also install the SDK-owned Hue skill so supported agents discover the same guidance in later sessions:
+
+```sh
 npx skills add hue-run/hue-sdk --skill hue
 ```
 
-The same skill is served at `https://docs.hue.run/skill.md` if your installer prefers a URL. Select the coding agent you use and follow the installer's prompts. Restart or reload your coding agent if it requires that to discover newly installed skills, then ask it to use the **Hue** skill. You can inspect the [public skill file](https://docs.hue.run/skill.md?v=0.2.3) before installing it.
+The skill is mirrored at `https://docs.hue.run/skill.md`. Select your coding agent and follow the installer's prompts, then reload it if required. You can inspect the current [public skill file](https://docs.hue.run/skill.md?v=0.2.3) before installing it. Manual installation currently documents TypeScript SDK 0.3.0 or Python 0.2.2; the one-command path resolves only a released compatible version and refuses an unsupported combination.
 
-Hosting the skill does not automatically load it into every agent. The startup prompt above explicitly asks the agent to read it; installing the skill makes it available to supported agents in later sessions. Neither step adds a dependency on the docs site to your running application.
+## Connect the Hue MCP server after linkage
 
-## Connect the Hue MCP server
+Setup integrates application telemetry. The [Hue MCP server](/agents/mcp-server) lets an agent inspect linked project data at the canonical `https://mcp.hue.run/mcp` endpoint. Create a separate **Coding agent (read-only)** key after signing in and configure it as `HUE_MCP_KEY` in the MCP client, never in the application. Create a separate **Tracing only** key if you want ordinary account-managed trace/log export, content capture, or generic receipts; claim reconciliation does not silently grant those capabilities to the setup credential.
 
-The skill teaches the agent how to integrate tracing. The [Hue MCP server](/agents/mcp-server) additionally lets it read your project's traces, spans, sessions, datasets and experiment results and verify delivery itself, from Claude Code, Codex, Cursor, Windsurf, Gemini CLI and other MCP clients. It uses a separate **Coding agent (read-only)** key configured as `HUE_MCP_KEY` in the agent's MCP client, never in the application. The skill uses the server's `verify_trace` and `get_trace` tools when they are connected and falls back to receipt evidence otherwise.
+Do not move either setup credential into an MCP client. Neither has project-browsing access. Claim revokes the old credential on the server; the next local reconciliation installs its setup-scoped replacement.
 
-## What the agent still needs
-
-- Access to your application code, its existing runtime and package manager.
-- A provisioned Hue project and a **Tracing only** key configured through your server's secret workflow.
-- Access from the server to Hue's telemetry endpoint, and permission to exercise an appropriate request for verification.
-- Optionally, a **Coding agent (read-only)** key in its MCP client so it can confirm stored traces and read evaluation results without your help.
-
-The skill guides dependency checks, safe initialization, metadata-only capture by default, streaming lifetime, outage tests and stored trace verification. Wrapping an entry point alone does not automatically instrument its internal model and tool calls. The agent should use your framework's instrumentation or wrap those operations explicitly, and report any unsupported integration or missing access.
-
-## Verify the result
-
-The SDK guides explain [TypeScript trace verification](/sdks/typescript#verify-stored-trace-evidence) and [Python trace verification](/sdks/python#verify-stored-trace-evidence). A receipt confirms stored evidence; inspecting the trace checks the captured values and redaction.
-
-Prefer manual integration? Follow the [quickstart](/quickstart) or use your [existing OpenTelemetry setup](/integrations/opentelemetry).
+Prefer a manual integration? Follow the [quickstart](/quickstart), the [TypeScript](/sdks/typescript) or [Python](/sdks/python) SDK guide, or the [existing OpenTelemetry guide](/integrations/opentelemetry).

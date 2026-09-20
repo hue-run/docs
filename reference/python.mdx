@@ -5,6 +5,8 @@ description: "Configuration, tracing, delivery and evaluation APIs in hue-run 0.
 
 This reference covers `hue-run` **0.2.2** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
 
+The [one-command setup workflow](/guides/agent-setup) is the supported interface for repository detection, trial provisioning, Python project edits, real-request verification, and deferred account linkage. It selects a compatible environment and package manager or returns `action.required`; do not reproduce its credential or private handoff protocol in application code.
+
 ## Imports
 
 | Module | Public exports |

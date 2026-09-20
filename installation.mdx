@@ -1,9 +1,34 @@
 ---
 title: "Installation"
-description: "Install the Hue SDK for TypeScript or Python."
+description: "Set up Hue in a TypeScript or Python application with one command, or install an SDK manually."
 ---
 
-Choose your language below, then [send your first trace](/quickstart) or let your [coding agent set up Hue](/guides/agent-setup).
+Use the setup command from your application's repository to start without an account. It detects a supported TypeScript or Python project, installs the matching SDK with the repository's package manager, adds metadata-only instrumentation, exercises a real application request, and verifies that request's exact receipt.
+
+<Tabs>
+  <Tab title="Agent">
+    Give a shell-capable coding agent this prompt:
+
+    ```text
+    Run `npx --yes @hue-run/sdk@latest setup --agent` in this repository and follow its structured instructions. Do not guess past an action.required result or expose a Hue credential or account-link handoff.
+    ```
+  </Tab>
+  <Tab title="Terminal">
+    Run the interactive command yourself:
+
+    ```sh
+    npx --yes @hue-run/sdk@latest setup
+    ```
+  </Tab>
+</Tabs>
+
+Terminal mode shows interactive progress. Agent mode emits machine-readable progress and never waits for an interactive answer. Both modes can provision the same bounded trial and enforce the same repository, integration, real-request, and receipt checks.
+
+Setup does not guess when the repository, package manager, application entry point, or safe request command is ambiguous. It returns `action.required` without changing the repository. A successful run means the dependency is installed, the application owns the integration, an actual application request ran exactly once, and Hue returned a matching stored receipt. A connection check or setup-only probe is not application verification.
+
+The initial installation is a bounded metadata-only trial. Content capture stays off, and setup creates no evaluation, simulation, managed run, or remote worker. The selected existing application route may call its configured model provider once; Hue does not invent or automatically replay that business request. You can [link an account after you have used it](/guides/agent-setup#link-an-account-after-setup).
+
+Prefer to configure the released packages manually? Choose your language below, then [send your first trace](/quickstart).
 
 ## TypeScript
 

@@ -129,6 +129,9 @@ if (JSON.stringify(presetNames) !== JSON.stringify(expectedPresetNames)) {
 const publicFiles = [...expectedMdxFiles, "skill.md"];
 const publicText = Object.fromEntries(publicFiles.map((path) => [path, read(path)]));
 const allPublicText = Object.values(publicText).join("\n");
+if (/\bfree trial\b/i.test(allPublicText)) {
+  fail('public content must use "start without an account" or "bounded metadata-only trial", not "free trial"');
+}
 for (const legacy of [
   "**Read-only**",
   "**Read and write**",
@@ -217,6 +220,122 @@ const requirements = {
 };
 for (const [path, phrases] of Object.entries(requirements)) {
   for (const phrase of phrases) if (!publicText[path].includes(phrase)) fail(`${path} must name ${phrase}`);
+}
+
+for (const [path, phrases] of Object.entries({
+  "installation.mdx": [
+    "action.required",
+    "bounded metadata-only trial",
+    "actual application request ran exactly once",
+  ],
+  "guides/agent-setup.mdx": [
+    "npx --yes @hue-run/sdk@latest setup --agent",
+    "npx --yes @hue-run/sdk@latest setup",
+    "npx --yes @hue-run/sdk@latest claim --format human",
+    "npx --yes @hue-run/sdk@latest claim --restart --format human",
+    "Restart requires both standard input and standard output to be terminals.",
+    "Agent mode rejects restart and never opens a browser.",
+    "consumed handoff with a still-live browser session is preserved, not reopened",
+    "setup log export",
+    "/api/v1/setup/traces/{traceId}/receipt",
+    "/api/v1/traces/{traceId}/receipt",
+    "generic Hue signup remains closed",
+    "owner or admin",
+    "ordinary member cannot transfer",
+    "linked setup-scoped credential",
+    "short-lived, single-use browser handoff",
+    "pre-claim credential is refused",
+    "does not replay the application request",
+    "https://mcp.hue.run/mcp",
+  ],
+  "guides/project-keys.mdx": [
+    "bounded metadata-only trial",
+    "cannot export logs",
+    "generic signup remains closed",
+    "owner or admin",
+    "Ordinary members cannot transfer",
+    "/api/v1/setup/traces/{traceId}/receipt",
+    "revokes the anonymous value",
+    "revokes the anonymous value on the server. Rerun the local command to reconcile and atomically install the replacement setup-scoped credential.",
+  ],
+  "guides/troubleshooting.mdx": [
+    "action.required",
+    "old anonymous credential",
+    "does not replay the application request",
+  ],
+})) {
+  for (const phrase of phrases) {
+    if (!publicText[path].includes(phrase)) fail(`${path} must document onboarding boundary: ${phrase}`);
+  }
+}
+
+const installationGuide = publicText["installation.mdx"];
+const agentGuide = publicText["guides/agent-setup.mdx"];
+if (
+  !/<Tab title="Agent">[\s\S]*?```text\s+Run `npx --yes @hue-run\/sdk@latest setup --agent`[^\n]*\n\s*```[\s\S]*?<\/Tab>/.test(
+    installationGuide,
+  )
+)
+  fail("installation.mdx must contain the exact standalone Agent prompt block");
+if (
+  !/<Tab title="Terminal">[\s\S]*?```sh\s+npx --yes @hue-run\/sdk@latest setup\s+```[\s\S]*?<\/Tab>/.test(
+    installationGuide,
+  )
+)
+  fail("installation.mdx must contain the exact standalone Terminal command block");
+
+for (const phrase of [
+  "Express with npm",
+  "Express with Bun",
+  "Flask with uv",
+  "100 traces",
+  "1,000 spans",
+  "2 MiB",
+  "24-hour ingestion window",
+  "following seven-day retention period",
+  "valid for 10 minutes",
+  "lasts at most 30 minutes",
+]) {
+  if (!agentGuide.includes(phrase)) fail(`agent setup guide must freeze: ${phrase}`);
+}
+if (/creates no[^.]*model-provider request/i.test(installationGuide)) {
+  fail("installation guide must not deny the one selected application/provider request");
+}
+for (const [path, text] of Object.entries({
+  "installation.mdx": installationGuide,
+  "guides/agent-setup.mdx": agentGuide,
+  "guides/project-keys.mdx": publicText["guides/project-keys.mdx"],
+  "guides/troubleshooting.mdx": publicText["guides/troubleshooting.mdx"],
+  "quickstart.mdx": publicText["quickstart.mdx"],
+  "agents/overview.mdx": publicText["agents/overview.mdx"],
+})) {
+  if (/\b(?:terms?|privacy)\b[^.]{0,100}\baccept/i.test(text))
+    fail(`${path} must not add a legal-acceptance gate`);
+}
+
+for (const [description, pattern] of [
+  [
+    "dedicated setup receipt acceptance and generic receipt rejection",
+    /checks `\/api\/v1\/setup\/traces\/\{traceId\}\/receipt`[\s\S]*generic `\/api\/v1\/traces\/\{traceId\}\/receipt` rejects a setup credential/,
+  ],
+  [
+    "claim-scoped verified adoption and owner/admin-only transfer",
+    /Only this private claim flow can admit a new identity; generic Hue signup remains closed\.[\s\S]*must verify their email[\s\S]*explicitly adopt the trial project[\s\S]*explicitly choose an organization where they are an owner or admin; an ordinary member cannot transfer/,
+  ],
+  [
+    "setup trace-only authority and closed privileged surfaces",
+    /send setup traces[\s\S]*rejects setup log export[\s\S]*cannot capture prompts or outputs, browse arbitrary traces, use the Hue MCP server, call evaluation APIs, change project settings, invite members, or alter billing/,
+  ],
+  [
+    "global lineage revocation plus bounded endpoint verification",
+    /atomically revokes the complete pre-claim credential lineage across Hue[\s\S]*separately confirms that the pre-claim credential is refused by `\/api\/v1\/setup\/traces\/\{traceId\}\/receipt`[\s\S]*endpoint check alone is not proof about every Hue route/,
+  ],
+  [
+    "server claim revocation before local credential reconciliation",
+    /Claim revokes the old credential on the server; the next local reconciliation installs its setup-scoped replacement/,
+  ],
+]) {
+  if (!pattern.test(agentGuide)) fail(`agent setup guide must bind ${description}`);
 }
 
 if (!publicText["evaluations/simulations.mdx"].includes("provider-facade route is deployed")) {

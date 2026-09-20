@@ -8,6 +8,10 @@ Start an experiment in Hue, run your existing agent in your own environment, and
 
 Hue manages dataset versions, dispatch and scoring. Your application keeps its model provider, instructions, tools and telemetry. Local and CI [evaluation runners](/evaluations/first-evaluation) remain available.
 
+<Note>
+  A bounded metadata-only setup trial does not register a target or start a managed run. First [link the installation to an account](/guides/agent-setup#link-an-account-after-setup), then configure an account-managed **Tracing and evaluations** key for the managed target.
+</Note>
+
 ## 1. Wrap your existing function
 
 Install `@hue-run/sdk@0.3.0` for Node.js 22 or 24 or `hue-run==0.2.2` for Python 3.10+. Configure a **Tracing and evaluations** key in the same Hue project as the dataset, then set up [tracing](/quickstart).

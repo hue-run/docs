@@ -5,6 +5,16 @@ description: "Configure server-side authentication and verify which project rece
 
 Use a project service key for SDK requests and OpenTelemetry exports. Create it in **Settings → Integrations & API keys** within the project you want to use.
 
+## Start without an account
+
+[One-command setup](/guides/agent-setup) can provision a bounded metadata-only trial before you have a Hue account. Its anonymous credential is installation-scoped: it sends setup traces and verifies known receipts within the displayed limits, but it cannot export logs, capture content, browse traces, use evaluations or MCP, change settings, or act as a signed-in member.
+
+Setup stores the credential in an ignored owner-only local file and never prints it. A short-lived, single-use private handoff lets a human link the installation later. Only that private claim flow admits a verified new user, who can adopt the trial project; generic signup remains closed. An existing user must explicitly select an organization where they are an owner or admin. Ordinary members cannot transfer the project into an organization.
+
+Successful adoption or transfer preserves accepted telemetry and receipt history and revokes the anonymous value on the server. Rerun the local command to reconcile and atomically install the replacement setup-scoped credential. The linkage command verifies on `/api/v1/setup/traces/{traceId}/receipt` that the old value is refused before reporting success. Create ordinary **Tracing only**, MCP, or evaluation-capable keys separately after linkage; claim does not widen the setup credential.
+
+The account-managed presets below apply after linkage or to a project you already own.
+
 ## Configure the application
 
 Store the key as `HUE_API_KEY` in your server environment or secret manager. Pass it to the SDK constructor, as shown in the [quickstart](/quickstart). Hue constructors do not automatically load environment files.
