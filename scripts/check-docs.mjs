@@ -239,7 +239,7 @@ for (const [path, phrases] of Object.entries({
     "setup log export",
     "/api/v1/setup/traces/{traceId}/receipt",
     "/api/v1/traces/{traceId}/receipt",
-    "generic Hue signup remains closed",
+    "does not open unrestricted signup or change existing invitation and staff access",
     "owner or admin",
     "ordinary member cannot transfer",
     "linked setup-scoped credential",
@@ -251,7 +251,7 @@ for (const [path, phrases] of Object.entries({
   "guides/project-keys.mdx": [
     "bounded metadata-only trial",
     "cannot export logs",
-    "generic signup remains closed",
+    "does not open unrestricted signup or change existing invitation and staff access",
     "owner or admin",
     "Ordinary members cannot transfer",
     "/api/v1/setup/traces/{traceId}/receipt",
@@ -320,7 +320,7 @@ for (const [description, pattern] of [
   ],
   [
     "claim-scoped verified adoption and owner/admin-only transfer",
-    /Only this private claim flow can admit a new identity; generic Hue signup remains closed\.[\s\S]*must verify their email[\s\S]*explicitly adopt the trial project[\s\S]*explicitly choose an organization where they are an owner or admin; an ordinary member cannot transfer/,
+    /New customers without an invitation use this private claim flow; it does not open unrestricted signup or change existing invitation and staff access\.[\s\S]*must verify their email[\s\S]*explicitly adopt the trial project[\s\S]*explicitly choose an organization where they are an owner or admin; an ordinary member cannot transfer/,
   ],
   [
     "setup trace-only authority and closed privileged surfaces",
