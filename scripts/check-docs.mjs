@@ -227,8 +227,15 @@ for (const [path, phrases] of Object.entries({
     "action.required",
     "bounded metadata-only trial",
     "actual application request ran exactly once",
+    "Published `@hue-run/sdk@latest` is still 0.3.2",
+    "does not include the 0.4.0 one-command setup",
+    "Do not treat its CLI as this flow",
+    "Scenario",
   ],
   "guides/agent-setup.mdx": [
+    "Published `@hue-run/sdk@latest` is still 0.3.2",
+    "does not include the 0.4.0 one-command setup",
+    "Do not treat its CLI as this flow",
     "npx --yes @hue-run/sdk@latest setup --agent",
     "npx --yes @hue-run/sdk@latest setup",
     "npx --yes @hue-run/sdk@latest claim --format human",
@@ -300,6 +307,12 @@ for (const phrase of [
 }
 if (/creates no[^.]*model-provider request/i.test(installationGuide)) {
   fail("installation guide must not deny the one selected application/provider request");
+}
+if (/@hue-run\/sdk@latest already (?:has|includes|ships)/i.test(allPublicText)) {
+  fail("public content must not claim @hue-run/sdk@latest already has setup");
+}
+if (/published `@hue-run\/sdk@latest` is(?: still)? 0\.4\.0/i.test(allPublicText)) {
+  fail("public content must not claim published @hue-run/sdk@latest is 0.4.0");
 }
 for (const [path, text] of Object.entries({
   "installation.mdx": installationGuide,

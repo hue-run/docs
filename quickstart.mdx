@@ -11,7 +11,7 @@ The manual diagnostic below sends a real trace to Hue with a local text transfor
 
 ## Set up an existing application
 
-The [one-command setup](/guides/agent-setup) can start a supported TypeScript or Python repository without a Hue account. It installs the compatible dependency, wires metadata-only instrumentation into the real application, runs an appropriate application request once, and verifies the exact trace and span receipt. It stops with `action.required` instead of guessing when it cannot identify a safe integration or request.
+The [one-command setup](/guides/agent-setup) is the intended path for a supported TypeScript or Python repository without a Hue account. Published `@hue-run/sdk@latest` is still 0.3.2 and does not include that 0.4.0 flow. Once published, it installs the compatible dependency, wires metadata-only instrumentation into the real application, runs an appropriate application request once, and verifies the exact trace and span receipt. It stops with `action.required` instead of guessing when it cannot identify a safe integration or request.
 
 The trial credential is bounded and cannot enable content capture, evaluations, simulations, managed runs, MCP access, or account administration. Generic signup remains closed; only the private claim flow can admit a verified new user to adopt that trial project. You can keep using the application within the displayed limits and [link an account later](/guides/agent-setup#link-an-account-after-setup) without losing its accepted telemetry.
 

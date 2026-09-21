@@ -6,6 +6,10 @@ sidebarTitle: "One-command setup"
 
 Give any shell-capable coding agent one prompt. Hue detects a supported TypeScript or Python repository, installs the compatible SDK, adds metadata-only instrumentation, and verifies one real application request. You can start without an account and link one after you have used Hue.
 
+<Note>
+  Published `@hue-run/sdk@latest` is still 0.3.2 and does not include the 0.4.0 one-command setup. Do not treat its CLI as this flow. The commands below are the intended path once that unpublished 0.4.0 release is accepted and published as `latest`. Until then, install the documented TypeScript 0.3.0 or Python 0.2.2 packages and follow the [quickstart](/quickstart).
+</Note>
+
 ## Give the agent one prompt
 
 Open your application in Codex, Claude Code, Cursor, or another shell-capable coding agent, then paste:
@@ -18,9 +22,7 @@ Agent mode writes append-only, versioned JSONL events. It never reads an interac
 
 If the repository type, package manager, dependency compatibility, application entry point, or safe request is ambiguous, setup returns `action.required` and stops before changing the repository or provisioning a trial. The agent should show you the bounded next action exactly as reported. It must not choose a framework, force an incompatible dependency, invent a request, or report partial progress as success.
 
-The first automated release deliberately supports a narrow matrix: Express with npm, Express with Bun, and Flask with uv. Other JavaScript
-package managers, Python environment managers, frameworks, monorepo roots, and
-ambiguous entry points stop with `action.required`; the command does not guess.
+The first automated release deliberately supports a narrow matrix: Express with npm, Express with Bun, and Flask with uv. Other JavaScript package managers, Python environment managers, frameworks, monorepo roots, and ambiguous entry points stop with `action.required`; the command does not guess.
 
 ## Run it yourself in a terminal
 
@@ -42,17 +44,13 @@ For a supported repository, setup:
 4. Stores its credential and installation proof only in an ignored local file with owner-only permissions. It never prints or emits those values.
 5. Starts or invokes the application's safe verification path once, flushes the providers that own its telemetry, and checks `/api/v1/setup/traces/{traceId}/receipt` for that request's exact trace and expected spans. The generic `/api/v1/traces/{traceId}/receipt` rejects a setup credential.
 
-Review the diff and the structured evidence. Setup does not enable content capture, create an evaluation, Scenario, simulation, managed run, or remote worker. The application still owns its business operation and provider credentials. Only exercise a request that is safe to run once; a telemetry failure never authorizes the agent to repeat business work.
+Review the diff and the structured evidence. Setup does not enable content capture, create an evaluation, Scenario, Hue Run, simulation, managed run, or remote worker. The application still owns its business operation and provider credentials. Only exercise a request that is safe to run once; a telemetry failure never authorizes the agent to repeat business work.
 
 ## Start without an account
 
 The initial credential belongs to a bounded metadata-only trial. It can send setup traces and read receipts only for its installation; Hue rejects setup log export. It cannot capture prompts or outputs, browse arbitrary traces, use the Hue MCP server, call evaluation APIs, change project settings, invite members, or alter billing. The command and status output report the non-secret state and remaining limits without exposing a bearer credential.
 
-The trial accepts at most 100 traces, 1,000 spans, and 2 MiB of logical
-telemetry during its 24-hour ingestion window. Linking preserves the project.
-Otherwise Hue revokes ingestion at expiry and purges the unclaimed trial after
-the following seven-day retention period. Retention does not extend the trial's
-ingestion or claim eligibility.
+The trial accepts at most 100 traces, 1,000 spans, and 2 MiB of logical telemetry during its 24-hour ingestion window. Linking preserves the project. Otherwise Hue revokes ingestion at expiry and purges the unclaimed trial after the following seven-day retention period. Retention does not extend the trial's ingestion or claim eligibility.
 
 Run setup again after an interruption. It resumes the same locally persisted installation and idempotency identity; it does not silently create a second trial. Expired, revoked, purged, or exhausted installations fail closed and explain the available owner action.
 
@@ -64,12 +62,7 @@ You can defer linkage until after the application has sent useful telemetry. Sta
 npx --yes @hue-run/sdk@latest claim --format human
 ```
 
-This human-mode command creates a short-lived, single-use browser handoff,
-valid for 10 minutes, in an ignored owner-only local file and opens that local
-file. Its exchanged browser session lasts at most 30 minutes. It does not print
-the bearer handoff, put it in shell history, or expose it through Agent events,
-logs, telemetry, screenshots, issue text, or an agent-opened URL. Public status
-contains only a non-secret handoff descriptor.
+This human-mode command creates a short-lived, single-use browser handoff, valid for 10 minutes, in an ignored owner-only local file and opens that local file. Its exchanged browser session lasts at most 30 minutes. It does not print the bearer handoff, put it in shell history, or expose it through Agent events, logs, telemetry, screenshots, issue text, or an agent-opened URL. Public status contains only a non-secret handoff descriptor.
 
 New customers without an invitation use this private claim flow; it does not open unrestricted signup or change existing invitation and staff access. A new user must verify their email or use a verified sign-in, then explicitly adopt the trial project. An existing user must explicitly choose an organization where they are an owner or admin; an ordinary member cannot transfer the project into that organization. The adoption or transfer preserves the installation identity, accepted telemetry, and receipt history.
 
@@ -85,7 +78,7 @@ Restart requires both standard input and standard output to be terminals. It inv
 
 ## Install the Hue skill for future sessions
 
-The setup command includes the released integration workflow. You can also install the SDK-owned Hue skill so supported agents discover the same guidance in later sessions:
+The setup command includes the integration workflow. You can also install the SDK-owned Hue skill so supported agents discover the same guidance in later sessions:
 
 ```sh
 npx skills add hue-run/hue-sdk --skill hue

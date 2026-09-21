@@ -16,7 +16,7 @@ The installable project-data server runs at `https://mcp.hue.run/mcp`. A separat
 
 ## Which one to reach for
 
-- **The agent can run a shell and is changing application code.** Give it the [one-command setup prompt](/guides/agent-setup#give-the-agent-one-prompt). A supported repository can start a bounded metadata-only trial without an account. Add the MCP server after account linkage when the agent should inspect project data.
+- **The agent can run a shell and is changing application code.** Give it the [one-command setup prompt](/guides/agent-setup#give-the-agent-one-prompt) once that unpublished 0.4.0 flow is on `@hue-run/sdk@latest`. A supported repository can start a bounded metadata-only trial without an account. Add the MCP server after account linkage when the agent should inspect project data. Until then, use the [manual SDK guides](/installation).
 - **The agent cannot run a shell**, for example a hosted assistant, **or you want several connected actions in one conversation** ("find yesterday's failing traces, show me the slowest span, compare the last two experiments"). Connect the MCP server.
 - **You are automating in CI.** Use the SDK evaluation clients and the receipt endpoint directly.
 

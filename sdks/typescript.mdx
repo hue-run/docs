@@ -10,7 +10,7 @@ For option defaults and method signatures, see the [TypeScript API reference](/r
 ## Install
 
 <Tip>
-  For a supported existing repository, [one-command setup](/guides/agent-setup) installs the compatible dependency, wires metadata-only instrumentation, and verifies a real application request. You can start without an account and link it later. This guide is the manual path for an account-managed key.
+  For a supported existing repository, [one-command setup](/guides/agent-setup) is the intended path to install the compatible dependency, wire metadata-only instrumentation, and verify a real application request. Published `@hue-run/sdk@latest` is still 0.3.2 and does not include that 0.4.0 flow. This guide is the current manual path for an account-managed key.
 </Tip>
 
 Use Node.js 22 or 24, or Bun 1.4. [Install the TypeScript SDK](/installation#typescript), then configure your key below. The package is ESM; CommonJS applications on Node.js 22.12 or later load it with `require("@hue-run/sdk")`. Check the [compatibility matrix](/sdks/compatibility) if your application already uses AI SDK or OpenTelemetry. Besides the core entry point, the package exposes `@hue-run/sdk/ai-sdk`, `@hue-run/sdk/evals`, `@hue-run/sdk/environment` and `@hue-run/sdk/managed`. `@hue-run/sdk/evals` needs the optional `zod` peer (`npm install zod`, 4.6.5 or later); [simulations](/evaluations/simulations) use it together with `@hue-run/sdk/environment`.

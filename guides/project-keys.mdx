@@ -7,7 +7,7 @@ Use a project service key for SDK requests and OpenTelemetry exports. Create it 
 
 ## Start without an account
 
-[One-command setup](/guides/agent-setup) can provision a bounded metadata-only trial before you have a Hue account. Its anonymous credential is installation-scoped: it sends setup traces and verifies known receipts within the displayed limits, but it cannot export logs, capture content, browse traces, use evaluations or MCP, change settings, or act as a signed-in member.
+[One-command setup](/guides/agent-setup) is the intended path to provision a bounded metadata-only trial before you have a Hue account. Published `@hue-run/sdk@latest` is still 0.3.2 and does not include that 0.4.0 flow. Its anonymous credential is installation-scoped: it sends setup traces and verifies known receipts within the displayed limits, but it cannot export logs, capture content, browse traces, use evaluations or MCP, change settings, or act as a signed-in member.
 
 Setup stores the credential in an ignored owner-only local file and never prints it. A short-lived, single-use private handoff lets a human link the installation later. New customers without an invitation use this private claim flow to verify their identity and adopt the trial project. It does not open unrestricted signup or change existing invitation and staff access. An existing user must explicitly select an organization where they are an owner or admin. Ordinary members cannot transfer the project into an organization.
 

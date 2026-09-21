@@ -5,6 +5,10 @@ description: "Set up Hue in a TypeScript or Python application with one command,
 
 Use the setup command from your application's repository to start without an account. It detects a supported TypeScript or Python project, installs the matching SDK with the repository's package manager, adds metadata-only instrumentation, exercises a real application request, and verifies that request's exact receipt.
 
+<Note>
+  Published `@hue-run/sdk@latest` is still 0.3.2 and does not include the 0.4.0 one-command setup. Do not treat its CLI as this flow. The commands below are the intended path once that unpublished 0.4.0 release is accepted and published as `latest`. Until then, install the documented TypeScript 0.3.0 or Python 0.2.2 packages and follow the [quickstart](/quickstart).
+</Note>
+
 <Tabs>
   <Tab title="Agent">
     Give a shell-capable coding agent this prompt:
@@ -26,7 +30,7 @@ Terminal mode shows interactive progress. Agent mode emits machine-readable prog
 
 Setup does not guess when the repository, package manager, application entry point, or safe request command is ambiguous. It returns `action.required` without changing the repository. A successful run means the dependency is installed, the application owns the integration, an actual application request ran exactly once, and Hue returned a matching stored receipt. A connection check or setup-only probe is not application verification.
 
-The initial installation is a bounded metadata-only trial. Content capture stays off, and setup creates no evaluation, simulation, managed run, or remote worker. The selected existing application route may call its configured model provider once; Hue does not invent or automatically replay that business request. You can [link an account after you have used it](/guides/agent-setup#link-an-account-after-setup).
+The initial installation is a bounded metadata-only trial. Content capture stays off, and setup creates no evaluation, Scenario, simulation, managed run, or remote worker. Setup credentials cannot call evaluation APIs. The selected existing application route may call its configured model provider once; Hue does not invent or automatically replay that business request. You can [link an account after you have used it](/guides/agent-setup#link-an-account-after-setup).
 
 Prefer to configure the released packages manually? Choose your language below, then [send your first trace](/quickstart).
 

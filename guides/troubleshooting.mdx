@@ -7,7 +7,7 @@ Start by separating the application result from the telemetry result. A model re
 
 ## One-command setup returns `action.required`
 
-This is a safe stop, not a successful installation. Read the structured reason and bounded next action. Setup refuses to guess when it finds an ambiguous repository, unsupported runtime or dependency, multiple package managers, an unknown application entry point, an unsafe verification request, edited managed files, or conflicting telemetry ownership.
+This is a safe stop, not a successful installation. It describes the intended 0.4.0 flow; published `@hue-run/sdk@latest` is still 0.3.2 and does not include that setup. Read the structured reason and bounded next action. Setup refuses to guess when it finds an ambiguous repository, unsupported runtime or dependency, multiple package managers, an unknown application entry point, an unsafe verification request, edited managed files, or conflicting telemetry ownership.
 
 Resolve the reported condition, then rerun the same command. It resumes the same installation identity when one already exists. Do not delete local state, force a dependency, choose a framework on the application's behalf, or report success from a package install, setup-only probe, or connection check. Integration succeeds only after one actual application request produces the exact expected stored receipt.
 

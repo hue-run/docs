@@ -7,15 +7,15 @@ og:title: "Welcome to Hue"
 
 Hue records what your AI application does and helps you evaluate its outputs. Your application runs in your own environment and sends telemetry to Hue through OpenTelemetry.
 
-Start with one request. The accountless setup path verifies metadata only. After you link an account and explicitly configure content capture with an ordinary project key, you can inspect inputs, outputs, model calls and tool calls and turn useful examples into a dataset for repeatable evaluations.
+Start with one request. The intended accountless setup path verifies metadata only; published `@hue-run/sdk@latest` is still 0.3.2 and does not include that 0.4.0 flow. After you link an account and explicitly configure content capture with an ordinary project key, you can inspect inputs, outputs, model calls and tool calls and turn useful examples into a dataset for repeatable evaluations.
 
 <CardGroup cols={2}>
   <Card title="Send your first trace" href="/quickstart">
-    Start without an account, connect your application, and verify a real request.
+    Install the documented SDK with an account-managed key and verify a real request.
   </Card>
 
   <Card title="Set up with an agent" href="/guides/agent-setup">
-    Give a shell-capable coding agent one prompt for a supported TypeScript or Python repository.
+    Intended one-command setup for Express/npm, Express/Bun, or Flask/uv, with deferred account linkage.
   </Card>
 
   <Card title="Install the SDK" href="/installation">
@@ -39,4 +39,4 @@ A **trace** records one execution. Its **spans** describe the model calls, tools
 
 An **evaluation** assesses a stored output using a pinned scorer definition. Execution failure, scorer failure and a negative quality result are different outcomes. For example, a successful model call can still receive a `false` quality score.
 
-Use [one-command setup](/guides/agent-setup) for a bounded metadata-only trial and deferred account linkage. Or install the TypeScript SDK from [npm](https://www.npmjs.com/package/@hue-run/sdk) or the Python SDK from [PyPI](https://pypi.org/project/hue-run/); see [installation](/installation) for commands and runtime requirements.
+Use [one-command setup](/guides/agent-setup) for the intended bounded metadata-only trial and deferred account linkage once `@hue-run/sdk@latest` publishes that flow. Today, install the TypeScript SDK from [npm](https://www.npmjs.com/package/@hue-run/sdk) or the Python SDK from [PyPI](https://pypi.org/project/hue-run/); see [installation](/installation) for commands and runtime requirements.
