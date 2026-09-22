@@ -135,6 +135,7 @@ for (const legacy of [
   "**Read and write**",
   "once that host is live",
   "skill.md?v=0.2.2",
+  "skill.md?v=0.2.3",
   "experiment comparison come later",
 ]) {
   if (allPublicText.includes(legacy)) fail(`public content contains retired text: ${legacy}`);
@@ -204,7 +205,6 @@ const requirements = {
   "integrations/opentelemetry.mdx": ["Tracing only", "Tracing and evaluations"],
   "integrations/reference-chatbot.mdx": ["Tracing only"],
   "guides/production-safety.mdx": ["Tracing only", "Tracing and evaluations"],
-  "guides/agent-setup.mdx": ["Tracing only", "Coding agent (read-only)"],
   "evaluations/first-evaluation.mdx": ["Tracing and evaluations"],
   "evaluations/simulations.mdx": ["Tracing and evaluations"],
   "evaluations/managed-runs.mdx": ["Tracing and evaluations"],
@@ -258,7 +258,6 @@ for (const [path, phrases] of Object.entries({
   "reference/typescript.mdx": [`\`@hue-run/sdk\` **${typescriptVersion}**`],
   "reference/python.mdx": [`\`hue-run\` **${pythonVersion}**`],
   "evaluations/managed-runs.mdx": [`@hue-run/sdk@${typescriptVersion}`, `hue-run==${pythonVersion}`],
-  "guides/agent-setup.mdx": [`TypeScript SDK ${typescriptVersion}`, `Python ${pythonVersion}`],
 })) {
   for (const phrase of phrases) if (!publicText[path].includes(phrase)) fail(`${path} must name current version ${phrase}`);
 }
@@ -284,8 +283,17 @@ const skillSource = canonicalSkill(publicSkill, sdk);
 if (digest(skillSource) !== sdk.skill.sha256) fail("skill.md differs from the SDK-owned skill source");
 const compatibilitySource = canonicalCompatibility(read("sdks/compatibility.mdx"));
 if (digest(compatibilitySource) !== sdk.compatibility.sha256) fail("sdks/compatibility.mdx differs from the SDK-owned source");
-if (!publicText["guides/agent-setup.mdx"].includes(`skill.md?v=${sdk.skill.metadata.version}`)) {
-  fail("agent setup must use the current skill cache version");
+const agentGate = publicText["guides/agent-setup.mdx"];
+for (const phrase of [
+  "invite-only",
+  "https://calendar.notion.so/meet/akethini/fd2smi4yej",
+  "founders@hue.run",
+  "Do not add packages",
+]) {
+  if (!agentGate.includes(phrase)) fail(`guides/agent-setup.mdx must contain the invite-only gate text: ${phrase}`);
+}
+for (const install of ["npx ", "npm install", "pip install", "uv add", "skills add", "skill.md?v="]) {
+  if (agentGate.includes(install)) fail(`guides/agent-setup.mdx is the invite-only gate and must not contain an install step: ${install}`);
 }
 
 let generated;
