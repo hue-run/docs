@@ -1,9 +1,9 @@
 ---
 title: "TypeScript API reference"
-description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.3.0."
+description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.4.2."
 ---
 
-This reference covers `@hue-run/sdk` **0.3.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+This reference covers `@hue-run/sdk` **0.4.2** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -75,7 +75,7 @@ hue.tool<T>(
   name: string,
   input: unknown,
   execute: () => T | Promise<T>,
-  options?: Pick<SpanOptions, "parentContext">,
+  options?: ToolOptions,
 ): Promise<T>
 
 hue.model<T>(
@@ -102,7 +102,7 @@ hue.recordMessages(
 
 `withSpan` returns the callback's result, ends the span after the callback settles, and records then rethrows an escaping application error. Consume streams inside the callback if their work belongs to that span. A returned streaming `Response` is not evidence that the stream has finished.
 
-`tool` runs `execute` inside a span named `execute_tool {name}` with `gen_ai.tool.name`, records `input` and a defined result as `gen_ai.tool.call.arguments` / `gen_ai.tool.call.result` according to your content policy, and returns the tool result. An `undefined` result omits result content. `options.parentContext` supplies an explicit parent for the tool span.
+`tool` runs `execute` inside a span named `execute_tool {name}` with `gen_ai.tool.name`, records `input` and a defined result as `gen_ai.tool.call.arguments` / `gen_ai.tool.call.result` according to your content policy, and returns the tool result. An `undefined` result omits result content. `options.parentContext` supplies an explicit parent for the tool span. `ToolOptions` extends `Pick<SpanOptions, "parentContext">` with `callId`, the provider-issued tool-call id recorded as `gen_ai.tool.call.id`, and `mcp`, an `McpServerInfo` (the MCP `initialize` `serverInfo`, passed as `client.getServerVersion()` after connect) recorded as `mcp.server.name` / `mcp.server.version` so a generic tool name is attributed to the server that handled the call.
 
 `model` runs `callback` inside a GenAI client span for one direct provider call, named `{operation} {model}` unless `options.name` is given, with `gen_ai.operation.name`, `gen_ai.request.model` and `gen_ai.provider.name`. The argument order matches `withSpan`. Inside it, the handle's `setInput` and `setOutput` record `gen_ai.input.messages` / `gen_ai.output.messages`, which should use the GenAI semantic-convention message shape; `recordMessages` inside the callback inherits the request metadata.
 
@@ -426,8 +426,8 @@ Provider-profile preflight is a control-plane contract. The provider-facade rout
 | `client` | Required `EvaluationClient` for the target Hue project. |
 | `environmentClient` | Required `EnvironmentClient` for the same Hue origin and project. |
 | `hue` | Required `HueClient` used for target and tool spans. |
-| `checkpointDirectory` | Required dedicated private directory for resumable checkpoints. Running a changed scenario while an unfinished simulation is checkpointed there fails; recover that simulation first. |
-| `scenario` | Required `SimulationScenario`. |
+| `checkpointDirectory` | Required dedicated private directory for resumable checkpoints. Running a changed definition while an unfinished simulation is checkpointed there fails; recover that simulation first. |
+| `definition` | Required `SimulationDefinition`. The deprecated `scenario` option accepts the same value and is still accepted. |
 | `persistResultContent` | Required boolean for saved target and scorer content. |
 | `traceEvidence` | Required `{ mode: "required" }` or `{ mode: "omit", reason }`. |
 | `target(inputs, context)` | Required. Invokes the existing local agent exactly once for this attempt with a `SimulationTargetContext`; returns a JSON value, `undefined` or a promise of either. |
@@ -437,24 +437,24 @@ Provider-profile preflight is a control-plane contract. The provider-facade rout
 | `maxSteps` | Per-world action ceiling, `1–500`. |
 | `ttlSeconds` | Per-world lease in seconds, `1–86400`. |
 | `signal` | Optional `AbortSignal`; cancellation is cooperative. |
-| `runName` | Optional display name for the fresh experiment; defaults to the source experiment or scenario name. |
+| `runName` | Optional display name for the fresh experiment; defaults to the source experiment or definition name. |
 | `onProgress(event)` | Optional callback receiving bounded nonsecret `SimulationProgress` events. |
 | `actualAgentManifest` | Optional `ActualAgentManifestInputV2`, or a function of `{ config, item, signal }` returning one, that opts into immutable provider-profile preflight. Requires `requestedProviders` and `mcpSurface`. Omitted evidence normalizes to explicit V2 missing evidence; it is never assumed equal to the baseline. |
 | `requestedProviders` | Optional `RequestedAttemptProviderV2[]`: the exact provider instances and ordered surfaces asserted for strict preflight. Supplied together with `mcpSurface`. |
 | `mcpSurface` | Optional `{ providerInstanceKey, surfaceKey: "google.gmail/mcp" \| "slack/mcp" }` selected from `requestedProviders` and projected to `context.mcp`. |
 
-`SimulationReport` extends `RunnerReport` with `experimentId`, the fresh experiment created for this invocation, and `runUrl`, the browser URL joining task, trace, world evidence and scoring. Invalid bounds throw `RangeError`; mismatched origins and an unfinished checkpointed scenario throw `Error`.
+`SimulationReport` extends `RunnerReport` with `experimentId`, the fresh experiment created for this invocation, and `runUrl`, the browser URL joining task, trace, world evidence and scoring. Invalid bounds throw `RangeError`; mismatched origins and an unfinished checkpointed definition throw `Error`.
 
-### SimulationScenario
+### SimulationDefinition
 
-`SimulationScenario` is a union of an app-authored reference and a repository-authored definition.
+`SimulationDefinition` is a union of an app-authored reference and a repository-authored definition. `SimulationScenario` is a deprecated alias for `SimulationDefinition`.
 
 | Kind | Fields |
 | --- | --- |
 | `{ kind: "experiment", experimentId }` | Selects an existing app-authored immutable experiment template. Each completed invocation clones its frozen dataset version, configuration and scorer-version pins into a fresh experiment. |
 | `{ kind: "repository", name, slug, description?, environment, cases, scorers, config? }` | Publishes and resolves the definition. `slug` is the stable dataset slug used for immutable version resolution; `environment` is an `EnvironmentIdentity` plus its `definition: PublishableEnvironmentDefinition`; `config` is passed to every target callback. At least one case and one scorer are required, and case keys must be unique. |
 
-`RepositorySimulationCase` is `{ externalKey, inputs, expected?, metadata? }`: a stable key unique within the scenario dataset, the JSON inputs passed to the target, an optional reference output and optional caller-owned metadata. `RepositorySimulationScorer` is an `Identity` plus `scorer`, a `ScorerDefinition` to publish or a `LocalScorer` bound to its source digest. Stable slugs reuse matching immutable content digests; changed definitions publish new versions. Unsupported or server-only scorer kinds throw `TypeError` before any write.
+`RepositorySimulationCase` is `{ externalKey, inputs, expected?, metadata? }`: a stable key unique within the dataset, the JSON inputs passed to the target, an optional reference output and optional caller-owned metadata. `RepositorySimulationScorer` is an `Identity` plus `scorer`, a `ScorerDefinition` to publish or a `LocalScorer` bound to its source digest. Stable slugs reuse matching immutable content digests; changed definitions publish new versions. Unsupported or server-only scorer kinds throw `TypeError` before any write.
 
 ### SimulationTargetContext
 
@@ -598,6 +598,79 @@ bindEnvironmentTools(options: BindEnvironmentToolsOptions): Record<string, Envir
 `bindEnvironmentTools` binds a run's generated catalog to plain local callables without changing the agent framework. `BindEnvironmentToolsOptions` requires `hue`, the client that records each action as tool telemetry, `client`, an environment client bound to the same Hue origin (only `act` is used), and `run`, the fresh `EnvironmentRun` whose closed catalog becomes callables. `parentContext` supplies an optional parent span context for the generated tool spans; `invocationId(action)` is an optional durable invocation-ID factory for caller-owned resume state, and without it each call uses a random UUID.
 
 Each `EnvironmentTool` has `name`, `description?`, `inputSchema` (the action's `ActionSchema`) and `execute(args?)`, which runs the action inside `hue.tool(name, args, ...)` and resolves with the world's `Observation`. Transport failures reject with `HueEnvironmentError`.
+
+
+## Local setup session
+
+`@hue-run/sdk/setup` is the session core behind the `hue setup` CLI: a pure, resumable state machine that detects a project, plans the deliberately narrow automatic integration matrix, installs the runtime, wires the application and verifies a metadata-only setup probe — emitting secret-free versioned events. It is a separate local inspection path, not a simulation launcher. Every JSONL event carries `SETUP_EVENT_CONTRACT_VERSION`.
+
+| Export | Role |
+| --- | --- |
+| `runSetup` | Runs one resumable setup command and emits exactly one terminal event. |
+| `SetupRunOptions` | Inputs for one invocation of the resumable setup runner. |
+| `SetupRunResult` | Terminal outcome and latest resumable state from one setup invocation. |
+| `SetupBackendOperations` | Backend operations consumed by the resumable setup runner. |
+| `SetupProjectAdapter` | Detects the supported language and safe setup plan for a project root. |
+| `SetupCheckpointAdapter` | Persists secret-free setup progress across interruptions. |
+| `transitionSetup` | Pure transition that advances the setup state without I/O, clocks, randomness or environment access. |
+| `createInitialSetupState` | Creates the deterministic initial state without reading the filesystem. |
+| `SetupMachineState` | Persisted phase of the pure setup state machine. |
+| `SetupMachineInput` | Input returned by an injected setup adapter. |
+| `SetupTransition` | Pure transition result; its events are templates completed by the runner. |
+| `SetupEffect` | Side effect requested by the pure state machine. |
+| `detectSetupProject` | Reads bounded manifest and lockfile metadata without importing or executing project code. |
+| `SetupProjectDetection` | Static project facts read without executing repository code. |
+| `planSetupApplication` | Statically recognizes the narrow automatic matrix without executing project code. |
+| `SetupApplicationPlan` | Closed automatic application matrix; other projects require an explicit agent-owned integration. |
+| `SetupApplicationActionRequired` | Stable reason an automatic application integration is not safe. |
+| `SetupPlan` | A bounded local setup plan. |
+| `installSetupRuntime` | Installs the exact runtime with the detected owner of the project's manifest and lockfile. |
+| `wireSetupApplication` | Adds only two owned wiring blocks around an existing app object; business logic is untouched. |
+| `SetupFileChange` | A secret-free managed integration file created or replaced by setup. |
+| `SetupCommand` | Fixed argv execution boundary for package managers and application entrypoints. |
+| `SetupCommandRunner` | Executes a fixed argv without a shell and returns only its status. |
+| `runSetupCommand` | Default command runner: fixed argv, no shell, bounded output and deadline. |
+| `SetupBackendAdapter` | Real implementation of the frozen Setup HTTP protocol v1. |
+| `SetupBackendAdapterOptions` | Construction options for that adapter. |
+| `SetupBackendError` | Sanitized setup failure with a stable local or protocol code. |
+| `SetupBackendClaim` | Non-secret account-claim state; bearer handoffs never appear in public adapter results. |
+| `SetupBackendReceipt` | Deprecated alias of `SetupProbeEvidence`; still exported. |
+| `SetupBackendTrial` | Deprecated alias of `SetupInstallationStatus`; still exported. |
+| `SetupPreflightStatus` | Read-only public setup availability and fixed anonymous bounds. |
+| `SetupCredentialResult` | Installation status plus one idempotently recovered telemetry credential. |
+| `SetupProbeEvidence` | Exact receipt evidence for one real metadata-only setup probe. |
+| `SetupApplicationEvidence` | Exact receipt evidence from a request through the repository's existing application. |
+| `SetupClaimHandoff` | Non-secret descriptor for the current one-time browser handoff. |
+| `SetupInstallationStatus` | Strictly validated Setup HTTP protocol v1 installation status. |
+| `FileSetupInstallationStore` | Owner-only, project/origin-scoped storage for installation proof and telemetry credentials. |
+| `SetupInstallationRecord` | Secret local installation state; it must never be emitted or copied into diagnostics. |
+| `SetupStoredCredential` | Telemetry credential saved only in an ignored owner-only installation file. |
+| `SetupStoredProbe` | Exact metadata probe identifiers retained for resumable receipt verification. |
+| `SetupStoredClaimHandoff` | Durable client identity for an idempotent one-time browser handoff request. |
+| `SetupStoredApplicationAttempt` | Durable no-replay marker written before starting an existing application request. |
+| `SetupStoredApplicationEvidence` | Exact identifiers emitted by a request through the repository's existing application. |
+| `SetupEvent` | Version 1 setup JSONL event union. |
+| `SetupEventName` | Names in the version 1 setup event contract. |
+| `SetupOutputMode` | Supported setup transcript formats. |
+| `selectSetupOutputMode` | Chooses a safe default: ANSI only on an ordinary interactive terminal. |
+| `renderHumanEvent` | Renders one lightweight append-only terminal entry; never moves the cursor or clears the screen. |
+| `renderPlainEvent` | Renders one ANSI-free append-only transcript entry. |
+| `renderJsonlEvent` | Renders one newline-free JSON object for JSONL output. |
+| `RunStartedEvent` | An installer setup-session command invocation began; this is not a Hue Run. |
+| `StepStartedEvent` | A named setup step began. |
+| `StepCompletedEvent` | A named setup step completed. |
+| `ProjectDetectedEvent` | Project detection completed. |
+| `PlanReadyEvent` | The deterministic setup plan is ready. |
+| `FileChangedEvent` | A future mutating adapter changed a project file. |
+| `PrivacyNoticeEvent` | Published, non-blocking privacy and security disclosure shown before telemetry. |
+| `ActionRequiredEvent` | Progress needs an explicit local or human action. |
+| `DiagnosticEvent` | A secret-free diagnostic safe for terminals and transcripts. |
+| `TrialCreatedEvent` | A backend adapter created an anonymous trial. |
+| `ClaimRequiredEvent` | The anonymous project can be claimed by a person. |
+| `ClaimCompletedEvent` | A backend adapter confirmed that the project was claimed. |
+| `ReceiptVerifiedEvent` | A backend adapter verified instrumentation-only receipt evidence. |
+| `RunCompletedEvent` | Exactly one successful terminal installer event ends a JSONL invocation. |
+| `RunFailedEvent` | Exactly one failed terminal installer event ends a JSONL invocation. |
 
 ## Managed target adapter
 

@@ -118,6 +118,7 @@ if (contrastRatio(config.colors.dark, config.background.color.dark) < 4.5) {
 const expectedPresetNames = [
   "Tracing only",
   "Tracing and evaluations",
+  "Source capture only",
   "Coding agent (read-only)",
   "Coding agent (read + evaluations)",
 ];

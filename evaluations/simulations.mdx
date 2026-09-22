@@ -13,7 +13,7 @@ Simulations are available in `@hue-run/sdk` 0.2.0 for TypeScript only. They buil
 Importing `@hue-run/sdk/evals` needs the optional `zod` peer (4.6.5 or later). Install it with the SDK:
 
 ```sh
-npm install @hue-run/sdk@0.3.0 zod
+npm install @hue-run/sdk@0.4.2 zod
 ```
 
 Set `HUE_API_KEY` to a [project service key](/guides/project-keys) created with the **Tracing and evaluations** preset. The evaluation client and the environment client must use the same Hue origin.
@@ -26,7 +26,7 @@ A run instantiates one version into one fresh isolated world with a virtual cloc
 
 An observation with `status: "error"` is a recorded world answer, for example a guard that refused a mutation. It is not a transport exception.
 
-## Run a scenario like a test
+## Run a definition like a test
 
 `runSimulation()` is the one-shot developer path. It calls your existing callback directly, so IDE breakpoints and cooperative cancellation work. It does not register a worker, poll for jobs, host your laptop or require an inbound tunnel.
 
@@ -43,8 +43,8 @@ try {
     client: createEvaluationClient(connection),
     environmentClient: createEnvironmentClient(connection),
     hue,
-    checkpointDirectory: ".hue-checkpoints/refund-scenario",
-    scenario: { kind: "experiment", experimentId: process.env.HUE_EXPERIMENT_ID! },
+    checkpointDirectory: ".hue-checkpoints/refund-definition",
+    definition: { kind: "experiment", experimentId: process.env.HUE_EXPERIMENT_ID! },
     persistResultContent: true,
     traceEvidence: { mode: "required" },
     // runMyExistingAgent is your application function, not an SDK method.
@@ -62,11 +62,11 @@ try {
 
 The referenced experiment is an app-authored template. Each completed invocation clones its exact frozen dataset, configuration and scorer-version pins into a fresh experiment and creates one isolated world per case. The `run_created` event carries the experiment URL as soon as the experiment exists, so you can inspect progress while the agent runs.
 
-Repeat the command after an edit for a fresh attempt and world. An interrupted invocation resumes through the private checkpoint directory instead of starting again. Use one directory per scenario and add it to `.gitignore`.
+Repeat the command after an edit for a fresh attempt and world. An interrupted invocation resumes through the private checkpoint directory instead of starting again. Use one directory per definition and add it to `.gitignore`.
 
-## Repository-authored scenarios
+## Repository-authored definitions
 
-A repository scenario keeps the world definition, cases and scorers next to the agent code. `runSimulation()` publishes them through the same validated environment, dataset, scorer and experiment APIs as scenarios authored in Hue. Stable slugs reuse matching immutable content digests; changed definitions, cases or scorers publish new versions. Hue does not synchronize files back from its UI, and the helper refuses an unrelated mutable dataset draft instead of overwriting it.
+A repository definition keeps the world definition, cases and scorers next to the agent code. `runSimulation()` publishes them through the same validated environment, dataset, scorer and experiment APIs as definitions authored in Hue. Stable slugs reuse matching immutable content digests; changed definitions, cases or scorers publish new versions. Hue does not synchronize files back from its UI, and the helper refuses an unrelated mutable dataset draft instead of overwriting it.
 
 ```ts
 import { defineLocalScorer } from "@hue-run/sdk/evals";
@@ -102,7 +102,7 @@ const listedRecords = defineLocalScorer({
   },
 });
 
-const scenario = {
+const definition = {
   kind: "repository" as const,
   name: "Summarize the records",
   slug: "summarize-records",
@@ -123,7 +123,7 @@ await runSimulation({
   environmentClient,
   hue,
   checkpointDirectory: ".hue-checkpoints/summarize-records",
-  scenario,
+  definition,
   persistResultContent: false,
   traceEvidence: { mode: "required" },
   target: (inputs, context) => runMyExistingAgent({ inputs, ...context }),
@@ -132,7 +132,7 @@ await runSimulation({
 
 Repository publication supports the public `ScorerDefinition` union: exact match, includes, JSON Schema, local code, manual and model-judge definitions. A `LocalScorer` from `defineLocalScorer` publishes its pinned definition and binds the callback in the same step. `runSimulation()` applies the same identity-affecting defaults as Hue before resolving versions and rejects unknown or server-only kinds; in particular, `document_verifier` is not part of this SDK contract and is rejected rather than published with a guessed digest.
 
-A scenario needs at least one case and one scorer, and case keys must be unique. Definition defaults are applied before the digest is computed: `required: true` on parameters, an identity observation projection, empty `guards`, a `not_found` error and handwritten provenance. Writing the defaults out does not create a new version.
+A definition needs at least one case and one scorer, and case keys must be unique. Definition defaults are applied before the digest is computed: `required: true` on parameters, an identity observation projection, empty `guards`, a `not_found` error and handwritten provenance. Writing the defaults out does not create a new version.
 
 ## What the callback receives
 
@@ -165,7 +165,7 @@ Cancellation is cooperative. Pass `signal` to `runSimulation()` and forward `con
 
 If the agent may have run without a saved outcome, resume fails explicitly with `UncertainExecutionError` and never calls it again. If Hue cannot confirm whether the world sealed, or a preflight response is lost after a decision may have been committed, the execution stays uncertain and `TargetOutcomeUncertainError` names the execution; a resume neither reacquires credentials nor invokes the callback again. Inspect the execution and its side effects before authorizing a new attempt. Removing the checkpoint directory or its lock is not permission to run the target again.
 
-Running a changed scenario while an unfinished simulation is checkpointed in the same directory fails. Recover or finish that simulation first, or use another directory.
+Running a changed definition while an unfinished simulation is checkpointed in the same directory fails. Recover or finish that simulation first, or use another directory.
 
 ## Pinned provider-profile preflight
 
@@ -210,4 +210,4 @@ Local scoring and historical rescoring skip incomplete evidence before calling a
 - A world records at most 500 actions and its lease is at most 86,400 seconds. A published definition may contain up to 240 KB; evidence validation accepts worlds of at most 64 collections and 2,000 entities and evidence of at most 8 MiB; coverage-gap arguments are limited to 16,000 bytes; API responses to 4 MiB and request bodies to 1 MiB.
 - The hosted MCP connection exposes Hue's bounded native actions. It is not general Gmail or Slack HTTP parity and does not proxy arbitrary provider traffic.
 - Forking, in-place reset and arbitrary-step diffs are outside this interface.
-- `document_verifier` scorers cannot be published from a repository scenario.
+- `document_verifier` scorers cannot be published from a repository definition.
