@@ -280,7 +280,45 @@ if (!publicSkill.startsWith(`${expectedSkillFrontmatter}\n`)) {
   fail("skill.md frontmatter differs from the SDK-owned skill metadata");
 }
 const skillSource = canonicalSkill(publicSkill, sdk);
-if (digest(skillSource) !== sdk.skill.sha256) fail("skill.md differs from the SDK-owned skill source");
+// A skill override is the one documented exception to mirroring the pinned SDK skill verbatim: the
+// released skill with exactly one section replaced by that section from a later SDK commit. It is
+// bound to the current snapshot, so refreshing contracts/sdk-docs.json forces its removal or renewal.
+const sourceMetadata = readJson("contracts/sources.json");
+const skillOverride = sourceMetadata.skillOverride;
+if (skillOverride) {
+  const { base, section } = skillOverride;
+  if (base.commit !== sourceMetadata.sources.sdk.commit) {
+    fail("contracts/sources.json skillOverride.base.commit must be the pinned SDK snapshot commit; re-mirror the skill and drop the override");
+  }
+  if (base.source !== sdk.skill.source || base.sha256 !== sdk.skill.sha256) {
+    fail("contracts/sources.json skillOverride.base no longer matches the SDK snapshot's skill; re-mirror the skill and drop the override");
+  }
+  if (!/^[0-9a-f]{40}$/.test(section.commit) || section.repository !== sdk.repository) {
+    fail("contracts/sources.json skillOverride.section must name a full hue-sdk commit");
+  }
+  if (digest(skillSource) !== skillOverride.sha256) fail("skill.md differs from the recorded skill override");
+  const body = bodyAfterFrontmatter(publicSkill) ?? "";
+  const start = body.indexOf(`\n${section.heading}\n`);
+  const end = start === -1 ? -1 : body.indexOf("\n## ", start + section.heading.length + 1);
+  if (start === -1 || end === -1) fail(`skill.md is missing the overriding section ${section.heading}`);
+  else if (digest(body.slice(start + 1, end + 1)) !== section.sha256) {
+    fail(`skill.md section ${section.heading} differs from hue-sdk ${section.commit}`);
+  }
+  if (body.includes(`\n${section.replaces}\n`)) fail(`skill.md still contains the replaced section ${section.replaces}`);
+} else if (digest(skillSource) !== sdk.skill.sha256) {
+  fail("skill.md differs from the SDK-owned skill source");
+}
+// Hue Cloud is invite-only: no public page may hand an agent an anonymous setup or claim command.
+if (!publicSkill.includes("## Invite-only access") || !publicSkill.includes("https://docs.hue.run/guides/agent-setup")) {
+  fail("skill.md must contain the invite-only section that links to the agent setup gate");
+}
+for (const [path, text] of Object.entries(publicText)) {
+  for (const [block] of text.matchAll(/^\s*```[\s\S]*?^\s*```/gm)) {
+    for (const command of ["setup --agent", "resume --agent", "hue claim", "hue setup", "@hue-run/sdk@latest setup"]) {
+      if (block.includes(command)) fail(`${path} has a code block with an anonymous setup command: ${command}`);
+    }
+  }
+}
 const compatibilitySource = canonicalCompatibility(read("sdks/compatibility.mdx"));
 if (digest(compatibilitySource) !== sdk.compatibility.sha256) fail("sdks/compatibility.mdx differs from the SDK-owned source");
 const agentGate = publicText["guides/agent-setup.mdx"];
