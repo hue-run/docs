@@ -13,21 +13,21 @@ For direct HTTP requests, authentication uses `Authorization: Bearer <project-se
 
 ## Understand access
 
-Choose the preset that matches one caller:
+A key either reads the project, reads and writes it, or only sends traces:
 
 | Preset | Use it for | Access |
 | --- | --- | --- |
+| **Read** | A coding agent on the [Hue MCP server](/agents/mcp-server) | Reads project traces and recorded content, evaluations, review, intents, managed and local runs, artifacts, members, and keys. It cannot send telemetry or change project data. |
+| **Read and write** | A trusted MCP client, CI job, evaluation worker, or source-capture process that also changes project data | Everything **Read** reaches, plus MCP writes, tracing, source capture, and evaluation, artifact, simulation, environment, and managed-run APIs. Append `?read_only=true` to the MCP URL to hide writes. Billing stays in Settings. |
 | **Tracing only** | Application telemetry, connection checks, and known-trace receipts | Sends traces and logs. It cannot browse project data or use evaluation APIs. |
-| **Tracing and evaluations** | An application or CI process that traces and also manages datasets, scorers, experiments, simulations, environments, or managed runs | Includes tracing plus evaluation-family API access. It cannot browse arbitrary traces. |
-| **Source capture only** | A capture process that records tool evidence and uploads source files | Sends evidence for captures this key owns. It cannot send telemetry, browse project data, or use evaluation APIs. |
-| **Coding agent (read-only)** | The [Hue MCP server](/agents/mcp-server) | Reads project traces, evaluations, review, intents, managed and local runs, artifacts, members, and keys. It cannot send telemetry or change project data. |
-| **Coding agent (read + evaluations)** | A trusted MCP client that should also write project data | Combines coding-agent reads with MCP writes for those surfaces, plus evaluation-family API access. Append `?read_only=true` to hide writes. Billing stays in Settings. |
 
-Choose **Tracing only** for an application that only exports telemetry and store it as `HUE_API_KEY`. Choose **Tracing and evaluations** only when that process also uses evaluation APIs. Choose **Source capture only** for a capture process that only records tool evidence and uploads source files. Create a separate coding-agent key for the MCP server and configure it as `HUE_MCP_KEY` in the agent's MCP client, never in the application. Use **Coding agent (read-only)** unless the agent should write project data; then use **Coding agent (read + evaluations)**. Existing keys keep their access; creating a new restricted key does not narrow an older credential.
+Choose **Tracing only** for a production application and store it as `HUE_API_KEY`: if it leaks, it can send telemetry but cannot read your traces, list members, or create keys. Create a separate **Read** key for a coding agent and configure it as `HUE_MCP_KEY` in the agent's MCP client, never in the application. Use **Read and write** only for a process that should change project data, such as an evaluation worker or an agent that authors evaluations, and keep it off production servers.
 
-Treat either key as a server credential. Keep it out of browser bundles, logs, source control and prompts. Owners and admins can create and revoke keys. A newly invited member needs an owner or admin to supply a key through the team's secret store.
+Keys created with earlier presets keep their access. **Coding agent (read-only)** and **Coding agent (read + evaluations)** keys now appear as **Read** and **Read and write**. **Tracing and evaluations** and **Source capture only** keys appear with a _(legacy)_ label; they keep working, but new keys use **Read and write** instead. Creating a new restricted key does not narrow an older credential.
 
-A service key does not represent a signed-in Hue user. Review claim and submit on the [MCP server](/agents/mcp-server) bind to the key's creating verified member. Org invites and role changes stay in the application session. Trace browsing for coding agents goes through that MCP server with a coding-agent key; the SDKs do not expose a general trace-search API.
+Treat every key as a server credential. Keep it out of browser bundles, logs, source control and prompts. Owners and admins can create and revoke keys. A newly invited member needs an owner or admin to supply a key through the team's secret store.
+
+A service key does not represent a signed-in Hue user. Review claim and submit on the [MCP server](/agents/mcp-server) bind to the key's creating verified member. Org invites and role changes stay in the application session. Trace browsing goes through that MCP server with a **Read** or **Read and write** key; the SDKs do not expose a general trace-search API.
 
 ## Verify and rotate
 

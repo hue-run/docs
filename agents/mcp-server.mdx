@@ -4,15 +4,15 @@ sidebarTitle: "MCP"
 description: "Connect Claude Code, Codex, Cursor, Windsurf, Gemini CLI and other MCP clients to https://mcp.hue.run/mcp for project-scoped traces, evaluations, review and settings."
 ---
 
-The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install: point an MCP client at the URL with a coding-agent key. A **Coding agent (read-only)** key can search traces, inspect spans, verify delivery, read evaluations, review, intents, managed and local runs, artifacts, members and keys, and search these docs. A **Coding agent (read + evaluations)** key also lists write tools for those same surfaces, all scoped to one project. Billing and plan changes stay in Settings.
+The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install: point an MCP client at the URL with a **Read** or **Read and write** project key. A **Read** key can search traces, inspect spans, verify delivery, read evaluations, review, intents, managed and local runs, artifacts, members and keys, and search these docs. A **Read and write** key also lists write tools for those same surfaces, all scoped to one project. Billing and plan changes stay in Settings.
 
 The project-data server is a dynamic Node.js route in Hue's main web application, not a separate data service. `https://app.hue.run/api/mcp` remains a supported compatibility alias. The separate Mintlify-hosted endpoint at `https://docs.hue.run/mcp` serves public documentation only; it cannot read a Hue project. The `search_hue_docs` tool delegates documentation searches to that endpoint without changing the project-data server's authentication boundary.
 
-## Create a coding-agent key
+## Create an agent key
 
-An owner or admin opens **Settings → Integrations & API keys**, chooses the project and creates a **Coding agent (read-only)** or **Coding agent (read + evaluations)** key. Save it in your secret manager and expose it to the agent's machine as `HUE_MCP_KEY`.
+An owner or admin opens **Settings → Integrations & API keys**, chooses the project and creates a **Read** key, or a **Read and write** key if the agent should change project data. Save it in your secret manager and expose it to the agent's machine as `HUE_MCP_KEY`.
 
-Keep this key separate from the application's `HUE_API_KEY`, which normally uses **Tracing only** or **Tracing and evaluations**. A **Coding agent (read-only)** key cannot send telemetry or change project data, so a leaked read-only agent key cannot alter your project. Do not auto-approve write tools. The key should never be wired into application code or committed. See [project keys](/guides/project-keys).
+Keep this key separate from the application's `HUE_API_KEY`, which uses **Tracing only**. A **Read** key cannot send telemetry or change project data, so a leaked agent key cannot alter your project. Do not auto-approve write tools. The key should never be wired into application code or committed. See [project keys](/guides/project-keys).
 
 <Note>
   The server speaks Streamable HTTP and is stateless. It serves both current MCP protocol revisions, so Claude Code, Codex, Cursor, Windsurf and Gemini CLI connect without extra flags. Clients that only support stdio need a remote-capable MCP client. Use the canonical `https://mcp.hue.run/mcp` address for new configurations.
@@ -133,7 +133,7 @@ Use the Hue MCP: call get_project_context, then show my 5 most recent error trac
 
 **Read evaluations.** "List my datasets", "show the cases in the latest version of the regression set", "summarize the last experiment and list the failing cases", "compare it against the baseline experiment". Tools: `list_datasets`, `get_dataset`, `list_scorers`, `get_scorer`, `list_experiments`, `get_experiment`, `list_experiment_items`, `get_experiment_item`, `get_experiment_execution`, `list_evaluation_runs`, `get_evaluation_run`, `list_environments`, `get_environment`.
 
-**Author evaluations.** Requires **Coding agent (read + evaluations)** without `?read_only=true`. Create a dataset (`add_dataset`), add cases (`add_dataset_cases`) or promote a trace (`add_trace_to_dataset`), edit a draft (`update_dataset`, `update_dataset_case`, `delete_dataset_case`, `add_dataset_draft`), freeze it (`freeze_dataset_version`), then pin scorers (`add_scorer`, `publish_scorer`, `copy_scorer`) and create an experiment (`add_experiment`). Record scoring results with `add_evaluation_run` and `add_evaluation_results`. Hide retired identities with `archive_dataset`, `archive_scorer` or `archive_environment`. Case execution can stay with the SDK, a managed run, a local agent, or `start_experiment_case` / `complete_experiment_case` / `finish_experiment`. Ask before any write; never auto-approve `add_*`, `update_*`, `delete_*`, `publish_*`, `freeze_*`, `archive_*` or `copy_*`.
+**Author evaluations.** Requires **Read and write** without `?read_only=true`. Create a dataset (`add_dataset`), add cases (`add_dataset_cases`) or promote a trace (`add_trace_to_dataset`), edit a draft (`update_dataset`, `update_dataset_case`, `delete_dataset_case`, `add_dataset_draft`), freeze it (`freeze_dataset_version`), then pin scorers (`add_scorer`, `publish_scorer`, `copy_scorer`) and create an experiment (`add_experiment`). Record scoring results with `add_evaluation_run` and `add_evaluation_results`. Hide retired identities with `archive_dataset`, `archive_scorer` or `archive_environment`. Case execution can stay with the SDK, a managed run, a local agent, or `start_experiment_case` / `complete_experiment_case` / `finish_experiment`. Ask before any write; never auto-approve `add_*`, `update_*`, `delete_*`, `publish_*`, `freeze_*`, `archive_*` or `copy_*`.
 
 **Author environments.** `add_environment` and `publish_environment_version` create a simulated world a case can pin.
 
@@ -162,7 +162,7 @@ Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or
 
 ## Troubleshooting
 
-`401` means the key is missing, malformed, revoked or expired. `403` means the key has no read access: create a **Coding agent (read-only)** or **Coding agent (read + evaluations)** key. `405` on `GET` and `404` for `Mcp-Session-Id` are expected: the server accepts stateless `POST` requests only. See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent).
+`401` means the key is missing, malformed, revoked or expired. `403` means the key has no read access: create a **Read** or **Read and write** key. **Tracing only** and legacy **Tracing and evaluations** keys cannot use this server. `405` on `GET` and `404` for `Mcp-Session-Id` are expected: the server accepts stateless `POST` requests only. See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent).
 
 ## What is next
 

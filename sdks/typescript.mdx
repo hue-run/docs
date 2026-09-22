@@ -15,7 +15,7 @@ Use Node.js 22 or 24, or Bun 1.4. [Install the TypeScript SDK](/installation#typ
 
 Create a **Tracing only** project service key in **Settings → Integrations & API keys**. Put it in your server environment as `HUE_API_KEY`. Keep environment files out of Git and never expose this key to a browser.
 
-**Tracing only** covers ingestion, connection checks, and known-trace receipt verification. Use **Tracing and evaluations** instead when the same process also creates datasets, scorers, experiments, simulations, environments, or managed runs. See [project keys](/guides/project-keys) for access and rotation.
+**Tracing only** covers ingestion, connection checks, and known-trace receipt verification. Use **Read and write** instead when the same process also creates datasets, scorers, experiments, simulations, environments, or managed runs. See [project keys](/guides/project-keys) for access and rotation.
 
 Hue Cloud is the default destination; no base URL is needed. See [connection settings](/guides/project-keys#connection-settings) when using another origin. HTTPS is required except for loopback HTTP. `allowInsecureHttp: true` permits plain HTTP to another host, such as a docker-compose or in-cluster collector, and records a one-time warning issue because the key then travels unencrypted. The SDK reads no `OTEL_EXPORTER_OTLP_*` environment variables; pass configuration explicitly.
 

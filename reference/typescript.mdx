@@ -35,7 +35,7 @@ const hue = createHue({
 
 | Option | Type | Default and behavior |
 | --- | --- | --- |
-| `apiKey` | `string` | Required when enabled; ignored for `enabled: false`. Use **Tracing only** for tracing and known-trace receipts; use **Tracing and evaluations** when this process also calls evaluation APIs. Keep it in server-only configuration. |
+| `apiKey` | `string` | Required when enabled; ignored for `enabled: false`. Use **Tracing only** for tracing and known-trace receipts; use **Read and write** when this process also calls evaluation APIs. Keep it in server-only configuration. |
 | `serviceName` | `string` | Required when enabled; 1–256 characters with non-whitespace content. Sets `service.name` on providers created by Hue. |
 | `enabled` | `boolean` | `true`; `false` creates a disabled client without attaching processors or requiring a key. |
 | `captureContent` | `boolean` | Required explicit choice for an enabled client; there is no default. A disabled client defaults it to `false`. |
@@ -232,7 +232,7 @@ import { createEvaluationClient } from "@hue-run/sdk/evals";
 const client = createEvaluationClient({ apiKey: process.env.HUE_API_KEY! });
 ```
 
-`createEvaluationClient(options: EvaluationClientOptions): EvaluationClient` and `new EvaluationClient(options)` accept required `apiKey`, optional `baseUrl` (default `https://app.hue.run`) and optional `timeoutMillis` (default `10000`, range `100–60000`). `checkConnection()` returns the key's project. Evaluation registry writes require a **Tracing and evaluations** key.
+`createEvaluationClient(options: EvaluationClientOptions): EvaluationClient` and `new EvaluationClient(options)` accept required `apiKey`, optional `baseUrl` (default `https://app.hue.run`) and optional `timeoutMillis` (default `10000`, range `100–60000`). `checkConnection()` returns the key's project. Evaluation registry writes require a **Read and write** key.
 
 Methods below return promises. `PageOptions` is `{ after?: string; limit?: number }`, with a supplied limit from 1 through 100. Paged responses are `Page<T>`, `{ items, nextCursor }`; pass a non-null cursor as the next `after`. IDs are UUIDs. `Identity` is `{ name, slug, description? }`. `listDatasets` and `listScorers` accept `RegistryPageOptions`, `PageOptions` plus `includeArchived?: boolean`, which includes archived identities so callers can diagnose slug conflicts explicitly.
 
@@ -526,7 +526,7 @@ const environments = createEnvironmentClient({ apiKey: process.env.HUE_API_KEY! 
 
 | Option | Type | Default and behavior |
 | --- | --- | --- |
-| `apiKey` | `string` | Required **Tracing and evaluations** project service key sent as a bearer token; server-side only. |
+| `apiKey` | `string` | Required **Read and write** project service key sent as a bearer token; server-side only. |
 | `baseUrl` | `string` | `https://app.hue.run`; the same origin rules as the tracing client. |
 | `timeoutMillis` | `number` | `10000`. Per-request deadline in milliseconds, with the same range as the evaluation client. |
 | `maxAttempts` | `number` | `4`; integer `1–10`. Attempts for idempotent run mutations. |
