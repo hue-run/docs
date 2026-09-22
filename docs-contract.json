@@ -4,15 +4,15 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "929cdbf1ed6c1e44b9e864ea9d7ce9d188fe45c5",
+      "commit": "144a674d741328048af54425d8e59d2fc2106906",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:d249063c644db3d6d0e6aa81681325bdf002d145022286ead263fba6c9501428"
+      "sha256": "sha256:7d2981c3f14fd5d30bb527e07324a9e967021de7dc7b85086a8fedaa9d92055e"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "ecdca37ec3ae06dad43b2caaa92178f928d80f7e",
+      "commit": "b537a0f4d2ee8b8716763f90bbb5b9578b8403ce",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:0ed6ff6b7d239606d749a451d584afb11a2d83397e182833976263739c966731"
+      "sha256": "sha256:ee8a52d450744096bd3fc1398169784483f451985505fcd6130b4e39919bcba7"
     }
   },
   "site": {
@@ -41,6 +41,14 @@
       "use": "Send traces and manage evaluation, artifact, and simulated-environment workflows."
     },
     {
+      "id": "capture_write",
+      "name": "Source capture only",
+      "capabilities": [
+        "capture_write"
+      ],
+      "use": "Record tool evidence and upload source files for captures owned by this key."
+    },
+    {
       "id": "agent_read",
       "name": "Coding agent (read-only)",
       "capabilities": [
@@ -61,18 +69,19 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.3.0",
+      "version": "0.4.2",
       "entrypoints": [
         "@hue-run/sdk",
         "@hue-run/sdk/ai-sdk",
         "@hue-run/sdk/environment",
         "@hue-run/sdk/evals",
-        "@hue-run/sdk/managed"
+        "@hue-run/sdk/managed",
+        "@hue-run/sdk/setup"
       ]
     },
     "python": {
       "name": "hue-run",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "modules": [
         "hue_sdk",
         "hue_sdk.evals",
@@ -81,9 +90,9 @@
     }
   },
   "skill": {
-    "version": "0.2.3",
-    "sha256": "sha256:d36e7748cc6683316ef07cf09c17a22c4a6c8db567def8aab2aeae6a9fdec08d",
-    "sdkSourceSha256": "sha256:4c65166dc2706a92abcccb817afd2e3efd0de8cc6338bd7975ac422370ab95d5"
+    "version": "0.4.1",
+    "sha256": "sha256:7d62c34aa5eeb1dc15b890c475b10f8ea781d8cc6301a7a5040ce8a576a2bcca",
+    "sdkSourceSha256": "sha256:bb6e402f470163d442603fa95c17b2b91220a5164eea2facbd95756656ae6cea"
   },
   "mcp": {
     "transport": "Streamable HTTP",
@@ -164,7 +173,7 @@
       "search_hue_docs",
       "load_hue_guide"
     ],
-    "catalogSha256": "131b1ce0c937fdbd75493ee93217b52623f63395d12127b80d8b2088396c09c0"
+    "catalogSha256": "a992e72eb6ad1106f614f7064ca22ac8fc490dcd27f098a686b3d926a7d5023e"
   },
   "pages": [
     "index",

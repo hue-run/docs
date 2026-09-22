@@ -3,6 +3,7 @@
   "repository": "hue-run/fern",
   "sources": [
     "packages/config/src/ecosystem.ts",
+    "packages/config/src/setup-public.ts",
     "apps/web/src/server/mcp/catalog.ts",
     "apps/web/src/server/mcp/install-snippets.ts",
     "tests/fixtures/sdk-compat.json"
@@ -29,6 +30,515 @@
       "mcpEndpoint": "https://docs.hue.run/mcp"
     }
   },
+  "setup": {
+    "protocolVersion": 1,
+    "releaseStatus": "unreleased",
+    "defaultAvailability": "inactive",
+    "documentation": "docs/setup-protocol.md",
+    "privacyNotice": {
+      "url": "https://hue.run/privacy",
+      "effectiveDate": "2026-08-24"
+    },
+    "securityUrl": "https://trust.hue.run/",
+    "disclosure": {
+      "presentBeforeTelemetry": true,
+      "securityPagePurpose": "supporting-security-information"
+    },
+    "capabilities": {
+      "anonymousTrial": true,
+      "credentialCapabilities": [
+        "setup_telemetry_write"
+      ],
+      "credentialKind": "anonymous_trial",
+      "ordinaryKeyStorage": "excluded",
+      "credentialNamespace": "hue_setup_(live|test)_setup-<24-hex>_<43-base64url>",
+      "genericKeyAuthentication": "rejected-before-database-lookup",
+      "prefixSubstitutionDefense": "setup-key-id-not-representable-by-generic-parser",
+      "createsCase": false,
+      "createsHueRun": false,
+      "sourceCapture": false,
+      "accountClaim": {
+        "freshAccount": "verified-email-adoption-without-prior-invitation",
+        "existingAccount": "verified-owner-or-admin-transfer",
+        "ordinarySignupInvitationGateUnchanged": true,
+        "releaseRequires": "real-browser-database-and-email-acceptance"
+      },
+      "contentCaptureDefault": false,
+      "contentCaptureRequires": [
+        "explicit-user-opt-in",
+        "ordinary-account-managed-key"
+      ]
+    },
+    "trial": {
+      "limits": {
+        "traces": 100,
+        "spans": 1000,
+        "bytes": 2097152
+      },
+      "expiresAfterSeconds": 86400,
+      "retentionAfterExpirySeconds": 604800,
+      "purgeAfterCreationSeconds": 691200,
+      "purgeScope": "unclaimed-project-data",
+      "retainedAfterPurge": "minimal-hashed-installation-tombstone",
+      "claimedProjectsArePurged": false,
+      "exactSanitizedReplayConsumesQuota": false,
+      "quotaFailureIsAtomic": true,
+      "terminalStates": [
+        "expired",
+        "purged"
+      ]
+    },
+    "metadata": {
+      "capturePolicy": "metadata-only-v1",
+      "acceptedSignal": "traces",
+      "retainedFields": [
+        "traceId",
+        "spanId",
+        "parentSpanId",
+        "startTimeUnixNano",
+        "endTimeUnixNano",
+        "flags",
+        "kind",
+        "status.code",
+        "genAi.operation",
+        "genAi.provider",
+        "genAi.usage.inputTokens",
+        "genAi.usage.outputTokens",
+        "genAi.usage.cacheReadTokens",
+        "genAi.usage.cacheWriteTokens",
+        "genAi.usage.reasoningTokens"
+      ],
+      "operations": [
+        "invoke_agent",
+        "chat",
+        "generate_content",
+        "text_completion",
+        "embeddings",
+        "execute_tool"
+      ],
+      "providers": [
+        "openai",
+        "anthropic",
+        "google",
+        "aws.bedrock",
+        "azure.ai.openai"
+      ],
+      "tokenCounts": {
+        "minimum": 0,
+        "maximum": 1000000000,
+        "integersOnly": true
+      },
+      "defaultSpanName": "hue.metadata",
+      "fixedScope": {
+        "name": "hue.metadata",
+        "version": "1"
+      },
+      "unknownFields": "discard-before-fingerprinting-summary-or-storage",
+      "logs": "rejected",
+      "setupLineageRemainsMetadataOnlyAfterClaim": true
+    },
+    "publicStatus": {
+      "method": "GET",
+      "path": "/api/v1/setup/preflight",
+      "authentication": "none",
+      "writes": false,
+      "returnsInstallationIdentity": false,
+      "responseSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "protocolVersion",
+          "capturePolicy",
+          "limits",
+          "privacyNotice",
+          "securityUrl",
+          "lifetime",
+          "state"
+        ],
+        "properties": {
+          "protocolVersion": {
+            "const": 1
+          },
+          "capturePolicy": {
+            "const": "metadata-only-v1"
+          },
+          "limits": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "traces",
+              "spans",
+              "bytes"
+            ],
+            "properties": {
+              "traces": {
+                "const": 100
+              },
+              "spans": {
+                "const": 1000
+              },
+              "bytes": {
+                "const": 2097152
+              }
+            }
+          },
+          "privacyNotice": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "url",
+              "effectiveDate"
+            ],
+            "properties": {
+              "url": {
+                "const": "https://hue.run/privacy"
+              },
+              "effectiveDate": {
+                "const": "2026-08-24"
+              }
+            }
+          },
+          "securityUrl": {
+            "const": "https://trust.hue.run/"
+          },
+          "lifetime": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expiresAfterSeconds",
+              "purgeAfterSeconds"
+            ],
+            "properties": {
+              "expiresAfterSeconds": {
+                "const": 86400
+              },
+              "purgeAfterSeconds": {
+                "const": 691200
+              }
+            }
+          },
+          "state": {
+            "enum": [
+              "inactive",
+              "available"
+            ]
+          }
+        }
+      }
+    },
+    "installationStatus": {
+      "method": "GET",
+      "path": "/api/v1/setup/installations/{installationId}",
+      "authentication": "installation-proof",
+      "visibility": "private-installation-owner",
+      "rotatesHandoff": false,
+      "responseSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "protocolVersion",
+          "installationId",
+          "state",
+          "project",
+          "credentialVersion",
+          "capturePolicy",
+          "expiresAt",
+          "limits",
+          "usage",
+          "claimHandoff",
+          "endpoints"
+        ],
+        "properties": {
+          "protocolVersion": {
+            "const": 1
+          },
+          "installationId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "claimed",
+              "expired",
+              "purged"
+            ]
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "organizationId"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "credentialVersion": {
+            "enum": [
+              0,
+              1
+            ]
+          },
+          "capturePolicy": {
+            "const": "metadata-only-v1"
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "limits": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "traces",
+              "spans",
+              "bytes"
+            ],
+            "properties": {
+              "traces": {
+                "const": 100
+              },
+              "spans": {
+                "const": 1000
+              },
+              "bytes": {
+                "const": 2097152
+              }
+            }
+          },
+          "usage": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "traces",
+              "spans",
+              "bytes"
+            ],
+            "properties": {
+              "traces": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "spans": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "claimHandoff": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "state",
+                  "expiresAt",
+                  "sessionExpiresAt"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                  },
+                  "state": {
+                    "enum": [
+                      "pending",
+                      "consumed",
+                      "expired",
+                      "revoked"
+                    ]
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "sessionExpiresAt": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "endpoints": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "otlp",
+              "receipt"
+            ],
+            "properties": {
+              "otlp": {
+                "const": "/api/v1/otlp/v1/traces"
+              },
+              "receipt": {
+                "const": "/api/v1/setup/traces/{traceId}/receipt"
+              }
+            }
+          }
+        }
+      }
+    },
+    "verification": {
+      "receiptPath": "/api/v1/setup/traces/{traceId}/receipt",
+      "requiresExactTraceAndSpanIds": true,
+      "requiresExporterFlush": true,
+      "requiresStoredEvidence": true,
+      "setupProbe": {
+        "purpose": "setup-transport",
+        "provesCustomerApplicationInstrumentation": false,
+        "contentFields": {
+          "input": false,
+          "output": false
+        }
+      },
+      "applicationRequest": {
+        "purpose": "customer-application-instrumentation",
+        "requiresActualInstrumentedApplicationRequest": true,
+        "independentExactReceiptRequired": true,
+        "syntheticSetupProbeCanSatisfy": false,
+        "remainsEvidenceAfterAdoptionOrTransfer": true,
+        "postClaimBusinessLogicReplayRequired": false
+      },
+      "postClaim": [
+        "same-original-application-receipt",
+        "old-setup-key-401",
+        "replacement-credential-state"
+      ],
+      "completion": "report-probe-verification-and-application-verification-separately"
+    },
+    "privateHandoff": {
+      "method": "POST",
+      "path": "/api/v1/setup/installations/{installationId}/claim-handoff",
+      "authentication": "installation-proof",
+      "publicDescriptorSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "state",
+          "expiresAt",
+          "sessionExpiresAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "consumed",
+              "expired",
+              "revoked"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sessionExpiresAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "idempotency": "client-persisted-uuidv4",
+      "compareAndSwap": "previousHandoffId",
+      "maximumIdsPerInstallation": 32,
+      "expiresAfterSeconds": 600,
+      "browserSessionExpiresAfterSeconds": 1800,
+      "deadlinesBoundedByTrialExpiry": true,
+      "consumption": "atomic-one-time",
+      "restart": "new-id-revokes-previous-handoff-and-browser-session",
+      "browserConfirmationIdentity": [
+        "installationId",
+        "handoffId",
+        "sessionId",
+        "accountId"
+      ],
+      "transportVisibility": "private-owner-only-browser-handoff",
+      "output": "non-secret-descriptor-and-generic-local-action-only"
+    },
+    "agentProtocol": {
+      "format": "jsonl",
+      "contractVersion": 2,
+      "privateCapabilitiesAllowed": false,
+      "reviewedEvents": {
+        "privacy.notice": {
+          "notice": {
+            "url": "https://hue.run/privacy",
+            "effectiveDate": "2026-08-24"
+          },
+          "beforeTelemetry": true
+        },
+        "receipt.verified": {
+          "applicationSource": "repository-http-boundary"
+        },
+        "claim.required": {
+          "bearerUrlAllowed": false,
+          "localBrowserHandoffOnly": true
+        },
+        "claim.completed": {
+          "reusesOriginalApplicationEvidence": true
+        }
+      },
+      "actions": [
+        "claim-project",
+        "configure",
+        "select-project",
+        "integrate-application",
+        "run-instrumented-request",
+        "open-claim-handoff",
+        "restart-claim-handoff"
+      ]
+    }
+  },
   "serviceKeyPresets": [
     {
       "id": "telemetry_write",
@@ -45,6 +555,14 @@
         "project_write"
       ],
       "use": "Send traces and manage evaluation, artifact, and simulated-environment workflows."
+    },
+    {
+      "id": "capture_write",
+      "name": "Source capture only",
+      "capabilities": [
+        "capture_write"
+      ],
+      "use": "Record tool evidence and upload source files for captures owned by this key."
     },
     {
       "id": "agent_read",
@@ -67,11 +585,11 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.3.0"
+      "version": "0.4.2"
     },
     "python": {
       "name": "hue-run",
-      "version": "0.2.2"
+      "version": "0.2.3"
     }
   },
   "mcp": {
@@ -1001,7 +1519,7 @@
         }
       }
     ],
-    "catalogSha256": "131b1ce0c937fdbd75493ee93217b52623f63395d12127b80d8b2088396c09c0",
+    "catalogSha256": "a992e72eb6ad1106f614f7064ca22ac8fc490dcd27f098a686b3d926a7d5023e",
     "installSnippets": {
       "claudeCodeProjectJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "claudeCodeCli": "claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp \\\n  --header 'Authorization: Bearer ${HUE_MCP_KEY}'",

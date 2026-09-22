@@ -11,13 +11,13 @@ The public Hue installation skill covers TypeScript, Python and existing OpenTel
 Open your application in Codex, Claude Code, Cursor, or your preferred coding agent, then paste:
 
 ```text
-Read https://docs.hue.run/skill.md?v=0.2.3 and use the Hue installation skill to add
+Read https://docs.hue.run/skill.md?v=0.4.1 and use the Hue installation skill to add
 tracing to this application. Also read https://docs.hue.run/guides/production-safety
 and https://docs.hue.run/quickstart, then read the compatibility
 and integration guides for this app's stack. Preserve app behavior,
 model providers, streaming lifetime, and existing OpenTelemetry ownership.
 
-Use TypeScript SDK 0.3.0 or Python 0.2.2. Verify the installed package;
+Use TypeScript SDK 0.4.2 or Python 0.2.3. Verify the installed package;
 do not use unreleased APIs or force incompatible dependency installation.
 Initialize one safe client per serving process and wire an environment kill
 switch. Start with metadata-only capture unless our team has already approved
@@ -47,7 +47,7 @@ From your application directory, run:
 npx skills add hue-run/hue-sdk --skill hue
 ```
 
-The same skill is served at `https://docs.hue.run/skill.md` if your installer prefers a URL. Select the coding agent you use and follow the installer's prompts. Restart or reload your coding agent if it requires that to discover newly installed skills, then ask it to use the **Hue** skill. You can inspect the [public skill file](https://docs.hue.run/skill.md?v=0.2.3) before installing it.
+The same skill is served at `https://docs.hue.run/skill.md` if your installer prefers a URL. Select the coding agent you use and follow the installer's prompts. Restart or reload your coding agent if it requires that to discover newly installed skills, then ask it to use the **Hue** skill. You can inspect the [public skill file](https://docs.hue.run/skill.md?v=0.4.1) before installing it.
 
 Hosting the skill does not automatically load it into every agent. The startup prompt above explicitly asks the agent to read it; installing the skill makes it available to supported agents in later sessions. Neither step adds a dependency on the docs site to your running application.
 
