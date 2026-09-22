@@ -88,6 +88,17 @@ export function buildDocsContract() {
       version: sdk.skill.metadata.version,
       sha256: sha256File("skill.md"),
       sdkSourceSha256: sdk.skill.sha256,
+      ...(sourceMetadata.skillOverride
+        ? {
+            override: {
+              baseCommit: sourceMetadata.skillOverride.base.commit,
+              sectionCommit: sourceMetadata.skillOverride.section.commit,
+              section: sourceMetadata.skillOverride.section.heading,
+              replaces: sourceMetadata.skillOverride.section.replaces,
+              sourceSha256: sourceMetadata.skillOverride.sha256,
+            },
+          }
+        : {}),
     },
     mcp: {
       transport: platform.mcp.transport,

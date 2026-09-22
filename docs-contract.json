@@ -91,8 +91,15 @@
   },
   "skill": {
     "version": "0.4.1",
-    "sha256": "sha256:7d62c34aa5eeb1dc15b890c475b10f8ea781d8cc6301a7a5040ce8a576a2bcca",
-    "sdkSourceSha256": "sha256:bb6e402f470163d442603fa95c17b2b91220a5164eea2facbd95756656ae6cea"
+    "sha256": "sha256:6add863605df2463c2dd5c51972e440478e29f2f65a9af734c2380147030f799",
+    "sdkSourceSha256": "sha256:bb6e402f470163d442603fa95c17b2b91220a5164eea2facbd95756656ae6cea",
+    "override": {
+      "baseCommit": "b537a0f4d2ee8b8716763f90bbb5b9578b8403ce",
+      "sectionCommit": "95c41fa75e60be268696d37076cf16585a8ac154",
+      "section": "## Invite-only access",
+      "replaces": "## One-command onboarding",
+      "sourceSha256": "sha256:8a232f2ee7678545a59c24868fd443ced7c3af07461b57d5d90884a90b76f9b8"
+    }
   },
   "mcp": {
     "transport": "Streamable HTTP",
