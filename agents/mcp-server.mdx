@@ -127,7 +127,7 @@ Use the Hue MCP: call get_project_context, then show my 5 most recent error trac
 
 ## What you can do
 
-**Investigate a failure.** "Show the error traces from the last 24 hours", "open the slowest span of that trace", "what did the model see before it failed?" (recorded content requires `include_content: true` and the application must have captured it). Tools: `search_traces`, `get_trace`, `get_span`, `list_sessions`. Each trace reports a `state`: `running` while a span is still open, `stalled` when 15 minutes pass without new data and no end arrives, or `ended`. Only the TypeScript SDK 0.7.0 and Python SDK 0.4.0 or later report open spans, so traces from other exporters appear once their spans end.
+**Investigate a failure.** "Show the error traces from the last 24 hours", "open the slowest span of that trace", "what did the model see before it failed?" (recorded content requires `include_content: true` and the application must have captured it). Tools: `search_traces`, `get_trace`, `get_span`, `list_sessions`. Each trace reports a `state`: `running` while a span is still open, `stalled` when 15 minutes pass without new data and no end arrives, or `ended`. Only the TypeScript SDK 0.7.0 and Python SDK 0.4.0 or later report open spans, and only Hue and AI spans that stay open longer than about 1.5 s; other spans, including every span from other exporters, appear once they end.
 
 **Confirm delivery.** "Did trace 0af7651916cd43dd8448eb211c80319c arrive with spans a and b, with model and usage recorded?" Tools: `verify_trace`.
 
