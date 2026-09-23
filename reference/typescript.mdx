@@ -1,9 +1,9 @@
 ---
 title: "TypeScript API reference"
-description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.5.1."
+description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.6.0."
 ---
 
-This reference covers `@hue-run/sdk` **0.5.1** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+This reference covers `@hue-run/sdk` **0.6.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -234,7 +234,7 @@ const client = createEvaluationClient({ apiKey: process.env.HUE_API_KEY! });
 
 `createEvaluationClient(options: EvaluationClientOptions): EvaluationClient` and `new EvaluationClient(options)` accept required `apiKey`, optional `baseUrl` (default `https://app.hue.run`) and optional `timeoutMillis` (default `10000`, range `100–60000`). `checkConnection()` returns the key's project. Evaluation registry writes require a **Read and write** key.
 
-Methods below return promises. `PageOptions` is `{ after?: string; limit?: number }`, with a supplied limit from 1 through 100. Paged responses are `Page<T>`, `{ items, nextCursor }`; pass a non-null cursor as the next `after`. IDs are UUIDs. `Identity` is `{ name, slug, description? }`. `listDatasets` and `listScorers` accept `RegistryPageOptions`, `PageOptions` plus `includeArchived?: boolean`, which includes archived identities so callers can diagnose slug conflicts explicitly.
+Methods below return promises. `PageOptions` is `{ after?: string; limit?: number }`, with a supplied limit from 1 through 100. Paged responses are `Page<T>`, `{ items, nextCursor }`; pass a non-null cursor as the next `after`. IDs are UUIDs. `Identity` is `{ name, slug, description? }`. `listEvalSets`, `listEvaluators`, `listDatasets` and `listScorers` accept `RegistryPageOptions`, `PageOptions` plus `includeArchived?: boolean`, which includes archived identities so callers can diagnose slug conflicts explicitly.
 
 Evaluation responses are limited to **4 MiB**. `listCases(versionId, page?)` includes case content, so a valid row limit can still produce an oversized response when cases are large. Request a smaller page, such as `{ limit: 1 }`, and follow `nextCursor`; the client does not automatically split or retry an oversized page. Request bodies are limited to 1 MiB.
 
@@ -250,28 +250,55 @@ Evaluation responses are limited to **4 MiB**. `listCases(versionId, page?)` inc
 | `CaseFile` / `SubjectFile` | One pinned input file in Hue's immutable manifest: `artifactId`, `role` (`source`, `attached_template`, `attached_reference`, `original`, or the evaluator-only `org_template` and `evaluator_reference`), `filename`, `contentType`, verified `byteSize` and hex `sha256` / the same entry on a saved subject, whose `role` may also be `output` for a file the target generated. |
 | `LocalFile` | A verified copy of a case input or generated output on the runner's disk: the `CaseFile` fields with `role` including `output`, the absolute `path` and optional `primary`. Generated files receive their `artifactId` after upload. |
 | `OutputFile` | A file the target generated for one case: `filename` (sanitized to one path segment), `contentType`, optional `primary` (at most one per execution) and either a local `path` or in-memory `bytes`. |
-| `CaseWrite` | Input for `addCase`; optional `environmentVersionId` selects an immutable simulated-world version for the case. |
+| `EvalSet` / `EvalSetVersion` / `EvalSetCase` | The product-named forms of `Dataset`, `DatasetVersion` and `DatasetCase`: an eval set's `versions` are `EvalSetVersion` values, which add `evalSetId`, and a case adds `evalSetVersionId`. The v1 fields remain present. |
+| `CaseWrite` | Input for `addEvalSetCase` and `addCase`; optional `environmentVersionId` selects an immutable simulated-world version for the case. |
 | `Scorer` / `ScorerVersion` | A scorer and its published `versions` / an immutable published definition with `contentDigest`. |
+| `Evaluator` / `EvaluatorVersion` | The product-named forms of `Scorer`, with optional `versions`, and `ScorerVersion`, which adds `evaluatorId` when the server supplies it; older v1 responses may omit it. |
 | `ScorerDefinition` / `MetricDefinition` | The pinned definition variants / a typed metric a scorer declares. |
 | `JudgeConfig` | Hosted judge configuration: `model`, `provider`, `rubric`, `bindings`, `maxOutputTokens`, `timeoutMs` and optional `temperature`. |
 | `Experiment` | A frozen dataset version, a configuration and pinned scorers, with its `evaluation` run and case counts by execution state. |
+| `Run` / `RunCase` | An `Experiment` with `evalSetVersionId` and its `scoring` pass / an `ExperimentCase` with `evalSetVersionId`. |
 | `ExperimentItem` | A case within an experiment and its latest `execution` (`null` before the first start). |
 | `Execution` / `TerminalState` | One target attempt whose `state` is a `TerminalState` (`"succeeded"`, `"error"` or `"cancelled"`), `"started"` or `"uncertain"`. |
 | `StartExecution` / `CompleteExecution` / `Completion` | Inputs and result of the low-level execution methods. |
 | `EvaluationRun` | Scoring progress for an experiment or rescore: pinned `scorerVersions`, `itemCount` and result counts by state. |
 | `EvaluationRunSummary` | One row of `listEvaluationRuns`: `id`, `name`, `experimentId` (`null` for a standalone scoring run) and `createdAt`. Read pins and score counts with `getEvaluationRun`. |
+| `Scoring` / `ScoringSummary` | An `EvaluationRun` with its pinned `evaluatorVersions` and optional `runId` / an `EvaluationRunSummary` with `runId`. `runId` is `null` for standalone scoring. A run ID and a scoring ID identify different records. |
 | `EvaluationItem` | A subject within an evaluation run, with `hasOutput` and `traceSnapshotId`. |
 | `Subject` | An immutable saved outcome: `executionId`, `inputs`, optional `output` and `expected`, `metadata`, `executionState`, trace evidence fields and the source case, experiment and attempt. Current servers add `environmentVersionId`, the frozen input and output `files` (`SubjectFile[]`) and the declared `primaryArtifactId`. |
+| `ScoringSubject` | A `Subject` with its source `evalSetVersionId` and `runId`. |
 | `Score` / `Result` | A scorer outcome (`scored`, `error` or `skipped`) / a score addressed to an `evaluationItemId` and `scorerVersionId`. |
 | `Metric` | A reported metric value: `name`, `value` and optional `passed`; a failed metric stays `state: "scored"`. |
 | `TypedError` | A sanitized `{ type, message? }`; the message is stored only when result content is persisted. |
 | `ResultSummary` / `StoredResult` | A listed result with `state` / the full stored result with `metrics`, `explanation`, `evidence`, `error` and `sourceDigest`. |
+| `ScoringResultInput` / `ScoringResultSummary` / `StoredScoringResult` | A `Score` addressed to an `evaluationItemId` and `evaluatorVersionId`, with `sourceDigest` for local code / a `ResultSummary` with `evaluatorVersionId` / a `StoredResult` with `scoringId` and `evaluatorVersionId`. |
 | `ScoreContext` / `LocalScorer` | What a local scorer callback receives, including sealed `environment` evidence when the runner requires it / a pinned `local_code` definition with its bound callback. |
 | `JudgeJob` | A hosted judge job with `state`, charge accounting and timestamps. |
 | `JudgeBudget` | The project's hosted judge allowance and admission controls; credential resolution does not establish provider acceptance. |
-| `RegistryPageOptions` | `PageOptions` plus `includeArchived` for `listDatasets` and `listScorers`. |
+| `RegistryPageOptions` | `PageOptions` plus `includeArchived` for `listEvalSets`, `listEvaluators`, `listDatasets` and `listScorers`. |
 | `EnvironmentEvidenceSnapshot` / `EnvironmentEvidence` | Sealed environment evidence resolved through one target execution: `runId`, `executionId`, `environmentVersionId`, `definitionDigest`, `seed`, terminal `status` (`completed`, `abandoned` or `expired`), `stepCount`, `stateDigest`, `initialState`, `finalState` and the coverage fields / the snapshot plus its complete `steps` ordered by ordinal. |
 | `SimulationMcpCapability` | Short-lived execution-scoped MCP connection for one simulated world: `url`, `token` and `expiresAt`. Never persist or expose the token. |
+
+### Eval sets, evaluators, runs and scoring
+
+Use these product-named methods in new code. They call the same v1 endpoints as the dataset, scorer, experiment and evaluation-run methods in the next sections and return the product fields, such as `evalSetId`, `evalSetVersionId`, `evaluatorVersionId`, `runId` and `scoringId`, alongside the v1 fields. The earlier method names are deprecated but remain callable for at least two more `0.MINOR` releases.
+
+| Method | Result or purpose |
+| --- | --- |
+| `createEvalSet(input: Identity)` / `getEvalSet(id)` / `listEvalSets(page?)` | An `EvalSet`, including its initial `versions` / a page of eval set summaries. |
+| `createEvalSetVersion(evalSetId, { fromVersionId? }?)` / `getEvalSetVersion(versionId)` | A new editable `EvalSetVersion` / a version. |
+| `listEvalSetCases(versionId, page?)` / `addEvalSetCase(versionId, input: CaseWrite)` | A page of `EvalSetCase` values / `{ item, version }`; retain the updated revision. |
+| `freezeEvalSetVersion(versionId, expectedRevision)` | The frozen `EvalSetVersion`. |
+| `createEvaluator(input: Identity)` / `getEvaluator(id)` / `listEvaluators(page?)` | Register or retrieve `Evaluator` identities. |
+| `publishEvaluatorVersion(evaluatorId, definition: ScorerDefinition)` / `getEvaluatorVersion(versionId)` | Publish or retrieve an immutable `EvaluatorVersion`. |
+| `createRun(input)` | `{ idempotencyKey, name, evalSetVersionId, evaluatorVersionIds, config }` → `{ id, scoringId, evaluationRunId }`. |
+| `getRun(id)` / `listRunItems(id, page?)` / `getRunCase(id, caseId)` | A `Run` / a page of `ExperimentItem` values / a `RunCase`. |
+| `startRunExecution(runId, caseId, input: StartExecution)` / `getRunExecution(id)` / `completeRunExecution(id, input: CompleteExecution)` | Start or recover an attempt → `Execution` / read an attempt / acknowledge its terminal outcome → `Completion`. |
+| `finishRun(id, idempotencyKey)` | `{ id, finishedAt }`. |
+| `createScoring(input)` | `{ idempotencyKey, name, subjectIds, evaluatorVersionIds }` → `{ id }`. |
+| `getScoring(id)` / `listScorings(page?)` / `listScoringItems(id, page?)` / `getScoringSubject(subjectId)` | A `Scoring` / a page of `ScoringSummary` values / a page of `EvaluationItem` values / a `ScoringSubject`. |
+| `submitScoringResults(scoringId, { idempotencyKey, results: ScoringResultInput[] })` | `{ ids }`. |
+| `listScoringResults(scoringId, page?)` / `getScoringResult(resultId)` | A page of `ScoringResultSummary` values / a `StoredScoringResult`. |
 
 ### Datasets and scorer definitions
 

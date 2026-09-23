@@ -41,7 +41,7 @@
       "App-launched local agents",
       "Scorer forward compatibility"
     ],
-    "sha256": "sha256:8bc7f4173a6b0c3cdb91f233cc12035a9b9441c9de63c5e839be793e9b87f01d",
+    "sha256": "sha256:640d991726f50c61a4fd5bc67ffccdcab7313594add44176e782306e90c2df2e",
     "source": "COMPATIBILITY.md"
   },
   "packages": {
@@ -97,7 +97,7 @@
         }
       },
       "name": "hue-run",
-      "version": "0.2.3"
+      "version": "0.3.0"
     },
     "typescript": {
       "bins": {
@@ -219,11 +219,16 @@
             "DependencyProviderV2",
             "EnvironmentEvidence",
             "EnvironmentEvidenceSnapshot",
+            "EvalSet",
+            "EvalSetCase",
+            "EvalSetVersion",
             "EvaluationClient",
             "EvaluationClientOptions",
             "EvaluationItem",
             "EvaluationRun",
             "EvaluationRunSummary",
+            "Evaluator",
+            "EvaluatorVersion",
             "Execution",
             "ExpectedAgentManifestV2",
             "Experiment",
@@ -269,6 +274,8 @@
             "Result",
             "ResultSummary",
             "RevokeAttemptResult",
+            "Run",
+            "RunCase",
             "RunExperimentOptions",
             "RunExperimentTargetContext",
             "RunLocalAgentOptions",
@@ -282,6 +289,11 @@
             "Scorer",
             "ScorerDefinition",
             "ScorerVersion",
+            "Scoring",
+            "ScoringResultInput",
+            "ScoringResultSummary",
+            "ScoringSubject",
+            "ScoringSummary",
             "SimulationDefinition",
             "SimulationMcpCapability",
             "SimulationProgress",
@@ -290,6 +302,7 @@
             "SimulationTargetContext",
             "StartExecution",
             "StoredResult",
+            "StoredScoringResult",
             "Subject",
             "SubjectFile",
             "SurfaceBindingV2",
@@ -442,7 +455,7 @@
           "source": "packages/sdk-typescript/setup-events.schema.json"
         }
       },
-      "version": "0.5.1"
+      "version": "0.6.0"
     }
   },
   "repository": "https://github.com/hue-run/hue-sdk",
@@ -454,7 +467,7 @@
       "version": "0.4.1"
     },
     "name": "hue",
-    "sha256": "sha256:0fc10147fb7df98c89a20366f0b23d5fb3815ee223a6c67560fe03e28a706967",
+    "sha256": "sha256:d431c7c41f82dd3cb6d0b34150df7c7c7d8f13b94b3e15115bbb9e6bf8f07bd4",
     "source": "skills/hue/SKILL.md"
   }
 }

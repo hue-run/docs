@@ -4,15 +4,15 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "75d579ee55cd008032ed3fa8e832dfe9105fb85c",
+      "commit": "6407f7f1ad4e84d729414c84813a12a03462d940",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:f825fcc43320ea4e0d1e41c7bbc54ee2e0003e353da7d77ab8652a46c0678351"
+      "sha256": "sha256:2b4fe7b60463bf635370dd8df8973ce09dd02067321b6b68ff2b983e65808a78"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "8ec9add7b69f9b980a523c0dc9bef7ddeb97e3d8",
+      "commit": "ecfea62a7a3c30bd3ac7b6c438d893711826da93",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:ae3ab2a46c1f6ba0f48760aac1ac4175d9a0e9606e5c469483ea16dc4f2a3fa1"
+      "sha256": "sha256:e564e6133f9a21500f6d0b3bfe72a24283cc3c80f4c255679ab125f38a2f1899"
     }
   },
   "site": {
@@ -53,7 +53,7 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.5.1",
+      "version": "0.6.0",
       "entrypoints": [
         "@hue-run/sdk",
         "@hue-run/sdk/ai-sdk",
@@ -65,7 +65,7 @@
     },
     "python": {
       "name": "hue-run",
-      "version": "0.2.3",
+      "version": "0.3.0",
       "modules": [
         "hue_sdk",
         "hue_sdk.evals",
@@ -75,8 +75,8 @@
   },
   "skill": {
     "version": "0.4.1",
-    "sha256": "sha256:566778acb8e3012f43109f1a5ad53eb8d9e7bcb7c9bf9d144fc74b300bb85f6f",
-    "sdkSourceSha256": "sha256:0fc10147fb7df98c89a20366f0b23d5fb3815ee223a6c67560fe03e28a706967"
+    "sha256": "sha256:6e63902ecfa2dac961c0621d22616a9ee7a4873ab5ea9a5765970a6217cd7c4f",
+    "sdkSourceSha256": "sha256:d431c7c41f82dd3cb6d0b34150df7c7c7d8f13b94b3e15115bbb9e6bf8f07bd4"
   },
   "mcp": {
     "transport": "Streamable HTTP",
@@ -103,7 +103,6 @@
       "add_eval_set_cases",
       "update_eval_set_case",
       "delete_eval_set_case",
-      "add_trace_to_eval_set",
       "freeze_eval_set_version",
       "add_evaluator",
       "publish_evaluator",
@@ -148,41 +147,9 @@
       "get_judge_budget",
       "add_judge_jobs",
       "search_hue_docs",
-      "load_hue_guide",
-      "list_datasets",
-      "get_dataset",
-      "list_scorers",
-      "get_scorer",
-      "add_dataset",
-      "update_dataset",
-      "add_dataset_draft",
-      "add_dataset_cases",
-      "update_dataset_case",
-      "delete_dataset_case",
-      "add_trace_to_dataset",
-      "freeze_dataset_version",
-      "add_scorer",
-      "publish_scorer",
-      "copy_scorer",
-      "archive_dataset",
-      "archive_scorer",
-      "list_experiments",
-      "get_experiment",
-      "add_experiment",
-      "list_experiment_items",
-      "get_experiment_item",
-      "get_experiment_execution",
-      "start_experiment_case",
-      "complete_experiment_case",
-      "finish_experiment",
-      "list_evaluation_runs",
-      "get_evaluation_run",
-      "add_evaluation_run",
-      "add_evaluation_results",
-      "list_scenarios",
-      "get_scenario"
+      "load_hue_guide"
     ],
-    "catalogSha256": "aa6770d2f60b39544f6c65c9facb1e57555ed8f41b670489093c8b83c630679a"
+    "catalogSha256": "12801fe269dfc3ae4efd936fa05e3fa9be294d39d7a84617d0309932e1f17390"
   },
   "pages": [
     "index",
