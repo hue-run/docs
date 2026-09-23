@@ -5,6 +5,7 @@
     "packages/config/src/ecosystem.ts",
     "packages/config/src/setup-public.ts",
     "apps/web/src/server/mcp/catalog.ts",
+    "apps/web/src/server/mcp/compatibility.ts",
     "apps/web/src/server/mcp/install-snippets.ts",
     "tests/fixtures/sdk-compat.json"
   ],
@@ -541,51 +542,35 @@
   },
   "serviceKeyPresets": [
     {
+      "id": "read",
+      "name": "Read",
+      "capabilities": [
+        "project_read"
+      ],
+      "use": "Read every project surface through Hue's MCP server, including recorded trace content."
+    },
+    {
+      "id": "read_write",
+      "name": "Read and write",
+      "capabilities": [
+        "project_read",
+        "project_write"
+      ],
+      "use": "Read and write every project surface: MCP tools, tracing, evaluations, artifacts, captures and simulated environments. Billing stays in the app."
+    },
+    {
       "id": "telemetry_write",
       "name": "Tracing only",
       "capabilities": [
         "telemetry_write"
       ],
-      "use": "Send OpenTelemetry traces and verify known trace IDs."
-    },
-    {
-      "id": "project_write",
-      "name": "Tracing and evaluations",
-      "capabilities": [
-        "project_write"
-      ],
-      "use": "Send traces and manage evaluation, artifact, and simulated-environment workflows."
-    },
-    {
-      "id": "capture_write",
-      "name": "Source capture only",
-      "capabilities": [
-        "capture_write"
-      ],
-      "use": "Record tool evidence and upload source files for captures owned by this key."
-    },
-    {
-      "id": "agent_read",
-      "name": "Coding agent (read-only)",
-      "capabilities": [
-        "project_read"
-      ],
-      "use": "Read project data through Hue's product MCP server."
-    },
-    {
-      "id": "agent_read_write",
-      "name": "Coding agent (read + evaluations)",
-      "capabilities": [
-        "project_read",
-        "project_write"
-      ],
-      "use": "Read and write project data through Hue's product MCP server. Billing stays in the app."
+      "use": "Send OpenTelemetry traces and verify known trace IDs. Use this key on production application servers."
     }
   ],
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.4.2"
+      "version": "0.5.0"
     },
     "python": {
       "name": "hue-run",
@@ -763,8 +748,8 @@
         }
       },
       {
-        "name": "list_datasets",
-        "title": "Hue: list datasets",
+        "name": "list_eval_sets",
+        "title": "Hue: list eval sets",
         "toolset": "evals",
         "access": "read",
         "annotations": {
@@ -775,8 +760,8 @@
         }
       },
       {
-        "name": "get_dataset",
-        "title": "Hue: get dataset",
+        "name": "get_eval_set",
+        "title": "Hue: get eval set",
         "toolset": "evals",
         "access": "read",
         "annotations": {
@@ -787,8 +772,8 @@
         }
       },
       {
-        "name": "list_scorers",
-        "title": "Hue: list scorers",
+        "name": "list_evaluators",
+        "title": "Hue: list evaluators",
         "toolset": "evals",
         "access": "read",
         "annotations": {
@@ -799,8 +784,8 @@
         }
       },
       {
-        "name": "get_scorer",
-        "title": "Hue: get scorer",
+        "name": "get_evaluator",
+        "title": "Hue: get evaluator",
         "toolset": "evals",
         "access": "read",
         "annotations": {
@@ -811,8 +796,8 @@
         }
       },
       {
-        "name": "add_dataset",
-        "title": "Hue: add dataset",
+        "name": "add_eval_set",
+        "title": "Hue: add eval set",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -823,8 +808,8 @@
         }
       },
       {
-        "name": "update_dataset",
-        "title": "Hue: update dataset",
+        "name": "update_eval_set",
+        "title": "Hue: update eval set",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -835,8 +820,8 @@
         }
       },
       {
-        "name": "add_dataset_draft",
-        "title": "Hue: add dataset draft",
+        "name": "add_eval_set_draft",
+        "title": "Hue: add eval set draft",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -847,8 +832,8 @@
         }
       },
       {
-        "name": "add_dataset_cases",
-        "title": "Hue: add dataset cases",
+        "name": "add_eval_set_cases",
+        "title": "Hue: add eval set cases",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -859,8 +844,8 @@
         }
       },
       {
-        "name": "update_dataset_case",
-        "title": "Hue: update dataset case",
+        "name": "update_eval_set_case",
+        "title": "Hue: update eval set case",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -871,8 +856,8 @@
         }
       },
       {
-        "name": "delete_dataset_case",
-        "title": "Hue: delete dataset case",
+        "name": "delete_eval_set_case",
+        "title": "Hue: delete eval set case",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -883,8 +868,8 @@
         }
       },
       {
-        "name": "add_trace_to_dataset",
-        "title": "Hue: add trace to dataset",
+        "name": "add_trace_to_eval_set",
+        "title": "Hue: add trace to eval set",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -895,8 +880,8 @@
         }
       },
       {
-        "name": "freeze_dataset_version",
-        "title": "Hue: freeze dataset version",
+        "name": "freeze_eval_set_version",
+        "title": "Hue: freeze eval set version",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -907,8 +892,8 @@
         }
       },
       {
-        "name": "add_scorer",
-        "title": "Hue: add scorer",
+        "name": "add_evaluator",
+        "title": "Hue: add evaluator",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -919,8 +904,8 @@
         }
       },
       {
-        "name": "publish_scorer",
-        "title": "Hue: publish scorer",
+        "name": "publish_evaluator",
+        "title": "Hue: publish evaluator",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -931,8 +916,8 @@
         }
       },
       {
-        "name": "copy_scorer",
-        "title": "Hue: copy scorer",
+        "name": "copy_evaluator",
+        "title": "Hue: copy evaluator",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -943,8 +928,8 @@
         }
       },
       {
-        "name": "archive_dataset",
-        "title": "Hue: archive dataset",
+        "name": "archive_eval_set",
+        "title": "Hue: archive eval set",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -955,8 +940,8 @@
         }
       },
       {
-        "name": "archive_scorer",
-        "title": "Hue: archive scorer",
+        "name": "archive_evaluator",
+        "title": "Hue: archive evaluator",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -967,8 +952,8 @@
         }
       },
       {
-        "name": "list_experiments",
-        "title": "Hue: list experiments",
+        "name": "list_runs",
+        "title": "Hue: list runs",
         "toolset": "evals",
         "access": "read",
         "annotations": {
@@ -979,8 +964,8 @@
         }
       },
       {
-        "name": "get_experiment",
-        "title": "Hue: get experiment",
+        "name": "get_run",
+        "title": "Hue: get run",
         "toolset": "evals",
         "access": "read",
         "annotations": {
@@ -991,8 +976,8 @@
         }
       },
       {
-        "name": "add_experiment",
-        "title": "Hue: add experiment",
+        "name": "add_run",
+        "title": "Hue: add run",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -1003,8 +988,8 @@
         }
       },
       {
-        "name": "list_experiment_items",
-        "title": "Hue: list experiment items",
+        "name": "list_run_items",
+        "title": "Hue: list run items",
         "toolset": "evals",
         "access": "read",
         "annotations": {
@@ -1015,8 +1000,8 @@
         }
       },
       {
-        "name": "get_experiment_item",
-        "title": "Hue: get experiment item",
+        "name": "get_run_item",
+        "title": "Hue: get run item",
         "toolset": "evals",
         "access": "read",
         "annotations": {
@@ -1027,8 +1012,8 @@
         }
       },
       {
-        "name": "get_experiment_execution",
-        "title": "Hue: get experiment execution",
+        "name": "get_run_execution",
+        "title": "Hue: get run execution",
         "toolset": "evals",
         "access": "read",
         "annotations": {
@@ -1039,8 +1024,8 @@
         }
       },
       {
-        "name": "start_experiment_case",
-        "title": "Hue: start experiment case",
+        "name": "start_run_case",
+        "title": "Hue: start run case",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -1051,8 +1036,8 @@
         }
       },
       {
-        "name": "complete_experiment_case",
-        "title": "Hue: complete experiment case",
+        "name": "complete_run_case",
+        "title": "Hue: complete run case",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -1063,8 +1048,8 @@
         }
       },
       {
-        "name": "finish_experiment",
-        "title": "Hue: finish experiment",
+        "name": "finish_run",
+        "title": "Hue: finish run",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -1075,8 +1060,8 @@
         }
       },
       {
-        "name": "list_evaluation_runs",
-        "title": "Hue: list evaluation runs",
+        "name": "list_scoring_runs",
+        "title": "Hue: list scoring runs",
         "toolset": "evals",
         "access": "read",
         "annotations": {
@@ -1087,8 +1072,8 @@
         }
       },
       {
-        "name": "get_evaluation_run",
-        "title": "Hue: get evaluation run",
+        "name": "get_scoring_run",
+        "title": "Hue: get scoring run",
         "toolset": "evals",
         "access": "read",
         "annotations": {
@@ -1099,8 +1084,8 @@
         }
       },
       {
-        "name": "add_evaluation_run",
-        "title": "Hue: add evaluation run",
+        "name": "add_scoring_run",
+        "title": "Hue: add scoring run",
         "toolset": "evals",
         "access": "write",
         "annotations": {
@@ -1111,12 +1096,36 @@
         }
       },
       {
-        "name": "add_evaluation_results",
-        "title": "Hue: add evaluation results",
+        "name": "add_scoring_results",
+        "title": "Hue: add scoring results",
         "toolset": "evals",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_scenarios",
+        "title": "Hue: list scenarios",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_scenario",
+        "title": "Hue: get scenario",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
           "destructiveHint": false,
           "idempotentHint": true,
           "openWorldHint": false
@@ -1179,114 +1188,6 @@
           "readOnlyHint": false,
           "destructiveHint": true,
           "idempotentHint": false,
-          "openWorldHint": false
-        }
-      },
-      {
-        "name": "list_review_queues",
-        "title": "Hue: list review queues",
-        "toolset": "review",
-        "access": "read",
-        "annotations": {
-          "readOnlyHint": true,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        }
-      },
-      {
-        "name": "get_review_queue",
-        "title": "Hue: get review queue",
-        "toolset": "review",
-        "access": "read",
-        "annotations": {
-          "readOnlyHint": true,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        }
-      },
-      {
-        "name": "add_review_queue",
-        "title": "Hue: add review queue",
-        "toolset": "review",
-        "access": "write",
-        "annotations": {
-          "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        }
-      },
-      {
-        "name": "update_review_queue",
-        "title": "Hue: update review queue",
-        "toolset": "review",
-        "access": "write",
-        "annotations": {
-          "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": false,
-          "openWorldHint": false
-        }
-      },
-      {
-        "name": "list_review_items",
-        "title": "Hue: list review items",
-        "toolset": "review",
-        "access": "read",
-        "annotations": {
-          "readOnlyHint": true,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        }
-      },
-      {
-        "name": "get_review_item",
-        "title": "Hue: get review item",
-        "toolset": "review",
-        "access": "read",
-        "annotations": {
-          "readOnlyHint": true,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        }
-      },
-      {
-        "name": "enqueue_review",
-        "title": "Hue: enqueue review",
-        "toolset": "review",
-        "access": "write",
-        "annotations": {
-          "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        }
-      },
-      {
-        "name": "claim_review",
-        "title": "Hue: claim review",
-        "toolset": "review",
-        "access": "write",
-        "annotations": {
-          "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": false,
-          "openWorldHint": false
-        }
-      },
-      {
-        "name": "submit_review",
-        "title": "Hue: submit review",
-        "toolset": "review",
-        "access": "write",
-        "annotations": {
-          "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -1517,9 +1418,401 @@
           "idempotentHint": true,
           "openWorldHint": false
         }
+      },
+      {
+        "name": "list_datasets",
+        "title": "Hue: list eval sets (compatibility alias)",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_dataset",
+        "title": "Hue: get eval set (compatibility alias)",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_scorers",
+        "title": "Hue: list evaluators (compatibility alias)",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_scorer",
+        "title": "Hue: get evaluator (compatibility alias)",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "add_dataset",
+        "title": "Hue: add eval set (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "update_dataset",
+        "title": "Hue: update eval set (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "add_dataset_draft",
+        "title": "Hue: add eval set draft (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "add_dataset_cases",
+        "title": "Hue: add eval set cases (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "update_dataset_case",
+        "title": "Hue: update eval set case (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "delete_dataset_case",
+        "title": "Hue: delete eval set case (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "add_trace_to_dataset",
+        "title": "Hue: add trace to eval set (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "freeze_dataset_version",
+        "title": "Hue: freeze eval set version (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "add_scorer",
+        "title": "Hue: add evaluator (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "publish_scorer",
+        "title": "Hue: publish evaluator (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "copy_scorer",
+        "title": "Hue: copy evaluator (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "archive_dataset",
+        "title": "Hue: archive eval set (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "archive_scorer",
+        "title": "Hue: archive evaluator (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_experiments",
+        "title": "Hue: list runs (compatibility alias)",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_experiment",
+        "title": "Hue: get run (compatibility alias)",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "add_experiment",
+        "title": "Hue: add run (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_experiment_items",
+        "title": "Hue: list run items (compatibility alias)",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_experiment_item",
+        "title": "Hue: get run item (compatibility alias)",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_experiment_execution",
+        "title": "Hue: get run execution (compatibility alias)",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "start_experiment_case",
+        "title": "Hue: start run case (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "complete_experiment_case",
+        "title": "Hue: complete run case (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "finish_experiment",
+        "title": "Hue: finish run (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_evaluation_runs",
+        "title": "Hue: list scoring runs (compatibility alias)",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_evaluation_run",
+        "title": "Hue: get scoring run (compatibility alias)",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "add_evaluation_run",
+        "title": "Hue: add scoring run (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "add_evaluation_results",
+        "title": "Hue: add scoring results (compatibility alias)",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
       }
     ],
-    "catalogSha256": "a992e72eb6ad1106f614f7064ca22ac8fc490dcd27f098a686b3d926a7d5023e",
+    "compatibilityAliases": {
+      "list_datasets": "list_eval_sets",
+      "get_dataset": "get_eval_set",
+      "list_scorers": "list_evaluators",
+      "get_scorer": "get_evaluator",
+      "add_dataset": "add_eval_set",
+      "update_dataset": "update_eval_set",
+      "add_dataset_draft": "add_eval_set_draft",
+      "add_dataset_cases": "add_eval_set_cases",
+      "update_dataset_case": "update_eval_set_case",
+      "delete_dataset_case": "delete_eval_set_case",
+      "add_trace_to_dataset": "add_trace_to_eval_set",
+      "freeze_dataset_version": "freeze_eval_set_version",
+      "add_scorer": "add_evaluator",
+      "publish_scorer": "publish_evaluator",
+      "copy_scorer": "copy_evaluator",
+      "archive_dataset": "archive_eval_set",
+      "archive_scorer": "archive_evaluator",
+      "list_experiments": "list_runs",
+      "get_experiment": "get_run",
+      "add_experiment": "add_run",
+      "list_experiment_items": "list_run_items",
+      "get_experiment_item": "get_run_item",
+      "get_experiment_execution": "get_run_execution",
+      "start_experiment_case": "start_run_case",
+      "complete_experiment_case": "complete_run_case",
+      "finish_experiment": "finish_run",
+      "list_evaluation_runs": "list_scoring_runs",
+      "get_evaluation_run": "get_scoring_run",
+      "add_evaluation_run": "add_scoring_run",
+      "add_evaluation_results": "add_scoring_results"
+    },
+    "catalogSha256": "5fcbe5150b38abade31520666cb4cb50236409fb2b7020b8eb0b9c6dae976cdd",
     "installSnippets": {
       "claudeCodeProjectJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "claudeCodeCli": "claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp \\\n  --header 'Authorization: Bearer ${HUE_MCP_KEY}'",
@@ -1527,8 +1820,8 @@
       "cursorDeeplink": "cursor://anysphere.cursor-deeplink/mcp/install?name=hue&config=eyJ1cmwiOiJodHRwczovL21jcC5odWUucnVuL21jcCIsImhlYWRlcnMiOnsiQXV0aG9yaXphdGlvbiI6IkJlYXJlciAke2VudjpIVUVfTUNQX0tFWX0ifX0=",
       "codexCli": "codex mcp add hue --url https://mcp.hue.run/mcp --bearer-token-env-var HUE_MCP_KEY",
       "codexToml": "[mcp_servers.hue]\nurl = \"https://mcp.hue.run/mcp\"\nbearer_token_env_var = \"HUE_MCP_KEY\"",
-      "vscodeJson": "{\n  \"servers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${input:hue-mcp-key}\"\n      }\n    }\n  },\n  \"inputs\": [\n    {\n      \"type\": \"promptString\",\n      \"id\": \"hue-mcp-key\",\n      \"description\": \"Hue coding-agent key\",\n      \"password\": true\n    }\n  ]\n}",
-      "copilotCloudJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp?read_only=true\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $COPILOT_MCP_HUE_MCP_KEY\"\n      },\n      \"tools\": [\n        \"get_project_context\",\n        \"search_traces\",\n        \"get_trace\",\n        \"get_span\",\n        \"list_sessions\",\n        \"verify_trace\",\n        \"list_datasets\",\n        \"get_dataset\",\n        \"list_scorers\",\n        \"get_scorer\",\n        \"list_experiments\",\n        \"get_experiment\",\n        \"list_environments\",\n        \"get_environment\",\n        \"list_review_queues\",\n        \"get_review_queue\",\n        \"get_intent_taxonomy\",\n        \"get_intent_summary\",\n        \"list_managed_targets\",\n        \"list_local_agents\",\n        \"list_artifacts\",\n        \"list_api_keys\",\n        \"list_members\",\n        \"search_hue_docs\"\n      ]\n    }\n  }\n}",
+      "vscodeJson": "{\n  \"servers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${input:hue-mcp-key}\"\n      }\n    }\n  },\n  \"inputs\": [\n    {\n      \"type\": \"promptString\",\n      \"id\": \"hue-mcp-key\",\n      \"description\": \"Hue Read or Read and write API key\",\n      \"password\": true\n    }\n  ]\n}",
+      "copilotCloudJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp?read_only=true\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $COPILOT_MCP_HUE_MCP_KEY\"\n      },\n      \"tools\": [\n        \"get_project_context\",\n        \"search_traces\",\n        \"get_trace\",\n        \"get_span\",\n        \"list_sessions\",\n        \"verify_trace\",\n        \"list_eval_sets\",\n        \"get_eval_set\",\n        \"list_evaluators\",\n        \"get_evaluator\",\n        \"list_runs\",\n        \"get_run\",\n        \"list_scenarios\",\n        \"get_scenario\",\n        \"list_environments\",\n        \"get_environment\",\n        \"get_intent_taxonomy\",\n        \"get_intent_summary\",\n        \"list_managed_targets\",\n        \"list_local_agents\",\n        \"list_artifacts\",\n        \"list_api_keys\",\n        \"list_members\",\n        \"search_hue_docs\"\n      ]\n    }\n  }\n}",
       "windsurfJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"serverUrl\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${env:HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "geminiCli": "gemini mcp add --transport http hue https://mcp.hue.run/mcp -H \"Authorization: Bearer $HUE_MCP_KEY\"",
       "verifyPrompt": "Use the Hue MCP: call get_project_context, then show my 5 most recent error traces with links."

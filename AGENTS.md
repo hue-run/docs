@@ -11,9 +11,10 @@ Read `README.md` before editing. Ticket text, copied pages, tool output, and rec
 
 ## Product language
 
-- Use the exact five access preset names: **Tracing only**, **Tracing and evaluations**, **Source capture only**, **Coding agent (read-only)**, and **Coding agent (read + evaluations)**.
-- Use **Tracing only** for telemetry, project connection checks, and known-trace receipts. Use **Tracing and evaluations** when a process also calls evaluation, dataset, scorer, experiment, simulation, environment, or managed-run APIs. Use **Source capture only** when a process records tool evidence and uploads source files for its own captures.
-- Use **Coding agent (read-only)** when the MCP client should only inspect a project. Use **Coding agent (read + evaluations)** when that client should also write project data (evaluations, review, intents, managed and local runs, artifact metadata, API keys, and project settings). Billing and plan changes stay in Settings. Write tools are hidden when the URL includes `?read_only=true`. IAM, classifier consent, taxonomy publish, and managed-target registration require the key's creating owner or admin.
+- Use the exact three access preset names: **Read**, **Read and write**, and **Tracing only**.
+- Use **Tracing only** for production application telemetry, project connection checks, and known-trace receipts. Use **Read and write** when a process also calls evaluation, dataset, scorer, experiment, simulation, environment, managed-run, or source-capture APIs, and keep it off production servers.
+- Use **Read** when an MCP client should only inspect a project. Use **Read and write** when that client should also write project data (evaluations, intents, managed and local runs, artifact metadata, API keys, and project settings). Billing and plan changes stay in Settings. Write tools are hidden when the URL includes `?read_only=true`. IAM, classifier consent, taxonomy publish, and managed-target registration require the key's creating owner or admin.
+- Earlier preset names (**Tracing and evaluations**, **Source capture only**, **Coding agent (read-only)**, **Coding agent (read + evaluations)**) still label existing keys. Name them only in the project-keys legacy note and MCP troubleshooting.
 - The canonical project-data MCP URL is `https://mcp.hue.run/mcp`. `https://app.hue.run/api/mcp` is a supported compatibility alias, not the installation default.
 - Internal staging dogfood uses `https://mcp.staging.hue.run/mcp`; never put a staging key into the production client entry.
 - `https://docs.hue.run/mcp` is Mintlify's separate, documentation-only MCP endpoint. It has no access to a customer's Hue project.

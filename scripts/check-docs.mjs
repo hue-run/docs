@@ -115,13 +115,16 @@ if (contrastRatio(config.colors.dark, config.background.color.dark) < 4.5) {
   fail("the dark-theme accent must meet WCAG AA text contrast");
 }
 
-const expectedPresetNames = [
-  "Tracing only",
+const expectedPresetNames = ["Read", "Read and write", "Tracing only"];
+// Earlier preset names still label existing keys in Settings. Only the key guide's legacy note and
+// the MCP guide's troubleshooting may name them.
+const legacyPresetNames = [
   "Tracing and evaluations",
   "Source capture only",
   "Coding agent (read-only)",
   "Coding agent (read + evaluations)",
 ];
+const legacyPresetFiles = ["guides/project-keys.mdx", "agents/mcp-server.mdx"];
 const presetNames = platform.serviceKeyPresets.map(({ name }) => name);
 if (JSON.stringify(presetNames) !== JSON.stringify(expectedPresetNames)) {
   fail(`platform contract has unexpected service-key presets: ${presetNames.join(", ")}`);
@@ -132,7 +135,6 @@ const publicText = Object.fromEntries(publicFiles.map((path) => [path, read(path
 const allPublicText = Object.values(publicText).join("\n");
 for (const legacy of [
   "**Read-only**",
-  "**Read and write**",
   "once that host is live",
   "skill.md?v=0.2.2",
   "skill.md?v=0.2.3",
@@ -184,37 +186,35 @@ for (const [variant, status] of Object.entries({
   if (platform.mcp.variants[variant]?.status !== status) fail(`unexpected ${variant} MCP status`);
 }
 
-const combinedPresetFiles = publicFiles.filter((path) => publicText[path].includes("Coding agent (read + evaluations)"));
-const allowedCombined = [
-  "agents/mcp-server.mdx",
-  "agents/overview.mdx",
-  "guides/project-keys.mdx",
-  "guides/troubleshooting.mdx",
-];
-for (const path of combinedPresetFiles) {
-  if (!allowedCombined.includes(path)) fail(`Coding agent (read + evaluations) is not allowed in ${path}`);
+for (const path of publicFiles) {
+  if (legacyPresetFiles.includes(path)) continue;
+  for (const name of legacyPresetNames) {
+    if (publicText[path].includes(name)) fail(`${path} names the retired key preset ${name}`);
+  }
 }
-for (const path of ["agents/mcp-server.mdx", "guides/project-keys.mdx"]) {
-  if (!combinedPresetFiles.includes(path)) fail(`${path} must name Coding agent (read + evaluations)`);
+for (const path of ["guides/project-keys.mdx"]) {
+  for (const name of legacyPresetNames) {
+    if (!publicText[path].includes(name)) fail(`${path} must explain the legacy preset ${name}`);
+  }
 }
 
 const requirements = {
   "quickstart.mdx": ["Tracing only"],
-  "sdks/typescript.mdx": ["Tracing only", "Tracing and evaluations"],
-  "sdks/python.mdx": ["Tracing only", "Tracing and evaluations"],
-  "integrations/opentelemetry.mdx": ["Tracing only", "Tracing and evaluations"],
+  "sdks/typescript.mdx": ["Tracing only", "Read and write"],
+  "sdks/python.mdx": ["Tracing only", "Read and write"],
+  "integrations/opentelemetry.mdx": ["Tracing only", "Read and write"],
   "integrations/reference-chatbot.mdx": ["Tracing only"],
-  "guides/production-safety.mdx": ["Tracing only", "Tracing and evaluations"],
-  "evaluations/first-evaluation.mdx": ["Tracing and evaluations"],
-  "evaluations/simulations.mdx": ["Tracing and evaluations"],
-  "evaluations/managed-runs.mdx": ["Tracing and evaluations"],
-  "reference/typescript.mdx": ["Tracing only", "Tracing and evaluations"],
-  "reference/python.mdx": ["Tracing only", "Tracing and evaluations"],
-  "agents/overview.mdx": ["Tracing only", "Tracing and evaluations", "Coding agent (read-only)", "Coding agent (read + evaluations)"],
-  "agents/mcp-server.mdx": ["Coding agent (read-only)", "Coding agent (read + evaluations)"],
-  "guides/troubleshooting.mdx": ["Tracing only", "Tracing and evaluations", "Coding agent (read-only)", "Coding agent (read + evaluations)"],
-  "guides/project-keys.mdx": expectedPresetNames,
-  "skill.md": ["Tracing only", "Tracing and evaluations", "Coding agent (read-only)"],
+  "guides/production-safety.mdx": ["Tracing only", "Read and write"],
+  "evaluations/first-evaluation.mdx": ["Read and write"],
+  "evaluations/simulations.mdx": ["Read and write"],
+  "evaluations/managed-runs.mdx": ["Read and write"],
+  "reference/typescript.mdx": ["Tracing only", "Read and write"],
+  "reference/python.mdx": ["Tracing only", "Read and write"],
+  "agents/overview.mdx": ["Tracing only", "**Read**", "Read and write"],
+  "agents/mcp-server.mdx": ["**Read**", "Read and write"],
+  "guides/troubleshooting.mdx": ["Tracing only", "**Read**", "Read and write"],
+  "guides/project-keys.mdx": expectedPresetNames.map((name) => `**${name}**`),
+  "skill.md": ["Tracing only", "Read and write"],
 };
 for (const [path, phrases] of Object.entries(requirements)) {
   for (const phrase of phrases) if (!publicText[path].includes(phrase)) fail(`${path} must name ${phrase}`);

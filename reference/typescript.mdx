@@ -1,9 +1,9 @@
 ---
 title: "TypeScript API reference"
-description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.4.2."
+description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.5.0."
 ---
 
-This reference covers `@hue-run/sdk` **0.4.2** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+This reference covers `@hue-run/sdk` **0.5.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -11,7 +11,7 @@ This reference covers `@hue-run/sdk` **0.4.2** on Node.js 22 or 24 and Bun 1.4. 
 | --- | --- |
 | `@hue-run/sdk` | `createHue`, `createHueSafe`, `HueClient`, `createHueTransport`, `HueTransport`, `hueExperimentalTelemetry`, `contentPrefixes`, `HueConnectionError`, `HueExportError`, `HueTraceVerificationError` and the tracing types below. |
 | `@hue-run/sdk/ai-sdk` | `hueTelemetry` for Vercel AI SDK 7. Requires the optional `ai` and `@ai-sdk/otel` peers. |
-| `@hue-run/sdk/evals` | Evaluation client, local runners including `runSimulation` and `runLocalAgent`, scorer definitions, attempt-preflight validators, evaluation errors and types. Requires the optional `zod` peer (4.6.5 or later). |
+| `@hue-run/sdk/evals` | Evaluation client, local runners including `runSimulation` and `runLocalAgent`, scorer definitions, file-based case helpers, published Scenario resolvers, verdict helpers, attempt-preflight validators, evaluation errors and types. Requires the optional `zod` peer (4.6.5 or later). |
 | `@hue-run/sdk/environment` | `createEnvironmentClient`, `EnvironmentClient`, `bindEnvironmentTools`, `HueEnvironmentError` and the simulated-environment types. |
 | `@hue-run/sdk/managed` | `createManagedTargetHandler` and the managed-target types. |
 
@@ -35,7 +35,7 @@ const hue = createHue({
 
 | Option | Type | Default and behavior |
 | --- | --- | --- |
-| `apiKey` | `string` | Required when enabled; ignored for `enabled: false`. Use **Tracing only** for tracing and known-trace receipts; use **Tracing and evaluations** when this process also calls evaluation APIs. Keep it in server-only configuration. |
+| `apiKey` | `string` | Required when enabled; ignored for `enabled: false`. Use **Tracing only** for tracing and known-trace receipts; use **Read and write** when this process also calls evaluation APIs. Keep it in server-only configuration. |
 | `serviceName` | `string` | Required when enabled; 1–256 characters with non-whitespace content. Sets `service.name` on providers created by Hue. |
 | `enabled` | `boolean` | `true`; `false` creates a disabled client without attaching processors or requiring a key. |
 | `captureContent` | `boolean` | Required explicit choice for an enabled client; there is no default. A disabled client defaults it to `false`. |
@@ -232,7 +232,7 @@ import { createEvaluationClient } from "@hue-run/sdk/evals";
 const client = createEvaluationClient({ apiKey: process.env.HUE_API_KEY! });
 ```
 
-`createEvaluationClient(options: EvaluationClientOptions): EvaluationClient` and `new EvaluationClient(options)` accept required `apiKey`, optional `baseUrl` (default `https://app.hue.run`) and optional `timeoutMillis` (default `10000`, range `100–60000`). `checkConnection()` returns the key's project. Evaluation registry writes require a **Tracing and evaluations** key.
+`createEvaluationClient(options: EvaluationClientOptions): EvaluationClient` and `new EvaluationClient(options)` accept required `apiKey`, optional `baseUrl` (default `https://app.hue.run`) and optional `timeoutMillis` (default `10000`, range `100–60000`). `checkConnection()` returns the key's project. Evaluation registry writes require a **Read and write** key.
 
 Methods below return promises. `PageOptions` is `{ after?: string; limit?: number }`, with a supplied limit from 1 through 100. Paged responses are `Page<T>`, `{ items, nextCursor }`; pass a non-null cursor as the next `after`. IDs are UUIDs. `Identity` is `{ name, slug, description? }`. `listDatasets` and `listScorers` accept `RegistryPageOptions`, `PageOptions` plus `includeArchived?: boolean`, which includes archived identities so callers can diagnose slug conflicts explicitly.
 
@@ -246,7 +246,10 @@ Evaluation responses are limited to **4 MiB**. `listCases(versionId, page?)` inc
 | --- | --- |
 | `Dataset` / `DatasetVersion` | A dataset with its `versions` / one version with `revision`, `frozenAt` and `contentDigest` (`null` while it is a draft). |
 | `DatasetCase` | A stored case: `id`, `externalKey`, `inputs`, optional `expected`, `metadata` and `datasetVersionId`, plus optional immutable provenance: `environmentVersionId` (the exact simulated world selected for the case), `sourceTraceId` / `sourceTraceRevision` and `artifactManifestId`. |
-| `ExperimentCase` | A `DatasetCase` as an experiment sees it, with `hasExpected` (JSON `null` counts as present). |
+| `ExperimentCase` | A `DatasetCase` as an experiment sees it, with `hasExpected` (JSON `null` counts as present) and, on current servers, `inputFiles`, its pinned `CaseFile` entries. |
+| `CaseFile` / `SubjectFile` | One pinned input file in Hue's immutable manifest: `artifactId`, `role` (`source`, `attached_template`, `attached_reference`, `original`, or the evaluator-only `org_template` and `evaluator_reference`), `filename`, `contentType`, verified `byteSize` and hex `sha256` / the same entry on a saved subject, whose `role` may also be `output` for a file the target generated. |
+| `LocalFile` | A verified copy of a case input or generated output on the runner's disk: the `CaseFile` fields with `role` including `output`, the absolute `path` and optional `primary`. Generated files receive their `artifactId` after upload. |
+| `OutputFile` | A file the target generated for one case: `filename` (sanitized to one path segment), `contentType`, optional `primary` (at most one per execution) and either a local `path` or in-memory `bytes`. |
 | `CaseWrite` | Input for `addCase`; optional `environmentVersionId` selects an immutable simulated-world version for the case. |
 | `Scorer` / `ScorerVersion` | A scorer and its published `versions` / an immutable published definition with `contentDigest`. |
 | `ScorerDefinition` / `MetricDefinition` | The pinned definition variants / a typed metric a scorer declares. |
@@ -256,8 +259,9 @@ Evaluation responses are limited to **4 MiB**. `listCases(versionId, page?)` inc
 | `Execution` / `TerminalState` | One target attempt whose `state` is a `TerminalState` (`"succeeded"`, `"error"` or `"cancelled"`), `"started"` or `"uncertain"`. |
 | `StartExecution` / `CompleteExecution` / `Completion` | Inputs and result of the low-level execution methods. |
 | `EvaluationRun` | Scoring progress for an experiment or rescore: pinned `scorerVersions`, `itemCount` and result counts by state. |
+| `EvaluationRunSummary` | One row of `listEvaluationRuns`: `id`, `name`, `experimentId` (`null` for a standalone scoring run) and `createdAt`. Read pins and score counts with `getEvaluationRun`. |
 | `EvaluationItem` | A subject within an evaluation run, with `hasOutput` and `traceSnapshotId`. |
-| `Subject` | An immutable saved outcome: `executionId`, `inputs`, optional `output` and `expected`, `metadata`, `executionState`, trace evidence fields and the source case, experiment and attempt. |
+| `Subject` | An immutable saved outcome: `executionId`, `inputs`, optional `output` and `expected`, `metadata`, `executionState`, trace evidence fields and the source case, experiment and attempt. Current servers add `environmentVersionId`, the frozen input and output `files` (`SubjectFile[]`) and the declared `primaryArtifactId`. |
 | `Score` / `Result` | A scorer outcome (`scored`, `error` or `skipped`) / a score addressed to an `evaluationItemId` and `scorerVersionId`. |
 | `Metric` | A reported metric value: `name`, `value` and optional `passed`; a failed metric stays `state: "scored"`. |
 | `TypedError` | A sanitized `{ type, message? }`; the message is stored only when result content is persisted. |
@@ -310,6 +314,7 @@ Hosted `config` is a `JudgeConfig` with required `model`, `provider`, `rubric`, 
 | `finishExperiment(id, idempotencyKey)` | `{ id, finishedAt }`. |
 | `createEvaluationRun(input)` | `{ idempotencyKey, name, subjectIds, scorerVersionIds }` → `{ id }`. |
 | `getEvaluationRun(id)` / `listEvaluationItems(id, page?)` / `getSubject(subjectId)` | An `EvaluationRun` / a page of `EvaluationItem` values / an immutable `Subject`. |
+| `listEvaluationRuns(page?)` | A page of `EvaluationRunSummary` values: every evaluation run of the project, oldest first. |
 | `submitResults(runId, { idempotencyKey, results: Result[] })` | `{ ids }`. |
 | `listResults(runId, page?)` / `getResult(resultId)` | A page of `ResultSummary` values / the `StoredResult`. |
 
@@ -324,6 +329,42 @@ Mutations do not retry implicitly. Reuse a saved idempotency key with the same i
 `getJudgeBudget()` returns a `JudgeBudget` with the configured allowance and availability. `createJudgeJobs(runId, { idempotencyKey, jobs: [{ evaluationItemId, scorerVersionId }] })` returns job IDs. Inspect `JudgeJob` values with `listJudgeJobs(runId, page?)` or `getJudgeJob(jobId)`, and request cancellation with `cancelJudgeJob(jobId, reason)`.
 
 Submitting hosted jobs is an explicit platform operation and can consume the project's allowance. SDK method availability does not establish that a hosted provider or project budget is configured. Local runners leave hosted and manual scorer pins for their owning workflows.
+
+### Artifacts
+
+`runExperiment` uses these methods to publish generated files; you rarely call them directly.
+
+| Method | Result or purpose |
+| --- | --- |
+| `reserveArtifact({ idempotencyKey, filename, contentType, byteSize, sha256 })` | Reserves an artifact by declared identity → `ArtifactReservation`; replaying the key returns the same reservation. |
+| `requestArtifactUpload(id)` | Issues a short-lived storage capability for the reserved bytes → `ArtifactUpload`. |
+| `uploadArtifactBytes(upload, bytes, contentType)` | Stages the bytes with a `PUT` to that capability. The Hue key is never sent to storage. |
+| `completeArtifact(id)` / `getArtifact(id)` | Asks Hue to verify the staged bytes against the declared identity / reads the reservation → `ArtifactReservation`. |
+| `downloadArtifact(id)` | The verified bytes of one ready artifact in this project as a `Uint8Array`, bounded to 25 MiB. |
+
+`ArtifactReservation` has `id`, `filename`, `declaredContentType`, `declaredBytes`, `declaredSha256`, `state` (`reserved`, `verifying`, `ready`, `rejected`, `cancelled` or `abandoned`; only `ready` artifacts are verified and downloadable), `copyState` (`none`, `started` or `acknowledged`), `verifiedBytes` and `verifiedSha256` (`null` until ready) and `failureCode`. `ArtifactUpload` is `{ uploadUrl, method: "PUT", headers?, expiresAt }`; omitted or `null` headers mean the file content type only.
+
+### Published Scenarios and eval sets
+
+A published Scenario is a case converted from a trace, with immutable pins to a frozen dataset version, an environment version and one scorer version. The evaluation client reads them with `listCaseConversions(page?)`, a page of `CaseConversionSummary` values (drafts and published), and `getCaseConversion(id)`, a `CaseConversion`. Both need a **Read and write** key.
+
+| Type | Meaning |
+| --- | --- |
+| `CaseConversionSummary` | `id`, `domain`, `status` (`"draft"` or `"published"`), `revision`, `createdAt` and the source `traceId`. |
+| `CaseConversion` | `id`, `status`, `publication` (`null` while a draft) and the optional summary fields. |
+| `CaseConversionPublication` | The pins created on publication: `caseId`, `datasetId`, `datasetVersionId`, `environmentId`, `environmentVersionId`, `scorerId` and `scorerVersionId`. |
+
+These `@hue-run/sdk/evals` functions resolve a selector to the pins an experiment or `runSimulation` needs.
+
+| Function | Behavior |
+| --- | --- |
+| `listScenarios(client, page?)` / `getScenario(client, id)` | Call `listCaseConversions` / `getCaseConversion`. |
+| `parseScenarioSelector(selector, segments = ["scenarios"])` | Returns a `ScenarioSelector`: `{ kind: "id", id }` for a UUID or a Hue URL containing `/<segment>/<uuid>` (query parameters ignored), otherwise `{ kind: "name", name }` with the trimmed name. Throws `TypeError` for an empty selector or a URL without a matching segment. |
+| `matchByName(candidates, name)` | Case-insensitive matching over `NamedCandidate` values (`{ name }`): exact matches first, then prefix, then substring. Returns a `NameMatch`, `{ matches, exact }`. |
+| `resolveScenarioPins(client, selector)` | Resolves a published Scenario by ID, Hue URL or dataset name → `ScenarioPins`. Throws `Error` when none matches, several match or the selection is an unpublished draft. |
+| `resolveEvalSetPins(client, selector, { scorerVersionIds? }?)` | Resolves an eval set by ID, Hue URL, exact slug or name to its latest saved version → `ScenarioPins`. Without a saved version it returns the latest draft with `saved: false`, so you can freeze it explicitly. An eval set pins no scorers; pass `scorerVersionIds`. |
+
+`ScenarioClient` is the subset of `EvaluationClient` these resolvers use: `listCaseConversions`, `getCaseConversion`, `getDataset`, `getDatasetVersion` and `listDatasets`. `ScenarioPins` contains `scenarioId` (`null` for an eval set), `name`, `datasetId`, `datasetVersionId`, `scorerVersionIds` (exactly one for a published Scenario), `environmentVersionId` (`null` when the selection pins none), `saved` (whether the version is frozen; experiments require a saved version) and `revision`, the version's current revision for freezing a draft.
 
 ## Run locally and rescore
 
@@ -342,13 +383,37 @@ Both functions are exported from `@hue-run/sdk/evals`.
 | `scorers` | Optional array of bound `LocalScorer` definitions/callbacks. |
 | `concurrency` | Default `1`; integer `1–16`. |
 | `schemaTimeoutMillis` | Default `2000`; integer `100–60000`; applies to JSON Schema validation, not arbitrary callbacks. |
-| `environmentEvidence` | Optional `"required"`: resolve sealed world evidence for local scoring and historical rescoring. `runSimulation` sets it. |
+| `environmentEvidence` | Optional `"required"`: resolve sealed world evidence for local scoring and historical rescoring. `runSimulation` sets it. `"when_pinned"` skips the read for cases that pin no world while still requiring it for cases that do. |
+| `filesDirectory` | Default `<checkpointDirectory>/files`. Holds verified input copies and generated files. |
+| `deferUnboundLocalScorers` | Optional. Reports pinned `local_code` versions this process has no binding for in `deferredScorerVersionIds`, leaving them to another executor, instead of refusing the run. |
 
-`runExperiment` additionally requires `hue`, `experimentId`, `traceEvidence` and `target(inputs, { config, item, span, executionId })`. The target may return a JSON value, `undefined`, or a promise of either. Evidence must be `{ mode: "required" }` or `{ mode: "omit", reason: "..." }`. Telemetry and evaluation clients must use the same project and origin.
+`runExperiment` additionally requires `hue`, `experimentId`, `traceEvidence` and `target(inputs, context)`, where `context` is a `RunExperimentTargetContext`. The target may return a JSON value, a `TargetResult` from `withFiles`, `undefined`, or a promise of any of these. Evidence must be `{ mode: "required" }` or `{ mode: "omit", reason: "..." }`. Telemetry and evaluation clients must use the same project and origin.
 
 `rescore` additionally requires `runId` and has **no target callback**. Create its evaluation run from existing subject IDs first. Both return a `RunnerReport`, `{ runId, subjectIds, resultIds, deferredScorerVersionIds }`.
 
 With `persistResultContent: false`, completions and checkpoints omit raw output, target error messages, scorer evidence and arbitrary explanations. Declared metric values remain stored, including text metrics. Already stored dataset inputs/references are independent of this setting. Historical scoring skips unavailable output; it does not rerun a target to reconstruct it.
+
+### File-based cases
+
+`RunExperimentTargetContext` is what the `runExperiment` target receives for one frozen case:
+
+| Field | Meaning |
+| --- | --- |
+| `config` / `item` | Frozen experiment configuration, validated as JSON / the frozen `ExperimentCase`, cloned before invocation. |
+| `span` | The `hue.experiment.case` `HueSpan` this attempt runs inside. |
+| `executionId` | Identity of this attempt. Derive an environment run's idempotency key from it to keep a resumed upload bound to the same world. |
+| `files` | `LocalFile` copies of the case's pinned input files meant for the agent, verified by byte count and SHA-256. Evaluator-only roles are withheld. |
+| `outputDirectory` | A private scratch directory for this case. |
+
+To save generated documents, return `withFiles(output, files)`: it takes a JSON output (or `undefined` when the target produced only files) and an `OutputFile[]`, and returns a `TargetResult` with readonly `output` and `files`. Generated files are uploaded regardless of `persistResultContent`, and local scorers receive every input and generated file in `ScoreContext.files` as `LocalFile` entries, generated ones with `role: "output"`. `rescore` downloads a subject's frozen `files` for code evaluators.
+
+| Export | Value or behavior |
+| --- | --- |
+| `targetFileRoles` | Roles the target receives: `source`, `attached_template`, `attached_reference` and `original`. |
+| `outputFileLimits` | `{ count: 32, bytes: 26214400 }`: at most 32 generated files per execution, each at most 25 MiB. |
+| `outputContentTypes` | Accepted generated content types: PDF, Word (`.docx`), PowerPoint (`.pptx`) and Excel (`.xlsx`) documents, `application/json`, `text/plain`, `text/csv`, `image/png`, `image/jpeg` and `image/webp`. |
+| `safeFilename(name)` | Reduces a declared file name to one printable path segment of at most 200 characters, or `"file"` when nothing remains. |
+| `OutputFileError` | Thrown when declared files cannot be used: too many, more than one `primary`, a missing or duplicate filename, an unsupported type, or a file that is unreadable, empty or larger than 25 MiB. The runner records it as the target's `TargetError`, not an uncertain execution. |
 
 ### Local scorer exports
 
@@ -381,6 +446,31 @@ When a target's outcome is uncertain, restarting the runner will not repeat it. 
 
 For a runnable experiment and historical rescore, see the public [first evaluation guide](/evaluations/first-evaluation).
 
+### Wait for results and verdicts
+
+Scorers that Hue executes grade after the runner returns, so a caller that wants per-case verdicts waits for them. These functions are exported from `@hue-run/sdk/evals`.
+
+| Function | Behavior |
+| --- | --- |
+| `waitForResults(client, options: WaitForResultsOptions)` | Polls an evaluation run until every item has a terminal (`scored`, `error` or `skipped`) result for every listed scorer version, or the budget elapses → `VerdictResults`. A timeout or abort returns the partial state with `complete: false`. |
+| `summarizeVerdicts(results, { experimentItems, scorerVersionIds?, subjects? })` | Groups results by experiment case, in `experimentItems` order → `VerdictSummary`. Pass `subjects` when items do not carry `execution.subjectId`; `scorerVersionIds` defaults to the versions seen in `results`. |
+| `compareVerdicts(current, baseline)` | Diffs two `VerdictSummary` values by case key → `VerdictComparison`. |
+| `collectExperimentVerdicts(client, options: CollectExperimentVerdictsOptions)` | Reads an experiment's pinned scorer versions, waits for its results and summarizes them per case → `ExperimentVerdicts`. |
+| `metricPassed(metric)` | Whether one `Metric` passes: its explicit `passed`, otherwise a boolean `value`; any other value counts as passing. |
+
+`VerdictClient` is the subset of `EvaluationClient` that `waitForResults` uses: `listEvaluationItems`, `listResults` and `getResult`. `collectExperimentVerdicts` also needs `getExperiment`, `listExperimentItems` and `getSubject`.
+
+`WaitForResultsOptions` requires `runId` (for example `report.runId`) and `scorerVersionIds`. Optional fields are `subjectIds` (restrict the wait, for example to `report.subjectIds`; defaults to every item), `timeoutMillis` (overall budget, default `300000`; `0` reads once), `pollIntervalMillis` (default `2000`; integer `250–60000`) and `signal`. `CollectExperimentVerdictsOptions` takes the same optional fields with `experimentId` in place of `runId` and `scorerVersionIds`. Runs of more than 5,000 items throw `RangeError`.
+
+| Type | Meaning |
+| --- | --- |
+| `VerdictResults` | `complete`, the waited-for `items` (`{ id, subjectId }`) and `results`, one `VerdictResult` per item and scorer version read so far. |
+| `VerdictResult` | `id`, `itemId`, `subjectId`, `scorerVersionId`, `state`, `metrics` (empty unless scored), `explanation` and `error` (`null` when absent). |
+| `CaseVerdict` | One row per case: `caseId`, `externalKey`, `subjectId` (`null` before completion), `state` (`passed`, `failed`, `error`, `skipped` or `pending`), `passed`, `metrics` tagged with their `scorerVersionId`, the persisted `explanations` of results that did not pass and the `errors` types. A case passes only when every pinned scorer scored it without a failing metric. |
+| `VerdictSummary` | `cases` (`CaseVerdict[]`) and `totals`: counts of `cases`, `passed`, `failed`, `error`, `skipped` and `pending`. |
+| `VerdictComparison` | `improvements`, `regressions`, `unchanged` and `cases`, one `{ externalKey, before, after, change }` per case key in either run; `before` and `after` are `missing` for a case absent from that run, and `change` is `improved`, `regressed` or `unchanged`. |
+| `ExperimentVerdicts` | `experimentId`, `runId`, the pinned `scorerVersionIds`, the raw `results` and the per-case `summary`. |
+
 ## Run a local agent worker
 
 ```ts
@@ -400,7 +490,8 @@ Register the process first with `registerLocalAgent(input: LocalAgentRegistratio
 | `hue` | Required `HueClient` used for target and tool spans. |
 | `checkpointDirectory` | Required private directory for worker identity and execution checkpoints. |
 | `agent` | Required `LocalAgentRegistration`: `key`, `name`, `revision`, optional `capabilities` and `scorerDigests`. |
-| `target(inputs, tools, context)` | Required. Invokes the existing local agent with isolated `EnvironmentTool`s and a `LocalAgentTargetContext`. |
+| `target(inputs, tools, context)` | Runs cases pinned to a hosted world (`environment:v1`). Invokes the existing local agent with isolated `EnvironmentTool`s and a `LocalAgentTargetContext`. Supply `target`, `directTarget` or both. |
+| `directTarget(inputs, context)` | Runs ordinary cases without a world (`direct:v1`) with a `LocalAgentDirectContext`; returns a JSON value, a `TargetResult` from `withFiles`, `undefined` or a promise of any of these. |
 | `scorers` | Optional `LocalScorer[]` matching published source digests. |
 | `concurrency` | Default `1`; integer `1–16`. |
 | `pollIntervalMillis` | Default `2000`; integer `250–60000`. |
@@ -408,6 +499,10 @@ Register the process first with `registerLocalAgent(input: LocalAgentRegistratio
 | `maxRuns` | Optional. Useful for one-shot jobs; omit to keep polling. |
 | `actualAgentManifest` / `requestedProviders` / `mcpSurface` | Optional V2 provider-profile preflight, validated together before the worker polls. |
 | `onCompleted(report)` | Optional callback after the experiment and queue completion are acknowledged. |
+
+`LocalAgentDirectContext` carries `config` (cloned), `item` identity only (`id` and `externalKey`), `executionId`, `trace` (`{ traceId, spanId }`), `files` (verified `LocalFile` copies of the case's agent-visible input files), `outputDirectory` (a private scratch directory; return generated files with `withFiles`) and optional `signal`. Expected outcomes and case metadata stay with grading.
+
+Hue offers a worker only the cases whose capabilities its registration declares. `localAgentCapabilities` is `{ environment: "environment:v1", direct: "direct:v1" }`. `registeredCapabilities({ agent, target?, directTarget? })` returns the registration's capabilities: the declared `agent.capabilities` plus one per supplied callback. It throws `TypeError` when neither callback is supplied or a declared `environment:v1` or `direct:v1` capability has no matching callback.
 
 ## Run a simulation
 
@@ -447,11 +542,12 @@ Provider-profile preflight is a control-plane contract. The provider-facade rout
 
 ### SimulationDefinition
 
-`SimulationDefinition` is a union of an app-authored reference and a repository-authored definition. `SimulationScenario` is a deprecated alias for `SimulationDefinition`.
+`SimulationDefinition` is a union of an app-authored reference, already published pins and a repository-authored definition. `SimulationScenario` is a deprecated alias for `SimulationDefinition`.
 
 | Kind | Fields |
 | --- | --- |
 | `{ kind: "experiment", experimentId }` | Selects an existing app-authored immutable experiment template. Each completed invocation clones its frozen dataset version, configuration and scorer-version pins into a fresh experiment. |
+| `{ kind: "pins", datasetVersionId, scorerVersionIds, config?, name? }` | Runs already published immutable pins, such as the `ScenarioPins` of a published Scenario. The frozen dataset version's cases pin their simulated-world versions; `config` defaults to `{}` and `name` to the dataset name, then `Simulation`. The checkpoint identity binds these pins. |
 | `{ kind: "repository", name, slug, description?, environment, cases, scorers, config? }` | Publishes and resolves the definition. `slug` is the stable dataset slug used for immutable version resolution; `environment` is an `EnvironmentIdentity` plus its `definition: PublishableEnvironmentDefinition`; `config` is passed to every target callback. At least one case and one scorer are required, and case keys must be unique. |
 
 `RepositorySimulationCase` is `{ externalKey, inputs, expected?, metadata? }`: a stable key unique within the dataset, the JSON inputs passed to the target, an optional reference output and optional caller-owned metadata. `RepositorySimulationScorer` is an `Identity` plus `scorer`, a `ScorerDefinition` to publish or a `LocalScorer` bound to its source digest. Stable slugs reuse matching immutable content digests; changed definitions publish new versions. Unsupported or server-only scorer kinds throw `TypeError` before any write.
@@ -526,7 +622,7 @@ const environments = createEnvironmentClient({ apiKey: process.env.HUE_API_KEY! 
 
 | Option | Type | Default and behavior |
 | --- | --- | --- |
-| `apiKey` | `string` | Required **Tracing and evaluations** project service key sent as a bearer token; server-side only. |
+| `apiKey` | `string` | Required **Read and write** project service key sent as a bearer token; server-side only. |
 | `baseUrl` | `string` | `https://app.hue.run`; the same origin rules as the tracing client. |
 | `timeoutMillis` | `number` | `10000`. Per-request deadline in milliseconds, with the same range as the evaluation client. |
 | `maxAttempts` | `number` | `4`; integer `1–10`. Attempts for idempotent run mutations. |
