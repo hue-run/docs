@@ -1,0 +1,63 @@
+---
+title: "Hue CLI"
+description: "Store a Hue key with hue login, connect your coding agent with hue mcp install, and run evaluations from your terminal with hue eval."
+---
+
+`@hue-run/sdk` includes the `hue` command. It stores a key you create in Hue, configures your coding agent for the [Hue MCP server](/agents/mcp-server), and runs a local agent against an eval set. Install it in the project where your agent lives:
+
+<CodeGroup>
+```sh npm
+npm install @hue-run/sdk@0.5.1
+```
+
+```sh Bun
+bun add @hue-run/sdk@0.5.1
+```
+</CodeGroup>
+
+Run the commands with `npx hue` (or `bunx hue`) from that project. Every command accepts `--help`.
+
+## Store your key
+
+Create a **Read and write** key in **Settings → Integrations & API keys** for the project you want to use, then run:
+
+```sh
+npx hue login --gitignore
+```
+
+`hue login` prints the key settings page and opens it in your browser when a terminal is attached. It reads the key without echoing it, checks it against Hue, and stores it once as both `HUE_API_KEY` (for evaluations) and `HUE_MCP_KEY` (for your coding agent) in `./.env.hue`, together with `HUE_BASE_URL` and `HUE_MCP_URL`. `--gitignore` adds that file to `.gitignore`. Key values are never printed.
+
+A **Read** or **Tracing only** key is refused before anything is stored, because it cannot run evaluations. See [project keys](/guides/project-keys) for what each preset can do.
+
+| Option | Effect |
+| --- | --- |
+| `--keys coding-agent` | Store only `HUE_MCP_KEY`. Accepts a **Read** key for an agent that should only inspect the project. |
+| `--keys evaluations` | Store only `HUE_API_KEY`. |
+| `--env-file PATH` | Write another file instead of `./.env.hue`. |
+| `--force` | Replace a different value already in the file. |
+| `--origin URL` | Use another Hue origin, such as staging. |
+| `--no-browser` | Print the settings page without opening it. |
+
+To revoke evaluation and agent access separately, run `--keys evaluations` and `--keys coding-agent` with two different keys.
+
+## Connect your coding agent
+
+```sh
+npx hue mcp install --client claude-code
+```
+
+`hue mcp install` writes the same configuration Hue shows in Settings: a server named `hue` at `https://mcp.hue.run/mcp` that reads the key from the `HUE_MCP_KEY` environment variable. It never writes the key itself. Supported clients are `claude-code`, `cursor`, `codex`, `vscode`, `windsurf` and `gemini`. Add `--dry-run` to see the change first, or `--print` for the snippet only.
+
+Export `HUE_MCP_KEY` in the shell that starts your client, then ask the agent to call `get_project_context` to confirm which project it reached. The [MCP guide](/agents/mcp-server) covers every client and what the server can do.
+
+## Run an evaluation
+
+`hue eval` runs your agent locally against a saved eval set or a published case and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It uses `HUE_API_KEY` from `--env-file` and needs the optional `zod` peer dependency:
+
+```sh
+npm install zod
+npx hue eval --set "Billing regressions" --scorer <evaluator-slug> ./hue-agent.ts --env-file .env.hue
+npx hue eval --worker ./hue-agent.ts --env-file .env.hue
+```
+
+`--worker` registers your agent so runs started from Hue execute on your machine. See [simulations](/evaluations/simulations) for the agent adapter that receives each case's inputs and tools, and the [TypeScript reference](/reference/typescript) for the underlying `runSimulation`, `runLocalAgent` and `runExperiment` APIs.

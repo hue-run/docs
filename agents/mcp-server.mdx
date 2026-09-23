@@ -137,7 +137,7 @@ Use the Hue MCP: call get_project_context, then show my 5 most recent error trac
 
 **Author environments.** `add_environment` and `publish_environment_version` create a simulated world a case can pin.
 
-**Reviewed cases.** `list_scenarios` lists cases reviewed from traces, drafts and published, with links. `get_scenario` returns one case with its eval set, saved version, pinned outcome evaluator, environment and a ready run block for `launch_local_run` or `hue eval`; the reviewed task text is returned only with `include_content: true`. Reviewing and publishing a case stay in the Hue app.
+**Reviewed cases.** `list_cases` lists cases reviewed from traces, drafts and published, with links. `get_case` returns one case with its eval set, saved version, pinned outcome evaluator, environment and a ready run block for `launch_local_run` or `hue eval`; the reviewed task text is returned only with `include_content: true`. Reviewing and publishing a case stay in the Hue app.
 
 **Intents.** Read the taxonomy and buckets with `get_intent_taxonomy`, `get_intent_summary` and `list_intent_traces`. `save_intent_taxonomy` republishes categories and requires an owner or admin creator.
 
@@ -168,12 +168,14 @@ Earlier tool names remain available as aliases of the current tools, so existing
 | `delete_dataset_case` | `delete_eval_set_case` |
 | `finish_experiment` | `finish_run` |
 | `freeze_dataset_version` | `freeze_eval_set_version` |
+| `get_scenario` | `get_case` |
 | `get_dataset` | `get_eval_set` |
 | `get_scorer` | `get_evaluator` |
 | `get_experiment` | `get_run` |
 | `get_experiment_execution` | `get_run_execution` |
 | `get_experiment_item` | `get_run_item` |
 | `get_evaluation_run` | `get_scoring_run` |
+| `list_scenarios` | `list_cases` |
 | `list_datasets` | `list_eval_sets` |
 | `list_scorers` | `list_evaluators` |
 | `list_experiment_items` | `list_run_items` |

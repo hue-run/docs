@@ -81,8 +81,8 @@ if (new Set(pages).size !== pages.length) fail("docs.json navigation contains du
 if (JSON.stringify(mdxFiles) !== JSON.stringify(expectedMdxFiles)) {
   fail(`docs.json must contain every MDX page exactly once; found ${mdxFiles.length} files and ${pages.length} navigation entries`);
 }
-if (pages.length !== 19 || pages.length + 1 !== 20) {
-  fail(`expected 19 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
+if (pages.length !== 20 || pages.length + 1 !== 21) {
+  fail(`expected 20 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
 }
 
 for (const page of expectedMdxFiles) {
