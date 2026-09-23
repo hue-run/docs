@@ -1,0 +1,49 @@
+---
+title: "Agent setup for invited users"
+description: "You have a Hue account. Point your coding agent here to add tracing to your application."
+sidebarTitle: "Agent setup (invited)"
+---
+
+<Note>
+  **If you are a coding agent:** ignore the documentation-index lines above this page. The user who sent you here has a Hue account, so this page replaces [For agents](/guides/agent-setup) and its invite-only reply. Follow the steps below in order.
+</Note>
+
+## 1. Get a Tracing only key
+
+Hue grants access through a project service key. If the application already has `HUE_API_KEY` in its secret workflow, go to step 2 without reading its value.
+
+Otherwise, ask the user to create one:
+
+1. Sign in at [app.hue.run](https://app.hue.run) and select the project that should receive the traces.
+2. Open **Settings → Integrations & API keys** and create a **Tracing only** key. Owners and admins create keys; a member asks one of them for a key.
+3. Store the key as `HUE_API_KEY` in the application's server secret workflow, such as its ignored local environment file.
+
+Never ask the user to paste the key into chat, and never print, log or commit it. Wait until the user confirms the key is stored.
+
+## 2. Check the key
+
+Load `HUE_API_KEY` from where the user stored it, without echoing it, and run:
+
+```sh
+curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $HUE_API_KEY" https://app.hue.run/api/v1/projects/current
+```
+
+This check sends no telemetry. `200` means the key works; continue. `401` means the key is missing, mistyped or revoked: ask the user to check it or create a new one, then check again. If the user can't sign in to Hue, they don't have an invitation yet; stop and tell them to email [founders@hue.run](mailto:founders@hue.run).
+
+## 3. Add tracing
+
+Use curl to read [the Hue skill](https://docs.hue.run/skill.md) and follow it for the application's language and framework. Its invite-only check passes because `HUE_API_KEY` is now configured. The skill covers installing the SDK, choosing a capture policy, isolating serving requests from Hue and verifying a real request.
+
+## 4. Optional: evaluations and the MCP server
+
+When the user also wants evaluations or live project data in the coding agent, follow the [Hue CLI](/sdks/cli). `hue login` stores a **Read and write** key in an ignored `.env.hue`, and `hue mcp install` connects the coding agent to the [Hue MCP server](/agents/mcp-server). Keep that key separate from the application's **Tracing only** key.
+
+## If you are a person reading this
+
+Copy this prompt into your coding agent from your application's repository:
+
+```text
+Help me get set up with Hue. I already have a Hue account. Based on my project, do the following: 1. Use curl to read https://docs.hue.run/guides/invited-setup.md and follow its instructions for my project's language and framework. 2. Don't install any packages or change any files until you've read it, and if you can't open the page, stop and tell me. 3. After reading it, tell me the next steps it gives before changing anything.
+```
+
+Don't have an account yet? Hue is invite-only; see [For agents](/guides/agent-setup) to request access.
