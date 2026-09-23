@@ -117,14 +117,14 @@ if (contrastRatio(config.colors.dark, config.background.color.dark) < 4.5) {
 
 const expectedPresetNames = ["Read", "Read and write", "Tracing only"];
 // Earlier preset names still label existing keys in Settings. Only the key guide's legacy note and
-// the MCP guide's troubleshooting may name them; SDK-owned mirrors follow their pinned snapshot.
+// the MCP guide's troubleshooting may name them.
 const legacyPresetNames = [
   "Tracing and evaluations",
   "Source capture only",
   "Coding agent (read-only)",
   "Coding agent (read + evaluations)",
 ];
-const legacyPresetFiles = ["guides/project-keys.mdx", "agents/mcp-server.mdx", "skill.md", "sdks/compatibility.mdx"];
+const legacyPresetFiles = ["guides/project-keys.mdx", "agents/mcp-server.mdx"];
 const presetNames = platform.serviceKeyPresets.map(({ name }) => name);
 if (JSON.stringify(presetNames) !== JSON.stringify(expectedPresetNames)) {
   fail(`platform contract has unexpected service-key presets: ${presetNames.join(", ")}`);
@@ -214,7 +214,7 @@ const requirements = {
   "agents/mcp-server.mdx": ["**Read**", "Read and write"],
   "guides/troubleshooting.mdx": ["Tracing only", "**Read**", "Read and write"],
   "guides/project-keys.mdx": expectedPresetNames.map((name) => `**${name}**`),
-  "skill.md": ["Tracing only"],
+  "skill.md": ["Tracing only", "Read and write"],
 };
 for (const [path, phrases] of Object.entries(requirements)) {
   for (const phrase of phrases) if (!publicText[path].includes(phrase)) fail(`${path} must name ${phrase}`);
