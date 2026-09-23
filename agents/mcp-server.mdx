@@ -133,11 +133,13 @@ Use the Hue MCP: call get_project_context, then show my 5 most recent error trac
 
 **Read evaluations.** "List my eval sets", "show the cases in the latest version of the regression set", "summarize the last run and list the failing cases", "compare it against the baseline run". Tools: `list_eval_sets`, `get_eval_set`, `list_evaluators`, `get_evaluator`, `list_runs`, `get_run`, `list_run_items`, `get_run_item`, `get_run_execution`, `list_scoring_runs`, `get_scoring_run`, `list_environments`, `get_environment`.
 
-**Author evaluations.** Requires **Read and write** without `?read_only=true`. Create an eval set (`add_eval_set`), add cases (`add_eval_set_cases`) or promote a trace (`add_trace_to_eval_set`), edit a draft (`update_eval_set`, `update_eval_set_case`, `delete_eval_set_case`, `add_eval_set_draft`), freeze it (`freeze_eval_set_version`), then pin evaluators (`add_evaluator`, `publish_evaluator`, `copy_evaluator`) and create a run (`add_run`). Record scoring results with `add_scoring_run` and `add_scoring_results`. Hide retired identities with `archive_eval_set`, `archive_evaluator` or `archive_environment`. Case execution can stay with the SDK, a managed run, a local agent, or `start_run_case` / `complete_run_case` / `finish_run`. Ask before any write; never auto-approve `add_*`, `update_*`, `delete_*`, `publish_*`, `freeze_*`, `archive_*` or `copy_*`.
+**Author evaluations.** Requires **Read and write** without `?read_only=true`. Create an eval set (`add_eval_set`), add cases (`add_eval_set_cases`), edit a draft (`update_eval_set`, `update_eval_set_case`, `delete_eval_set_case`, `add_eval_set_draft`), freeze it (`freeze_eval_set_version`), then pin evaluators (`add_evaluator`, `publish_evaluator`, `copy_evaluator`) and create a run (`add_run`). Record scoring results with `add_scoring_run` and `add_scoring_results`. Hide retired identities with `archive_eval_set`, `archive_evaluator` or `archive_environment`. Case execution can stay with the SDK, a managed run, a local agent, or `start_run_case` / `complete_run_case` / `finish_run`. Ask before any write; never auto-approve `add_*`, `update_*`, `delete_*`, `publish_*`, `freeze_*`, `archive_*` or `copy_*`.
 
 **Author environments.** `add_environment` and `publish_environment_version` create a simulated world a case can pin.
 
-**Reviewed cases.** `list_cases` lists cases reviewed from traces, drafts and published, with links. `get_case` returns one case with its eval set, saved version, pinned outcome evaluator, environment and a ready run block for `launch_local_run` or `hue eval`; the reviewed task text is returned only with `include_content: true`. Reviewing and publishing a case stay in the Hue app.
+**Reviewed cases.** `list_cases` lists cases reviewed from traces, drafts and published, with links. `get_case` returns one case with its eval set, saved version, pinned outcome evaluator, environment and a ready run block for `launch_local_run` or `hue eval`; the reviewed task text is returned only with `include_content: true`.
+
+**Create a case from a trace.** No MCP tool turns a trace into a case. In Hue, open the trace and choose **Create case** in the trace inspector, or choose **Create case** from **Suggested cases**. Before you publish, you review the task and the starting world, and you set success criteria independently of the recorded answer. A script or coding agent that can make HTTP requests can drive the same review through the REST endpoint `https://app.hue.run/api/v1/case-conversions` with a **Read and write** key. `list_cases` and `get_case` then read the case, whether it is a draft or published.
 
 **Intents.** Read the taxonomy and buckets with `get_intent_taxonomy`, `get_intent_summary` and `list_intent_traces`. `save_intent_taxonomy` republishes categories and requires an owner or admin creator.
 
@@ -149,9 +151,13 @@ Use the Hue MCP: call get_project_context, then show my 5 most recent error trac
 
 **Look things up.** "How do I flush spans in a Next.js streaming route?" Tools: `search_hue_docs`, `load_hue_guide` (`data-model`, `investigate`, `author`).
 
-Earlier tool names remain available as aliases of the current tools, so existing prompts and allowlists keep working. Prefer the current names in new configurations:
+Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or a Hue trace link. Time windows accept ISO-8601 or relative values such as `15m`, `24h` or `7d` (up to 90 days). Results are paginated with opaque cursors and bounded by `max_chars`; truncated results say so and suggest a narrower request. Draft writes take `expected_revision` from `get_eval_set`.
 
-| Earlier name | Current name |
+## Retired tool names
+
+Hue served the earlier tool names below as aliases of the current tools for one production release, then retired them. A call to a retired name now fails as an unknown tool. Update prompts, allowlists and approval rules to the current names:
+
+| Retired name | Current name |
 | --- | --- |
 | `add_dataset` | `add_eval_set` |
 | `add_dataset_cases` | `add_eval_set_cases` |
@@ -160,7 +166,6 @@ Earlier tool names remain available as aliases of the current tools, so existing
 | `add_experiment` | `add_run` |
 | `add_evaluation_results` | `add_scoring_results` |
 | `add_evaluation_run` | `add_scoring_run` |
-| `add_trace_to_dataset` | `add_trace_to_eval_set` |
 | `archive_dataset` | `archive_eval_set` |
 | `archive_scorer` | `archive_evaluator` |
 | `complete_experiment_case` | `complete_run_case` |
@@ -186,7 +191,7 @@ Earlier tool names remain available as aliases of the current tools, so existing
 | `update_dataset` | `update_eval_set` |
 | `update_dataset_case` | `update_eval_set_case` |
 
-Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or a Hue trace link. Time windows accept ISO-8601 or relative values such as `15m`, `24h` or `7d` (up to 90 days). Results are paginated with opaque cursors and bounded by `max_chars`; truncated results say so and suggest a narrower request. Draft writes take `expected_revision` from `get_eval_set`.
+`add_trace_to_eval_set` and its earlier name `add_trace_to_dataset` were removed with no replacement tool. To turn a trace into a case, use **Create case** in Hue or the `/api/v1/case-conversions` REST endpoint, as described under [what you can do](#what-you-can-do).
 
 ## Content and safety
 
@@ -199,8 +204,8 @@ Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or
 
 ## Troubleshooting
 
-`401` means the key is missing, malformed, revoked or expired. `403` means the key has no read access: create a **Read** or **Read and write** key. **Tracing only** and legacy **Tracing and evaluations** keys cannot use this server. `405` on `GET` and `404` for `Mcp-Session-Id` are expected: the server accepts stateless `POST` requests only. See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent).
+`401` means the key is missing, malformed, revoked or expired. `403` means the key has no read access: create a **Read** or **Read and write** key. **Tracing only** and legacy **Tracing and evaluations** keys cannot use this server. `405` on `GET` and `404` for `Mcp-Session-Id` are expected: the server accepts stateless `POST` requests only. An unknown-tool error means the tool is not registered for this connection: write tools are hidden for a **Read** key or a URL with `?read_only=true`, and [retired tool names](#retired-tool-names) are no longer served. See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent).
 
 ## What is next
 
-OAuth sign-in for hosted assistants is not in this release. Tool names stay stable; renamed tools keep their old name for at least ninety days. This server does not change billing or plans, ingest OTLP payloads, invite members or change roles, or return artifact bytes.
+OAuth sign-in for hosted assistants is not in this release. Tools can be renamed or removed between releases; [retired tool names](#retired-tool-names) lists the names this server no longer serves. This server does not change billing or plans, ingest OTLP payloads, invite members or change roles, return artifact bytes, or create cases from traces.

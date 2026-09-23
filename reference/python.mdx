@@ -1,9 +1,9 @@
 ---
 title: "Python API reference"
-description: "Configuration, tracing, delivery and evaluation APIs in hue-run 0.2.3."
+description: "Configuration, tracing, delivery and evaluation APIs in hue-run 0.3.0."
 ---
 
-This reference covers `hue-run` **0.2.3** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
+This reference covers `hue-run` **0.3.0** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -171,6 +171,29 @@ client = EvaluationClient(
 Client methods are synchronous and return dictionaries. **Arguments use snake_case; response fields and low-level completion payloads use HTTP camelCase.** `check_connection()` returns the current project. List methods accept keyword-only `after=None, limit=100`; limits are 1–100. Responses contain `items` and `nextCursor`.
 
 Evaluation responses are limited to **4 MiB**. `list_cases(version_id, ...)` includes case content, so a valid row limit can still produce an oversized response when cases are large. Request a smaller page, such as `limit=1`, and pass each non-null `nextCursor` as `after`. The client does not automatically split or retry an oversized page.
+
+### Eval sets, evaluators, runs and scoring
+
+Use these product-named methods in new code. They call the same v1 endpoints as the dataset, scorer, experiment and evaluation-run methods in the next sections, accept product-named arguments such as `eval_set_version_id` and `evaluator_version_ids`, and return dictionaries with product fields, such as `evalSetId`, `evalSetVersionId`, `evaluatorVersionId`, `runId` and `scoringId`, alongside the v1 fields. The earlier method names are deprecated but remain callable for at least two more `0.MINOR` releases.
+
+| Method | Parameters and result |
+| --- | --- |
+| `create_eval_set(*, name, slug, description="")` / `get_eval_set(eval_set_id)` / `list_eval_sets(...)` | Eval set with initial `versions` / an eval set / page of summaries. |
+| `create_eval_set_version(eval_set_id, *, from_version_id=None)` / `get_eval_set_version(version_id)` | New editable version / a version. |
+| `list_eval_set_cases(version_id, ...)` / `add_eval_set_case(version_id, *, expected_revision, external_key, inputs, expected=MISSING, metadata=None)` | Page of cases / `{ "item": ..., "version": ... }`; retain the updated revision. |
+| `freeze_eval_set_version(version_id, expected_revision)` | Frozen eval set version. |
+| `create_evaluator(*, name, slug, description="")` / `get_evaluator(evaluator_id)` / `list_evaluators(...)` | Register or retrieve evaluator identities. |
+| `publish_evaluator_version(evaluator_id, definition)` / `get_evaluator_version(version_id)` | Publish or retrieve an immutable evaluator version. |
+| `create_run(*, idempotency_key, name, eval_set_version_id, evaluator_version_ids, config)` | `{ "id": ..., "scoringId": ..., "evaluationRunId": ... }`. |
+| `get_run(run_id)` / `list_run_items(run_id, ...)` / `get_run_case(run_id, case_id)` | Read pinned configuration and cases. |
+| `start_run_execution(run_id, case_id, *, idempotency_key, ...)` / `get_run_execution(execution_id)` / `complete_run_execution(execution_id, payload)` | Start or recover an attempt / retrieve it / acknowledge its terminal outcome. |
+| `finish_run(run_id, idempotency_key)` | `{ "id": ..., "finishedAt": ... }`. |
+| `create_scoring(*, idempotency_key, name, subject_ids, evaluator_version_ids)` | `{ "id": ... }` for scoring saved subjects. |
+| `get_scoring(scoring_id)` / `list_scorings(...)` / `list_scoring_items(scoring_id, ...)` / `get_scoring_subject(subject_id)` | Read a scoring pass, the project's scoring passes, its items and immutable saved evidence. |
+| `submit_scoring_results(scoring_id, *, idempotency_key, results)` | `{ "ids": [...] }`; each result names its `evaluatorVersionId`. |
+| `list_scoring_results(scoring_id, ...)` / `get_scoring_result(result_id)` | Result summaries / a stored result. |
+
+A run ID and a scoring ID identify different records.
 
 ### Datasets and scorer definitions
 
