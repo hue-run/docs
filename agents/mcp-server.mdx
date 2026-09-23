@@ -127,7 +127,7 @@ Use the Hue MCP: call get_project_context, then show my 5 most recent error trac
 
 ## What you can do
 
-**Investigate a failure.** "Show the error traces from the last 24 hours", "open the slowest span of that trace", "what did the model see before it failed?" (recorded content requires `include_content: true` and the application must have captured it). Tools: `search_traces`, `get_trace`, `get_span`, `list_sessions`.
+**Investigate a failure.** "Show the error traces from the last 24 hours", "open the slowest span of that trace", "what did the model see before it failed?" (recorded content requires `include_content: true` and the application must have captured it). Tools: `search_traces`, `get_trace`, `get_span`, `list_sessions`. Each trace reports a `state`: `running` while a span is still open, `stalled` when 15 minutes pass without new data and no end arrives, or `ended`. Only the TypeScript SDK 0.7.0 and Python SDK 0.4.0 or later report open spans, so traces from other exporters appear once their spans end.
 
 **Confirm delivery.** "Did trace 0af7651916cd43dd8448eb211c80319c arrive with spans a and b, with model and usage recorded?" Tools: `verify_trace`.
 
@@ -139,7 +139,7 @@ Use the Hue MCP: call get_project_context, then show my 5 most recent error trac
 
 **Reviewed cases.** `list_cases` lists cases reviewed from traces, drafts and published, with links. `get_case` returns one case with its eval set, saved version, pinned outcome evaluator, environment and a ready run block for `launch_local_run` or `hue eval`; the reviewed task text is returned only with `include_content: true`.
 
-**Create a case from a trace.** No MCP tool turns a trace into a case. In Hue, open the trace and choose **Create case** in the trace inspector, or choose **Create case** from **Suggested cases**. Before you publish, you review the task and the starting world, and you set success criteria independently of the recorded answer. A script or coding agent that can make HTTP requests can drive the same review through the REST endpoint `https://app.hue.run/api/v1/case-conversions` with a **Read and write** key. `list_cases` and `get_case` then read the case, whether it is a draft or published.
+**Create a case from a trace.** Requires **Read and write** without `?read_only=true`. In Hue, open the trace and choose **Create case** in the trace inspector, or choose **Create case** from **Suggested cases**. A coding agent runs the same review over MCP. `add_case_conversion` pins the trace into a draft case, and repeating the call with the same idempotency key returns the same draft. `get_case_conversion` reports readiness and findings, and returns the saved task, starting world and criteria only with `include_content: true`. `update_case_conversion` edits the draft, and `publish_case_conversion` publishes a ready draft into a new or existing eval set. `archive_case_conversion` abandons a draft; a published case can't be archived, but its eval set can. Before you publish, review the task and the starting world, and set success criteria independently of the recorded answer. A trace that is still running can't become a case. The REST endpoint `https://app.hue.run/api/v1/case-conversions` runs the same workflow. `list_cases` and `get_case` then read the case, whether it is a draft or published.
 
 **Intents.** Read the taxonomy and buckets with `get_intent_taxonomy`, `get_intent_summary` and `list_intent_traces`. `save_intent_taxonomy` republishes categories and requires an owner or admin creator.
 
@@ -191,7 +191,7 @@ Hue served the earlier tool names below as aliases of the current tools for one 
 | `update_dataset` | `update_eval_set` |
 | `update_dataset_case` | `update_eval_set_case` |
 
-`add_trace_to_eval_set` and its earlier name `add_trace_to_dataset` were removed with no replacement tool. To turn a trace into a case, use **Create case** in Hue or the `/api/v1/case-conversions` REST endpoint, as described under [what you can do](#what-you-can-do).
+`add_trace_to_eval_set` and its earlier name `add_trace_to_dataset` were removed. To turn a trace into a case, use the case conversion tools, **Create case** in Hue or the `/api/v1/case-conversions` REST endpoint, as described under [what you can do](#what-you-can-do).
 
 ## Content and safety
 

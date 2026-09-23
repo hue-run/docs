@@ -30,6 +30,11 @@
         "boundary": "No Hue package or model wrapper required; metrics and OTLP gRPC ingestion are not supported.",
         "path": "Direct OpenTelemetry export",
         "verifiedSupport": "OTLP HTTP protobuf/JSON traces and correlated logs, including gzip"
+      },
+      {
+        "boundary": "Requires a Hue deployment that answers trace exports with `Hue-Pending-Spans: 1` (app.hue.run does). A receiver without that header, an older Hue or a generic collector, gets placeholders only in the first export that carries them: the SDK then records one warning and switches live spans off for that client. Turn `liveSpans` / `live_spans` off to send none at all.",
+        "path": "Live spans",
+        "verifiedSupport": "Placeholders for running Hue and AI spans, sent by the Hue transports from TypeScript `0.7.0` and Python `0.4.0`"
       }
     ],
     "sections": [
@@ -41,7 +46,7 @@
       "App-launched local agents",
       "Scorer forward compatibility"
     ],
-    "sha256": "sha256:640d991726f50c61a4fd5bc67ffccdcab7313594add44176e782306e90c2df2e",
+    "sha256": "sha256:8ae6770dcb1f2c702cac414e823dc6ccfdae9852bd6009f9f64b013df64f8880",
     "source": "COMPATIBILITY.md"
   },
   "packages": {
@@ -97,7 +102,7 @@
         }
       },
       "name": "hue-run",
-      "version": "0.3.0"
+      "version": "0.4.0"
     },
     "typescript": {
       "bins": {
@@ -455,7 +460,7 @@
           "source": "packages/sdk-typescript/setup-events.schema.json"
         }
       },
-      "version": "0.6.0"
+      "version": "0.7.0"
     }
   },
   "repository": "https://github.com/hue-run/hue-sdk",

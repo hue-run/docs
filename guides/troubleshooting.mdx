@@ -29,6 +29,10 @@ Spans can arrive in separate batches, and children may arrive before their paren
 
 An OpenTelemetry status of `Unset` means no explicit status was recorded. It is not itself an application failure.
 
+## A trace stays running
+
+With TypeScript SDK 0.7.0 or Python SDK 0.4.0 or later, Hue shows a trace as **Running** while one of its spans is still open, and it resolves in place when the finished spans arrive. When 15 minutes pass with no new span or log and no end has arrived, Hue shows **No end received** instead. Either a span is still running, or the process stopped before it exported its finished spans. Await the SDK's flush before the process exits. If a wrapping processor forwards span starts to Hue, it must also forward the ends of those spans. Any later span or log makes the trace running again.
+
 ## Input or output is missing
 
 Check the explicit content setting. `captureContent: false` in TypeScript or `capture_content=False` in Python intentionally omits supported content fields in Hue helpers. Both SDKs also strip recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes from every record on Hue's export path, including spans from third-party instrumentors on the same provider; the [compatibility matrix](/sdks/compatibility) lists the keys.
