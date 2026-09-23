@@ -97,6 +97,60 @@ If the [Hue MCP server](https://docs.hue.run/agents/mcp-server) is connected (to
 
 Summarize the installed version, changed files, configuration names, capture policy, checks run, and delivery evidence. Separate locally tested behavior, collector acknowledgement, stored receipt evidence, and content inspected in Hue. State remaining access or verification steps without claiming success.
 
+## Evaluate against a Scenario
+
+When the user asks to evaluate or regression-test their agent against a Hue Scenario, use this loop.
+Hue never executes the agent: it runs in the user's process, and Hue only hosts the isolated
+simulated world and grades the sealed outcome. Scenario review and publication stay in the Hue UI.
+
+1. Find the published Scenario with the Hue MCP tools `list_scenarios` and `get_scenario`, or use
+   the Scenario URL the user pastes.
+2. Check `list_local_agents`. If no agent is online, run the evaluation from the shell:
+
+   ```sh
+   hue eval --scenario "<name>" ./hue-agent.ts --env-file .env.hue
+   ```
+
+   `hue-agent.ts` exports `runMyAgent(inputs, context)` and hands `context.mcp` or `context.tools`
+   to the real agent's tool boundary. The **Tracing and evaluations** key comes from `hue login`
+   into an ignored env file such as `.env.hue`; never print it, paste it into chat or commit it.
+3. Read the printed run URL and the per-case PASS/FAIL checks. Investigate with `get_experiment`
+   (`include_failing_cases`), `get_experiment_item` and `get_trace`, change the agent, and rerun with
+   `--baseline <previous experiment id>` to see improvements and regressions.
+4. To let the Run button and `launch_local_run` use this agent, start a worker instead:
+
+   ```sh
+   hue eval --worker ./hue-agent.ts --env-file .env.hue
+   ```
+
+Exit code 0 means every case passed; 1 means a case failed, errored or Hue's checks were still
+pending; 2 is a usage error. Content capture stays off unless `--content` is passed, and in
+one-shot mode so does persisting case outputs and explanations to Hue; `--worker` always persists
+them so a run launched from Hue can be read on its run page. Report the run URL and the printed verdicts; do not claim a pass without them.
+
+## Evaluate a document eval set
+
+When the eval set's cases are a task plus pinned input files answered with generated documents
+(a letter, a deck), `hue eval` runs them as direct cases: no simulated world, and Hue's own
+grading executor scores the uploaded documents after the run.
+
+1. Find the set with `list_datasets` (or use the slug the team gave you) and the evaluator with
+   `list_scorers`; both are pinned by slug:
+
+   ```sh
+   hue eval --set <eval-set-slug> --scorer <evaluator-slug> --command "<agent command>" \
+     --revision <prompt or commit revision> --wait 1800 --json --env-file .env.hue
+   ```
+
+2. The command runs once per case inside a private case directory: read `HUE_CASE_INPUTS`
+   (inputs JSON) and `files/<role>/` (the pinned inputs), write the generated documents to
+   `HUE_CASE_OUTPUT_DIR`, optionally `summary.txt` and `manifest.json` (`{"primary": "<file>"}`).
+   Nothing evaluator-related runs or is installed on this machine.
+3. Read the `--json` document: `cases[].state`, `totals`, `runUrl`, `mode: "direct"` and
+   `deferredScorerVersionIds` (the evaluator versions Hue graded). `complete: false` with exit 1
+   means Hue's grading had not finished within `--wait`; rerun with a longer wait or inspect the
+   run URL and `get_experiment`. Compare prompt revisions with `--baseline <previous experiment id>`.
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |

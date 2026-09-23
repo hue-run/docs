@@ -1,10 +1,10 @@
 ---
 title: "Connect the Hue MCP server"
 sidebarTitle: "MCP"
-description: "Connect Claude Code, Codex, Cursor, Windsurf, Gemini CLI and other MCP clients to https://mcp.hue.run/mcp for project-scoped traces, evaluations, review and settings."
+description: "Connect Claude Code, Codex, Cursor, Windsurf, Gemini CLI and other MCP clients to https://mcp.hue.run/mcp for project-scoped traces, evaluations, cases and settings."
 ---
 
-The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install: point an MCP client at the URL with a **Read** or **Read and write** project key. A **Read** key can search traces, inspect spans, verify delivery, read evaluations, review, intents, managed and local runs, artifacts, members and keys, and search these docs. A **Read and write** key also lists write tools for those same surfaces, all scoped to one project. Billing and plan changes stay in Settings.
+The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install: point an MCP client at the URL with a **Read** or **Read and write** project key. A **Read** key can search traces, inspect spans, verify delivery, read evaluations and reviewed cases, intents, managed and local runs, artifacts, members and keys, and search these docs. A **Read and write** key also lists write tools for those same surfaces, all scoped to one project. Billing and plan changes stay in Settings.
 
 The project-data server is a dynamic Node.js route in Hue's main web application, not a separate data service. `https://app.hue.run/api/mcp` remains a supported compatibility alias. The separate Mintlify-hosted endpoint at `https://docs.hue.run/mcp` serves public documentation only; it cannot read a Hue project. The `search_hue_docs` tool delegates documentation searches to that endpoint without changing the project-data server's authentication boundary.
 
@@ -131,13 +131,13 @@ Use the Hue MCP: call get_project_context, then show my 5 most recent error trac
 
 **Confirm delivery.** "Did trace 0af7651916cd43dd8448eb211c80319c arrive with spans a and b, with model and usage recorded?" Tools: `verify_trace`.
 
-**Read evaluations.** "List my datasets", "show the cases in the latest version of the regression set", "summarize the last experiment and list the failing cases", "compare it against the baseline experiment". Tools: `list_datasets`, `get_dataset`, `list_scorers`, `get_scorer`, `list_experiments`, `get_experiment`, `list_experiment_items`, `get_experiment_item`, `get_experiment_execution`, `list_evaluation_runs`, `get_evaluation_run`, `list_environments`, `get_environment`.
+**Read evaluations.** "List my eval sets", "show the cases in the latest version of the regression set", "summarize the last run and list the failing cases", "compare it against the baseline run". Tools: `list_eval_sets`, `get_eval_set`, `list_evaluators`, `get_evaluator`, `list_runs`, `get_run`, `list_run_items`, `get_run_item`, `get_run_execution`, `list_scoring_runs`, `get_scoring_run`, `list_environments`, `get_environment`.
 
-**Author evaluations.** Requires **Read and write** without `?read_only=true`. Create a dataset (`add_dataset`), add cases (`add_dataset_cases`) or promote a trace (`add_trace_to_dataset`), edit a draft (`update_dataset`, `update_dataset_case`, `delete_dataset_case`, `add_dataset_draft`), freeze it (`freeze_dataset_version`), then pin scorers (`add_scorer`, `publish_scorer`, `copy_scorer`) and create an experiment (`add_experiment`). Record scoring results with `add_evaluation_run` and `add_evaluation_results`. Hide retired identities with `archive_dataset`, `archive_scorer` or `archive_environment`. Case execution can stay with the SDK, a managed run, a local agent, or `start_experiment_case` / `complete_experiment_case` / `finish_experiment`. Ask before any write; never auto-approve `add_*`, `update_*`, `delete_*`, `publish_*`, `freeze_*`, `archive_*` or `copy_*`.
+**Author evaluations.** Requires **Read and write** without `?read_only=true`. Create an eval set (`add_eval_set`), add cases (`add_eval_set_cases`) or promote a trace (`add_trace_to_eval_set`), edit a draft (`update_eval_set`, `update_eval_set_case`, `delete_eval_set_case`, `add_eval_set_draft`), freeze it (`freeze_eval_set_version`), then pin evaluators (`add_evaluator`, `publish_evaluator`, `copy_evaluator`) and create a run (`add_run`). Record scoring results with `add_scoring_run` and `add_scoring_results`. Hide retired identities with `archive_eval_set`, `archive_evaluator` or `archive_environment`. Case execution can stay with the SDK, a managed run, a local agent, or `start_run_case` / `complete_run_case` / `finish_run`. Ask before any write; never auto-approve `add_*`, `update_*`, `delete_*`, `publish_*`, `freeze_*`, `archive_*` or `copy_*`.
 
 **Author environments.** `add_environment` and `publish_environment_version` create a simulated world a case can pin.
 
-**Review.** Inspect queues and items with `list_review_queues`, `get_review_queue`, `list_review_items` and `get_review_item`. Creating or updating a queue (`add_review_queue`, `update_review_queue`) and `enqueue_review` require the key's creating owner or admin. `claim_review` and `submit_review` bind to that same verified member.
+**Reviewed cases.** `list_scenarios` lists cases reviewed from traces, drafts and published, with links. `get_scenario` returns one case with its eval set, saved version, pinned outcome evaluator, environment and a ready run block for `launch_local_run` or `hue eval`; the reviewed task text is returned only with `include_content: true`. Reviewing and publishing a case stay in the Hue app.
 
 **Intents.** Read the taxonomy and buckets with `get_intent_taxonomy`, `get_intent_summary` and `list_intent_traces`. `save_intent_taxonomy` republishes categories and requires an owner or admin creator.
 
@@ -149,7 +149,42 @@ Use the Hue MCP: call get_project_context, then show my 5 most recent error trac
 
 **Look things up.** "How do I flush spans in a Next.js streaming route?" Tools: `search_hue_docs`, `load_hue_guide` (`data-model`, `investigate`, `author`).
 
-Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or a Hue trace link. Time windows accept ISO-8601 or relative values such as `15m`, `24h` or `7d` (up to 90 days). Results are paginated with opaque cursors and bounded by `max_chars`; truncated results say so and suggest a narrower request. Draft writes take `expected_revision` from `get_dataset`.
+Earlier tool names remain available as aliases of the current tools, so existing prompts and allowlists keep working. Prefer the current names in new configurations:
+
+| Earlier name | Current name |
+| --- | --- |
+| `add_dataset` | `add_eval_set` |
+| `add_dataset_cases` | `add_eval_set_cases` |
+| `add_dataset_draft` | `add_eval_set_draft` |
+| `add_scorer` | `add_evaluator` |
+| `add_experiment` | `add_run` |
+| `add_evaluation_results` | `add_scoring_results` |
+| `add_evaluation_run` | `add_scoring_run` |
+| `add_trace_to_dataset` | `add_trace_to_eval_set` |
+| `archive_dataset` | `archive_eval_set` |
+| `archive_scorer` | `archive_evaluator` |
+| `complete_experiment_case` | `complete_run_case` |
+| `copy_scorer` | `copy_evaluator` |
+| `delete_dataset_case` | `delete_eval_set_case` |
+| `finish_experiment` | `finish_run` |
+| `freeze_dataset_version` | `freeze_eval_set_version` |
+| `get_dataset` | `get_eval_set` |
+| `get_scorer` | `get_evaluator` |
+| `get_experiment` | `get_run` |
+| `get_experiment_execution` | `get_run_execution` |
+| `get_experiment_item` | `get_run_item` |
+| `get_evaluation_run` | `get_scoring_run` |
+| `list_datasets` | `list_eval_sets` |
+| `list_scorers` | `list_evaluators` |
+| `list_experiment_items` | `list_run_items` |
+| `list_experiments` | `list_runs` |
+| `list_evaluation_runs` | `list_scoring_runs` |
+| `publish_scorer` | `publish_evaluator` |
+| `start_experiment_case` | `start_run_case` |
+| `update_dataset` | `update_eval_set` |
+| `update_dataset_case` | `update_eval_set_case` |
+
+Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or a Hue trace link. Time windows accept ISO-8601 or relative values such as `15m`, `24h` or `7d` (up to 90 days). Results are paginated with opaque cursors and bounded by `max_chars`; truncated results say so and suggest a narrower request. Draft writes take `expected_revision` from `get_eval_set`.
 
 ## Content and safety
 

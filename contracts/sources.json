@@ -3,32 +3,15 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "144a674d741328048af54425d8e59d2fc2106906",
+      "commit": "533778ae8b1077b09fec47c43f7e882a6051b7dd",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:7d2981c3f14fd5d30bb527e07324a9e967021de7dc7b85086a8fedaa9d92055e"
+      "sha256": "sha256:6617c3113f99c19a1569253f2bbcdb2a32377ee71d4e59af9d51b19bf0fc6252"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "b537a0f4d2ee8b8716763f90bbb5b9578b8403ce",
-      "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:ee8a52d450744096bd3fc1398169784483f451985505fcd6130b4e39919bcba7"
-    }
-  },
-  "skillOverride": {
-    "reason": "Hue Cloud is invite-only (founders' decision 2026-09-22). The skill published with 0.4.1 still told agents to run anonymous setup; hue-sdk main gated it in #73 but also carries unreleased sections that the docs must not publish, so skill.md mirrors the released skill with only that section replaced.",
-    "base": {
-      "commit": "b537a0f4d2ee8b8716763f90bbb5b9578b8403ce",
-      "source": "skills/hue/SKILL.md",
-      "sha256": "sha256:bb6e402f470163d442603fa95c17b2b91220a5164eea2facbd95756656ae6cea"
-    },
-    "section": {
-      "repository": "https://github.com/hue-run/hue-sdk",
       "commit": "95c41fa75e60be268696d37076cf16585a8ac154",
-      "pullRequest": "https://github.com/hue-run/hue-sdk/pull/73",
-      "heading": "## Invite-only access",
-      "replaces": "## One-command onboarding",
-      "sha256": "sha256:01fada91f4c224c201e7e4efde3bda750f52ad822aa920fe976dc79c808502fc"
-    },
-    "sha256": "sha256:8a232f2ee7678545a59c24868fd443ced7c3af07461b57d5d90884a90b76f9b8"
+      "contractFile": "contracts/sdk-docs.json",
+      "sha256": "sha256:722c59f70b0d9e4ed02408c37ec93bcccbee41bcfa2b4e7faee3990166e14252"
+    }
   }
 }

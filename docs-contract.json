@@ -4,15 +4,15 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "144a674d741328048af54425d8e59d2fc2106906",
+      "commit": "533778ae8b1077b09fec47c43f7e882a6051b7dd",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:7d2981c3f14fd5d30bb527e07324a9e967021de7dc7b85086a8fedaa9d92055e"
+      "sha256": "sha256:6617c3113f99c19a1569253f2bbcdb2a32377ee71d4e59af9d51b19bf0fc6252"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "b537a0f4d2ee8b8716763f90bbb5b9578b8403ce",
+      "commit": "95c41fa75e60be268696d37076cf16585a8ac154",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:ee8a52d450744096bd3fc1398169784483f451985505fcd6130b4e39919bcba7"
+      "sha256": "sha256:722c59f70b0d9e4ed02408c37ec93bcccbee41bcfa2b4e7faee3990166e14252"
     }
   },
   "site": {
@@ -25,51 +25,35 @@
   },
   "serviceKeyPresets": [
     {
+      "id": "read",
+      "name": "Read",
+      "capabilities": [
+        "project_read"
+      ],
+      "use": "Read every project surface through Hue's MCP server, including recorded trace content."
+    },
+    {
+      "id": "read_write",
+      "name": "Read and write",
+      "capabilities": [
+        "project_read",
+        "project_write"
+      ],
+      "use": "Read and write every project surface: MCP tools, tracing, evaluations, artifacts, captures and simulated environments. Billing stays in the app."
+    },
+    {
       "id": "telemetry_write",
       "name": "Tracing only",
       "capabilities": [
         "telemetry_write"
       ],
-      "use": "Send OpenTelemetry traces and verify known trace IDs."
-    },
-    {
-      "id": "project_write",
-      "name": "Tracing and evaluations",
-      "capabilities": [
-        "project_write"
-      ],
-      "use": "Send traces and manage evaluation, artifact, and simulated-environment workflows."
-    },
-    {
-      "id": "capture_write",
-      "name": "Source capture only",
-      "capabilities": [
-        "capture_write"
-      ],
-      "use": "Record tool evidence and upload source files for captures owned by this key."
-    },
-    {
-      "id": "agent_read",
-      "name": "Coding agent (read-only)",
-      "capabilities": [
-        "project_read"
-      ],
-      "use": "Read project data through Hue's product MCP server."
-    },
-    {
-      "id": "agent_read_write",
-      "name": "Coding agent (read + evaluations)",
-      "capabilities": [
-        "project_read",
-        "project_write"
-      ],
-      "use": "Read and write project data through Hue's product MCP server. Billing stays in the app."
+      "use": "Send OpenTelemetry traces and verify known trace IDs. Use this key on production application servers."
     }
   ],
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.4.2",
+      "version": "0.5.0",
       "entrypoints": [
         "@hue-run/sdk",
         "@hue-run/sdk/ai-sdk",
@@ -91,15 +75,8 @@
   },
   "skill": {
     "version": "0.4.1",
-    "sha256": "sha256:6add863605df2463c2dd5c51972e440478e29f2f65a9af734c2380147030f799",
-    "sdkSourceSha256": "sha256:bb6e402f470163d442603fa95c17b2b91220a5164eea2facbd95756656ae6cea",
-    "override": {
-      "baseCommit": "b537a0f4d2ee8b8716763f90bbb5b9578b8403ce",
-      "sectionCommit": "95c41fa75e60be268696d37076cf16585a8ac154",
-      "section": "## Invite-only access",
-      "replaces": "## One-command onboarding",
-      "sourceSha256": "sha256:8a232f2ee7678545a59c24868fd443ced7c3af07461b57d5d90884a90b76f9b8"
-    }
+    "sha256": "sha256:368652fd103cf18faf846185be95c12f63702b37580c55c68e1a2c1b2c4e2ec3",
+    "sdkSourceSha256": "sha256:bca3f17c0a2354d7e8a4e0dc6a543eb611e8299b9c3420e92e939bb264cb0b35"
   },
   "mcp": {
     "transport": "Streamable HTTP",
@@ -116,6 +93,62 @@
       "get_span",
       "list_sessions",
       "verify_trace",
+      "list_eval_sets",
+      "get_eval_set",
+      "list_evaluators",
+      "get_evaluator",
+      "add_eval_set",
+      "update_eval_set",
+      "add_eval_set_draft",
+      "add_eval_set_cases",
+      "update_eval_set_case",
+      "delete_eval_set_case",
+      "add_trace_to_eval_set",
+      "freeze_eval_set_version",
+      "add_evaluator",
+      "publish_evaluator",
+      "copy_evaluator",
+      "archive_eval_set",
+      "archive_evaluator",
+      "list_runs",
+      "get_run",
+      "add_run",
+      "list_run_items",
+      "get_run_item",
+      "get_run_execution",
+      "start_run_case",
+      "complete_run_case",
+      "finish_run",
+      "list_scoring_runs",
+      "get_scoring_run",
+      "add_scoring_run",
+      "add_scoring_results",
+      "list_scenarios",
+      "get_scenario",
+      "list_environments",
+      "get_environment",
+      "add_environment",
+      "publish_environment_version",
+      "archive_environment",
+      "get_intent_taxonomy",
+      "save_intent_taxonomy",
+      "get_intent_summary",
+      "list_intent_traces",
+      "list_managed_targets",
+      "add_managed_target",
+      "preflight_managed_run",
+      "launch_managed_run",
+      "get_managed_run",
+      "cancel_managed_run",
+      "list_local_agents",
+      "launch_local_run",
+      "get_local_run",
+      "list_artifacts",
+      "get_artifact",
+      "get_judge_budget",
+      "add_judge_jobs",
+      "search_hue_docs",
+      "load_hue_guide",
       "list_datasets",
       "get_dataset",
       "list_scorers",
@@ -145,42 +178,9 @@
       "list_evaluation_runs",
       "get_evaluation_run",
       "add_evaluation_run",
-      "add_evaluation_results",
-      "list_environments",
-      "get_environment",
-      "add_environment",
-      "publish_environment_version",
-      "archive_environment",
-      "list_review_queues",
-      "get_review_queue",
-      "add_review_queue",
-      "update_review_queue",
-      "list_review_items",
-      "get_review_item",
-      "enqueue_review",
-      "claim_review",
-      "submit_review",
-      "get_intent_taxonomy",
-      "save_intent_taxonomy",
-      "get_intent_summary",
-      "list_intent_traces",
-      "list_managed_targets",
-      "add_managed_target",
-      "preflight_managed_run",
-      "launch_managed_run",
-      "get_managed_run",
-      "cancel_managed_run",
-      "list_local_agents",
-      "launch_local_run",
-      "get_local_run",
-      "list_artifacts",
-      "get_artifact",
-      "get_judge_budget",
-      "add_judge_jobs",
-      "search_hue_docs",
-      "load_hue_guide"
+      "add_evaluation_results"
     ],
-    "catalogSha256": "a992e72eb6ad1106f614f7064ca22ac8fc490dcd27f098a686b3d926a7d5023e"
+    "catalogSha256": "5fcbe5150b38abade31520666cb4cb50236409fb2b7020b8eb0b9c6dae976cdd"
   },
   "pages": [
     "index",

@@ -17,7 +17,7 @@ A key either reads the project, reads and writes it, or only sends traces:
 
 | Preset | Use it for | Access |
 | --- | --- | --- |
-| **Read** | A coding agent on the [Hue MCP server](/agents/mcp-server) | Reads project traces and recorded content, evaluations, review, intents, managed and local runs, artifacts, members, and keys. It cannot send telemetry or change project data. |
+| **Read** | A coding agent on the [Hue MCP server](/agents/mcp-server) | Reads project traces and recorded content, evaluations, reviewed cases, intents, managed and local runs, artifacts, members, and keys. It cannot send telemetry or change project data. |
 | **Read and write** | A trusted MCP client, CI job, evaluation worker, or source-capture process that also changes project data | Everything **Read** reaches, plus MCP writes, tracing, source capture, and evaluation, artifact, simulation, environment, and managed-run APIs. Append `?read_only=true` to the MCP URL to hide writes. Billing stays in Settings. |
 | **Tracing only** | Application telemetry, connection checks, and known-trace receipts | Sends traces and logs. It cannot browse project data or use evaluation APIs. |
 
@@ -27,7 +27,7 @@ Keys created with earlier presets keep their access. **Coding agent (read-only)*
 
 Treat every key as a server credential. Keep it out of browser bundles, logs, source control and prompts. Owners and admins can create and revoke keys. A newly invited member needs an owner or admin to supply a key through the team's secret store.
 
-A service key does not represent a signed-in Hue user. Review claim and submit on the [MCP server](/agents/mcp-server) bind to the key's creating verified member. Org invites and role changes stay in the application session. Trace browsing goes through that MCP server with a **Read** or **Read and write** key; the SDKs do not expose a general trace-search API.
+A service key does not represent a signed-in Hue user. Owner- and admin-only tools on the [MCP server](/agents/mcp-server) check the key's creating verified member. Org invites and role changes stay in the application session. Trace browsing goes through that MCP server with a **Read** or **Read and write** key; the SDKs do not expose a general trace-search API.
 
 ## Verify and rotate
 
