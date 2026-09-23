@@ -148,7 +148,7 @@ A placeholder usually reaches Hue about 1.5 s after its span starts: up to 0.5 s
 - Placeholders are advisory. A placeholder is queued only while the queue is under a quarter of its record and byte budgets and is skipped silently otherwise. While queued they count in `queued_trace_records` and `queued_trace_bytes`, but never as dropped or failed telemetry.
 - A receiver that does not accept placeholders, such as a generic collector, rejects them only in the first export that carries them. The SDK then sets `export_status.live_spans_rejected`, a warning that does not affect `ok`, and stops announcing spans for the rest of that client's life.
 - Pass `live_spans=False` to send none.
-- Hue adds its span processor directly to the tracer provider, so it receives every span end. A placeholder already sent for a span whose finished record never reaches Hue, for example because the span never ends or the process exits before flushing it, leaves the span shown as running until Hue marks the trace stalled.
+- The SDK registers its span processor on the tracer provider itself and exports no processor to wrap. A provider that wraps it anyway never sees placeholders, so Hue still receives the running span's name and attributes even when the wrapper later drops or edits the span; such a wrapper should forward `on_end` for every span whose `on_start` it forwarded. A placeholder already sent for a span whose finished record never reaches Hue, for example because the span never ends, a wrapper withholds its end or the process exits before flushing it, leaves the span shown as running until Hue marks the trace stalled.
 
 ## Trace verification
 
