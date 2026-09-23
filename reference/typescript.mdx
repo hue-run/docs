@@ -211,7 +211,7 @@ Queues are in memory and bounded to 2,048 records per signal, including exports 
 
 OpenTelemetry exports a span only when it ends, so a long streamed turn would otherwise stay invisible until it finishes. When a Hue or AI span is still open at the transport's next 500 ms tick, the transport queues a placeholder: an ordinary OTLP span whose parent is the running span, with its name, kind, start time and current attributes and an end time of 0. Hue shows the span, and its trace, as running and replaces the placeholder when the finished span arrives. A placeholder whose span has ended by the time it is exported is not sent.
 
-A placeholder reaches Hue up to about 1.5 s after its span starts: up to 500 ms until the next tick, then up to 1 s while the export queue batches it. A span shorter than that usually never shows as running and appears only when it ends.
+A placeholder usually reaches Hue about 1.5 s after its span starts: up to 500 ms until the next tick, then about 1 s while the export queue batches it. It arrives sooner when a batch is already scheduled and later while an earlier export is still in flight, because the next 1 s batch is scheduled only after that export finishes. A span shorter than about 1.5 s therefore usually never shows as running and appears only when it ends.
 
 - Only spans from the client's tracer (`withSpan`, `tool`, `model`, `hue.tracer` and the AI SDK adapters) and spans with a `gen_ai.`, `ai.`, `llm.` or `traceloop.` attribute at start, or a name starting with `ai.`, are announced. HTTP, database and other framework spans are not.
 - Placeholder attributes follow `captureContent` and `redact` like the finished span. Tool definitions, system instructions and any value over 64 KiB are left out.

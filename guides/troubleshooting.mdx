@@ -31,7 +31,7 @@ An OpenTelemetry status of `Unset` means no explicit status was recorded. It is 
 
 ## A trace stays running
 
-With TypeScript SDK 0.7.0 or Python SDK 0.4.0 or later, Hue shows a trace as **Running** while one of its Hue or AI spans is still open, from about 1.5 s after that span begins, and it resolves in place when the finished spans arrive. When 15 minutes pass with no new span or log and no end has arrived, Hue shows **No end received** instead. Either a span is still running, or the process stopped before it exported its finished spans. Await the SDK's flush before the process exits. If a wrapping processor forwards span starts to Hue, it must also forward the ends of those spans. Any later span or log makes the trace running again.
+With TypeScript SDK 0.7.0 or Python SDK 0.4.0 or later, Hue shows a trace as **Running** while one of its Hue or AI spans is still open, usually from about 1.5 s after that span begins, and it resolves in place when the finished spans arrive. When 15 minutes pass with no new span or log and no end has arrived, Hue shows **No end received** instead. Either a span is still running, or the process stopped before it exported its finished spans. Await the SDK's flush before the process exits. If a wrapping processor forwards span starts to Hue, it must also forward the ends of those spans. Any later span or log makes the trace running again.
 
 ## Input or output is missing
 
