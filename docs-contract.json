@@ -4,15 +4,15 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "533778ae8b1077b09fec47c43f7e882a6051b7dd",
+      "commit": "75d579ee55cd008032ed3fa8e832dfe9105fb85c",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:6617c3113f99c19a1569253f2bbcdb2a32377ee71d4e59af9d51b19bf0fc6252"
+      "sha256": "sha256:f825fcc43320ea4e0d1e41c7bbc54ee2e0003e353da7d77ab8652a46c0678351"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "a42141da5b17fc7785cfa56da4662c17058ea3e8",
+      "commit": "8ec9add7b69f9b980a523c0dc9bef7ddeb97e3d8",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:b7cc3a8e0c02ce8046a31734d91dea82e9c5a2d48c17d7a0b129fd70872bcc83"
+      "sha256": "sha256:ae3ab2a46c1f6ba0f48760aac1ac4175d9a0e9606e5c469483ea16dc4f2a3fa1"
     }
   },
   "site": {
@@ -21,7 +21,7 @@
     "projectMcpAlias": "https://app.hue.run/api/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
     "skillUrl": "https://docs.hue.run/skill.md",
-    "pageCount": 20
+    "pageCount": 21
   },
   "serviceKeyPresets": [
     {
@@ -53,7 +53,7 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "entrypoints": [
         "@hue-run/sdk",
         "@hue-run/sdk/ai-sdk",
@@ -123,8 +123,8 @@
       "get_scoring_run",
       "add_scoring_run",
       "add_scoring_results",
-      "list_scenarios",
-      "get_scenario",
+      "list_cases",
+      "get_case",
       "list_environments",
       "get_environment",
       "add_environment",
@@ -178,9 +178,11 @@
       "list_evaluation_runs",
       "get_evaluation_run",
       "add_evaluation_run",
-      "add_evaluation_results"
+      "add_evaluation_results",
+      "list_scenarios",
+      "get_scenario"
     ],
-    "catalogSha256": "5fcbe5150b38abade31520666cb4cb50236409fb2b7020b8eb0b9c6dae976cdd"
+    "catalogSha256": "aa6770d2f60b39544f6c65c9facb1e57555ed8f41b670489093c8b83c630679a"
   },
   "pages": [
     "index",
@@ -191,6 +193,7 @@
     "guides/agent-setup",
     "sdks/typescript",
     "sdks/python",
+    "sdks/cli",
     "sdks/compatibility",
     "integrations/opentelemetry",
     "integrations/reference-chatbot",
