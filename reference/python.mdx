@@ -59,7 +59,7 @@ Hue(
 | `enabled` | Default `True`; must be a boolean. `False` creates a disabled client without requiring a key or attaching to a supplied provider. |
 | `max_queue_size` | Default `2048`; positive integer limiting pending records per signal, including admissions and active export batches. |
 | `max_queue_bytes` | Default `8388608`; positive integer limiting encoded queue bytes per signal, including active export batches. |
-| `live_spans` | Default `True`; must be a boolean. Sends a placeholder for each Hue or AI span still open at the export worker's next 0.5 s tick, so Hue shows it as running. Setup keys never send placeholders. See [live spans](#live-spans). |
+| `live_spans` | Default `True`; must be a boolean. Sends placeholders for open Hue and AI spans. A span still open when its placeholder is exported, usually about 1.5 s after it starts, shows as running. Setup keys never send placeholders. See [live spans](#live-spans). |
 
 Use the `api_key=` keyword when omitting the origin. The first positional parameter is `base_url`, so `Hue("<key>")` raises `TypeError` naming `api_key=`; existing `Hue(base_url, api_key, ...)` calls are unchanged. When enabled, the key is required and validated even though the signature permits `None`. Disabled clients do not require a key. The constructor does not load environment variables or an environment file automatically. Invalid options raise `TypeError` or `ValueError`.
 
@@ -144,11 +144,11 @@ A placeholder usually reaches Hue about 1.5 s after its span starts: up to 0.5 s
 
 - Only spans from `hue.tracer` (every helper) and spans with a `gen_ai.`, `ai.`, `llm.` or `traceloop.` attribute at start, or a name starting with `ai.`, are announced. HTTP, database and other framework spans are not.
 - Placeholders follow the same `capture_content` policy as finished spans. Tool definitions, system instructions and any value over 64 KiB are left out; the finished span still carries them.
-- A span processor that scrubs or rewrites attributes when a span ends, such as a wrapper that forwards an edited copy to Hue's `on_end`, never sees placeholders: the export worker builds each one from the running span's current attributes. `redactor` still applies, because it rewrites helper content before the helper sets it on the span. Scrub any other sensitive attribute where you record it, or pass `live_spans=False`.
+- Placeholders carry the running span's name and attributes as set when the export worker builds them, so a value you overwrite before the span ends can still reach Hue. `capture_content=False` strips recognized content keys from them, and `redactor` rewrites helper content before the helper sets it on the span. Scrub any other sensitive attribute where you record it, or pass `live_spans=False`.
 - Placeholders are advisory. A placeholder is queued only while the queue is under a quarter of its record and byte budgets and is skipped silently otherwise. While queued they count in `queued_trace_records` and `queued_trace_bytes`, but never as dropped or failed telemetry.
 - A receiver that does not accept placeholders, such as a generic collector, rejects them only in the first export that carries them. The SDK then sets `export_status.live_spans_rejected`, a warning that does not affect `ok`, and stops announcing spans for the rest of that client's life.
 - Pass `live_spans=False` to send none.
-- A processor wrapper that forwards `on_start` to Hue should also forward `on_end` for the same spans. A placeholder already sent for a span that never reaches Hue can leave the span shown as running.
+- Hue adds its span processor directly to the tracer provider, so it receives every span end. A placeholder already sent for a span whose finished record never reaches Hue, for example because the span never ends or the process exits before flushing it, leaves the span shown as running until Hue marks the trace stalled.
 
 ## Trace verification
 
