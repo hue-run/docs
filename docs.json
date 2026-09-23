@@ -23,7 +23,8 @@
         "pages": [
           "agents/overview",
           "agents/mcp-server",
-          "guides/agent-setup"
+          "guides/agent-setup",
+          "guides/invited-setup"
         ]
       },
       {
