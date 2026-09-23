@@ -569,11 +569,11 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.6.0"
+      "version": "0.7.0"
     },
     "python": {
       "name": "hue-run",
-      "version": "0.3.0"
+      "version": "0.4.0"
     }
   },
   "mcp": {
@@ -1119,6 +1119,66 @@
         }
       },
       {
+        "name": "add_case_conversion",
+        "title": "Hue: add case conversion",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_case_conversion",
+        "title": "Hue: get case conversion",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "update_case_conversion",
+        "title": "Hue: update case conversion",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "publish_case_conversion",
+        "title": "Hue: publish case conversion",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "archive_case_conversion",
+        "title": "Hue: archive case conversion",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
         "name": "list_environments",
         "title": "Hue: list environments",
         "toolset": "environments",
@@ -1408,7 +1468,7 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "12801fe269dfc3ae4efd936fa05e3fa9be294d39d7a84617d0309932e1f17390",
+    "catalogSha256": "bc1c49ddb8bad4a7fbd1917e703921d3b2562eef030ff4b959a940df92326079",
     "installSnippets": {
       "claudeCodeProjectJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "claudeCodeCli": "claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp \\\n  --header 'Authorization: Bearer ${HUE_MCP_KEY}'",

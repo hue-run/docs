@@ -1,9 +1,9 @@
 ---
 title: "TypeScript API reference"
-description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.6.0."
+description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.7.0."
 ---
 
-This reference covers `@hue-run/sdk` **0.6.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+This reference covers `@hue-run/sdk` **0.7.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -45,6 +45,7 @@ const hue = createHue({
 | `resourceAttributes` | `Attributes` | Optional additional resource attributes for an owned client, for example `deployment.environment.name` or `service.namespace`; `serviceName` and `serviceVersion` take precedence over same-named keys. Ignored with a `warning` issue in attach mode. |
 | `maxQueueBytes` | `number` | `8388608`; 1024–67108864. Shared estimated trace/log queue bytes, including in-flight work. Not total process RSS. |
 | `timeoutMillis` | `number` | `10000`; integer from `100` through `60000`. Configures transport requests and the project connection check; it is not an overall `flush()` deadline. |
+| `liveSpans` | `boolean` | `true`. Sends a placeholder for each Hue or AI span still open at the transport's next 500 ms tick, so Hue shows it as running. Setup credentials never send placeholders. See [live spans](#live-spans). |
 | `redact` | `(value: string, path: string) => string` | Optional string transformation on Hue's export path. See [content policy](#content-policy). |
 | `onExportIssue` | `(issue: ExportIssue) => void \| Promise<void>` | Optional callback for sanitized export diagnostics, called at most once per second. |
 
@@ -205,6 +206,17 @@ The transport's `spanProcessor` and `logRecordProcessor` receive `RecordValue` r
 `shutdown()` stops new Hue helpers and flushes. It closes providers that Hue created; borrowed providers remain usable. Repeated calls share the same shutdown promise. If your application supplied the providers, close those providers and then call `transport.shutdown()` during process shutdown. Reuse a shared client across server requests.
 
 Queues are in memory and bounded to 2,048 records per signal, including exports in flight. Export requests are sized from each record's own encoding and split at 1 MiB. Retryable failures use the OpenTelemetry retry policy; partial rejections are not retried wholesale. An acknowledgement means collector receipt, not that every span of a distributed trace has arrived. Stop producing spans before shutdown.
+
+## Live spans
+
+OpenTelemetry exports a span only when it ends, so a long streamed turn would otherwise stay invisible until it finishes. When a Hue or AI span is still open at the transport's next 500 ms tick, the transport queues a placeholder: an ordinary OTLP span whose parent is the running span, with its name, kind, start time and current attributes and an end time of 0. Hue shows the span, and its trace, as running and replaces the placeholder when the finished span arrives. A placeholder whose span has ended by the time it is exported is not sent.
+
+- Only spans from the client's tracer (`withSpan`, `tool`, `model`, `hue.tracer` and the AI SDK adapters) and spans with a `gen_ai.`, `ai.`, `llm.` or `traceloop.` attribute at start, or a name starting with `ai.`, are announced. HTTP, database and other framework spans are not.
+- Placeholder attributes follow `captureContent` and `redact` like the finished span. Tool definitions, system instructions and any value over 64 KiB are left out.
+- Placeholders are advisory. They are queued only while the queue is under a quarter of its record and byte budgets, and skipped silently otherwise. While queued they count in `pendingSpans` and `pendingBytes`, but never as accepted, rejected, failed or dropped records. Losing only placeholders records a `warning` issue and does not make `flush()` throw.
+- A receiver that does not accept placeholders, such as a generic collector, rejects them only in the first export that carries them. The transport then records one `warning` issue and stops sending placeholders for that client.
+- Opt out with `liveSpans: false`.
+- With an [existing provider](/integrations/opentelemetry), announcements start in `spanProcessor.onStart`. A wrapping processor that forwards `onStart` should forward `onEnd` for the same spans; a placeholder already sent for a span that never reaches Hue keeps it showing as running until Hue marks the trace stalled.
 
 ## Trace verification
 
