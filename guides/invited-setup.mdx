@@ -22,7 +22,7 @@ Otherwise, ask the user to:
    npx --yes --package @hue-run/sdk@0.8.0 hue login --gitignore
    ```
 
-   `hue login` checks the key against Hue, stores it as `HUE_API_KEY` and `HUE_MCP_KEY` in `.env.hue` and adds that file to `.gitignore`. It refuses a **Read** or **Tracing only** key and never prints the key.
+   `hue login` checks the key against Hue, stores it as `HUE_API_KEY` and `HUE_MCP_KEY` in `.env.hue` and adds that file to `.gitignore`. It refuses a **Read** or **Tracing only** key and never prints the key. If `.env.hue` already holds a different `HUE_API_KEY` or `HUE_MCP_KEY`, add `--force` to replace it.
 
 Don't run `hue login` yourself: it waits for the key at a hidden prompt. Never ask the user to paste the key into chat, and never print, log or commit it. Wait until the user confirms the key is stored.
 
