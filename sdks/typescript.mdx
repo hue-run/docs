@@ -35,7 +35,7 @@ async function main() {
   const hue = createHue({
     apiKey,
     serviceName: "uppercase-demo",
-    captureContent: false, // Send timing and metadata without prompt/output content.
+    captureContent: true, // Record inputs and outputs alongside timing and metadata.
     onExportIssue: (issue) => {
       console.error("Hue export issue", issue.kind, issue.signal, issue.count);
     },
@@ -78,16 +78,16 @@ Run it with your environment already configured:
 node trace.ts
 ```
 
-Open **Traces** in the project that owns the key. The root span and its `execute_tool uppercase` child share the printed trace ID. With `captureContent: false`, the example sends timing and identity metadata while omitting its input and output content.
+Open **Traces** in the project that owns the key. The root span and its `execute_tool uppercase` child share the printed trace ID. With `captureContent: true`, both spans show the input `hello` and the output `HELLO` alongside timing and identity metadata.
 
 `checkConnection()` rejects with `HueConnectionError` when the key or origin is wrong. Its fixed message is safe to log; `status` carries the HTTP status when Hue answered, and `cause` carries the underlying network, timeout or parsing error.
 
 ## Choose what you capture
 
-You must supply `captureContent: true` or `false`. A disabled client (`enabled: false`) exports nothing and defaults it to `false`.
+You must supply `captureContent: true` or `false`; there is no default. Use `true`: Hue can only show and evaluate what a trace records. Use `false` for metadata-only capture when you'd rather not send content, or when an application or data policy forbids sending it to another service. A disabled client (`enabled: false`) exports nothing and defaults it to `false`.
 
+- `true`, the recommended setting, captures content you provide to supported helpers and instrumentations: prompts and messages, responses and tool inputs and outputs, alongside model, usage, timing and errors. Hue stores received content; automatic telemetry expiry is not currently available. Before export, the SDK replaces credentials in recorded tool definitions with `"[redacted]"` and exports an inline file over 64 KiB in recorded messages as its `sha256` and `size`; see the [content policy](/reference/typescript#content-policy).
 - `false` disables Hue helper content and removes recognized GenAI, Vercel AI SDK, OpenInference, and OpenLLMetry content fields before Hue exports them, including spans from other instrumentations on a shared provider. It also removes log bodies, status descriptions and exception text. The exported `contentPrefixes` array lists the removed keys.
-- `true` captures content you provide to supported helpers and instrumentations. Hue stores received content; automatic telemetry expiry is not currently available. Before export, the SDK replaces credentials in recorded tool definitions with `"[redacted]"` and exports an inline file over 64 KiB in recorded messages as its `sha256` and `size`; see the [content policy](/reference/typescript#content-policy).
 - `redact(value, path)` can transform supported strings before export. Redactor and capture failures omit unsafe content and increment instrumentation failure counters without changing application results.
 
 Helper spans record a failed callback's `error.type` (the error's `name`), an ERROR status and an `exception` event carrying only the type. Exception messages and stack traces are never recorded, whatever `captureContent` is; keep them in application logs.
@@ -165,7 +165,7 @@ if (!confirmation.verified) {
 console.log(confirmation.receipt?.traceUrl);
 ```
 
-Only require fields the request should emit and your capture policy permits. Supported names are `input`, `output`, `model`, `usage`, and `session`; omit content fields for metadata-only capture and usage when the instrumentation does not report it.
+Only require fields the request should emit and your capture policy permits. Supported names are `input`, `output`, `model`, `usage`, and `session`. With content capture, add `input` and `output` to confirm the request's content arrived. Omit them for metadata-only capture, and omit `usage` when the instrumentation does not report it.
 
 The receipt reports stored field presence, span counts, and missing expected spans. It contains no captured values. A successful result confirms the conditions you requested; inspect the trace in Hue to check the content and redaction. See the [verification API](/reference/typescript#trace-verification) for limits and failures.
 

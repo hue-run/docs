@@ -24,7 +24,7 @@ from hue_sdk import Hue
 
 hue = Hue(
     api_key=os.environ["HUE_API_KEY"],
-    capture_content=False,
+    capture_content=True,  # Record supported input/output content.
     service_name="my-agent",
 )
 ```
@@ -51,7 +51,7 @@ Hue(
 | --- | --- |
 | `base_url` | Optional origin; defaults to `https://app.hue.run`. Do not append an API path. HTTPS is required except for loopback HTTP; credentials, query strings and fragments are rejected. |
 | `api_key` | Required project service key. Use **Tracing only** for tracing and known-trace receipts; use **Read and write** when this process also calls evaluation APIs. Keep it in the server environment. |
-| `capture_content` | Required explicit `True` or `False`; there is no default. |
+| `capture_content` | Required explicit `True` or `False`; there is no default. `True`, the recommended setting, records supported content; `False` sends metadata only. See [content policy](#content-policy). |
 | `service_name` | Default `"hue-python-agent"`; configures the resource when Hue creates both providers. |
 | `tracer_provider` | Optional OpenTelemetry SDK `TracerProvider` to borrow. Hue adds its span processor without replacing the global provider. |
 | `logger_provider` | Optional OpenTelemetry SDK `LoggerProvider` to borrow for correlated logs. Hue adds its log record processor without replacing the global provider. |

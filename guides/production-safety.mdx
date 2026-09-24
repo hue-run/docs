@@ -27,7 +27,7 @@ import { createHueSafe, type JsonValue } from "@hue-run/sdk";
 export const hue = createHueSafe({
   apiKey: process.env.HUE_API_KEY ?? "",
   serviceName: "customer-agent",
-  captureContent: process.env.HUE_CAPTURE_CONTENT === "true",
+  captureContent: process.env.HUE_CAPTURE_CONTENT === "true", // Set HUE_CAPTURE_CONTENT=true (recommended) to record content; any other value sends metadata only.
   enabled: process.env.HUE_TRACING_ENABLED !== "false",
   maxQueueBytes: 8 * 1024 * 1024,
 });
@@ -57,7 +57,7 @@ from hue_sdk import create_hue_safe
 hue = create_hue_safe(
     api_key=os.environ.get("HUE_API_KEY"),
     service_name="customer-agent",
-    capture_content=os.environ.get("HUE_CAPTURE_CONTENT") == "true",
+    capture_content=os.environ.get("HUE_CAPTURE_CONTENT") == "true",  # Set HUE_CAPTURE_CONTENT=true (recommended) to record content; any other value sends metadata only.
     enabled=os.environ.get("HUE_TRACING_ENABLED") != "false",
     max_queue_bytes=8 * 1024 * 1024,
 )
@@ -103,7 +103,9 @@ Before rollout, test your real entry point against a loopback receiver that retu
 
 ## Capture, titles and retention
 
-Start with metadata-only capture until your team approves storing prompt and tool content. Both SDKs strip recognized third-party content attributes on Hue's export path in that mode, but unrecognized custom keys pass through, so configure third-party instrumentors' own capture controls as well. Custom names and arbitrary attributes are application-controlled.
+Set `HUE_CAPTURE_CONTENT=true` in the serving environment. Hue can only show and evaluate what a trace records, so capturing prompts, responses and tool inputs and outputs alongside model, usage, timing and errors is the recommended setting. The snippets treat any other value, including an unset variable, as `false` and send metadata only. Choose `false` when your team would rather not send that content, or when an application or data policy forbids sending it to another service. Content capture does not turn off your redactor or Hue's credential scrubbing.
+
+In metadata-only mode, both SDKs strip recognized third-party content attributes on Hue's export path, but unrecognized custom keys pass through, so configure third-party instrumentors' own capture controls to match your choice. Custom names and arbitrary attributes are application-controlled.
 
 AI trace titles are off by default. An owner or admin can enable them in **Settings → Projects → Edit project**, which permits short excerpts of captured content to be sent to Google Gemini through Vercel AI Gateway. Turning the setting off stops new title requests; a request already in flight may finish. Existing titles remain.
 

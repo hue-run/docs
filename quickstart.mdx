@@ -40,7 +40,7 @@ export HUE_API_KEY=your_project_service_key
 export HUE_CAPTURE_CONTENT=true
 ```
 
-This example records only `Hello Hue` and `HELLO HUE`. Choose `true` to store that content or `false` to send metadata only. The programs read these variables explicitly; neither SDK automatically loads a `.env` file. Third-party instrumentors have their own capture settings, covered in the [TypeScript](/sdks/typescript) and [Python](/sdks/python) guides.
+`HUE_CAPTURE_CONTENT=true` is the recommended setting: traces then record prompts, responses and tool inputs and outputs alongside timing and errors, and Hue can show and evaluate them. This example's only content is `Hello Hue` and `HELLO HUE`. The SDKs require an explicit choice, so the programs stop unless the variable is `true` or `false`. Set `false` to send metadata only, for example when a data policy forbids sending content to another service. The programs read these variables explicitly; neither SDK automatically loads a `.env` file. Third-party instrumentors have their own capture settings, covered in the [TypeScript](/sdks/typescript) and [Python](/sdks/python) guides.
 
 ## 3. Record a request
 
@@ -56,13 +56,13 @@ Both SDKs connect to Hue Cloud by default. Other origins are an [advanced config
     const apiKey = process.env.HUE_API_KEY;
     const capture = process.env.HUE_CAPTURE_CONTENT;
     if (!apiKey || !["true", "false"].includes(capture)) {
-      throw new Error("Set HUE_API_KEY and choose HUE_CAPTURE_CONTENT=true or false");
+      throw new Error("Set HUE_API_KEY and HUE_CAPTURE_CONTENT=true (recommended) or false");
     }
     
     const hue = createHue({
       apiKey,
       serviceName: "hue-first-trace",
-      captureContent: capture === "true", // Store inputs and outputs only when enabled.
+      captureContent: capture === "true", // true records inputs and outputs; false sends metadata only.
     });
     
     try {
@@ -98,12 +98,12 @@ Both SDKs connect to Hue Cloud by default. Other origins are an [advanced config
     api_key = os.environ.get("HUE_API_KEY")
     capture = os.environ.get("HUE_CAPTURE_CONTENT")
     if not api_key or capture not in ("true", "false"):
-        raise ValueError("Set HUE_API_KEY and choose HUE_CAPTURE_CONTENT=true or false")
+        raise ValueError("Set HUE_API_KEY and HUE_CAPTURE_CONTENT=true (recommended) or false")
     
     hue = Hue(
         api_key=api_key,
         service_name="hue-first-trace",
-        capture_content=capture == "true",  # Choose whether to store inputs and outputs.
+        capture_content=capture == "true",  # True records inputs and outputs; False sends metadata only.
     )
     
     try:
@@ -138,7 +138,7 @@ In the same Hue project, open **Traces** and match the printed trace ID. You sho
 
 - A root span named `first-trace` and a tool child named `execute_tool uppercase`.
 - Session `hue-quickstart` and the recorded timing.
-- Input `Hello Hue` and output `HELLO HUE` when capture is enabled; unavailable content when disabled.
+- Input `Hello Hue` and output `HELLO HUE`. With `HUE_CAPTURE_CONTENT=false`, the trace shows no input or output.
 
 Export acknowledgement confirms receiver acceptance. Inspecting the stored trace verifies the complete setup.
 

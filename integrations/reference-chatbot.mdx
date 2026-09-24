@@ -33,7 +33,7 @@ HUE_CHAT_MODE=synthetic
 PORT=3401
 ```
 
-Use `true` to store this synthetic conversation's content, or `false` to send metadata only. Start the server:
+`true`, the recommended setting, records this synthetic conversation's prompts, responses and tool inputs and outputs. `false` sends metadata only. The server requires one of the two. Start the server:
 
 ```sh
 node --env-file=.env dist/server.js
@@ -53,7 +53,7 @@ In your Hue project, open **Traces** and match the trace IDs shown by the chatbo
 - The controlled error appears as an execution error.
 - Export failures are reported separately from model or tool failures.
 
-Restart with `HUE_CAPTURE_CONTENT=false` and repeat. A printed trace ID alone does not prove delivery. The reference app reports telemetry acceptance after both traces and logs are acknowledged; inspecting stored records verifies the connection.
+To compare the metadata-only opt-out, restart with `HUE_CAPTURE_CONTENT=false` and repeat. A printed trace ID alone does not prove delivery. The reference app reports telemetry acceptance after both traces and logs are acknowledged; inspecting stored records verifies the connection.
 
 Synthetic mode uses the AI SDK's actual streaming and tool execution machinery with deterministic provider responses. It does not assess a live model's quality, and it leaves unknown token usage absent.
 

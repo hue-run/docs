@@ -30,7 +30,7 @@ from hue_sdk import Hue
 hue = Hue(
     api_key=os.environ["HUE_API_KEY"],
     service_name="addition-demo",
-    capture_content=False,  # Send timing and metadata without inputs or outputs.
+    capture_content=True,  # Record inputs and outputs alongside timing and metadata.
 )
 
 try:
@@ -60,11 +60,11 @@ Run it with your environment already configured:
 .venv/bin/python trace.py
 ```
 
-Open **Traces** in the project that owns the key. The root span and its `execute_tool add` child share the printed trace ID. Their input and output are omitted because this example explicitly chooses metadata-only capture.
+Open **Traces** in the project that owns the key. The root span and its `execute_tool add` child share the printed trace ID. Both show the input `{"a": 2, "b": 2}` and the output `4` because this example captures content.
 
 ## Choose what you capture
 
-`capture_content` is required. `False` omits content supplied through Hue's input, output, tool, and inference-log helpers before it enters an OpenTelemetry queue. `True` captures that content. Received content is stored by Hue; automatic telemetry expiry is not currently available.
+`capture_content` is required; there is no default. Use `True`, the recommended setting: Hue can only show and evaluate what a trace records. `True` captures content supplied through Hue's input, output, tool, and inference-log helpers, such as prompts and messages, responses and tool inputs and outputs. Use `False` for metadata-only capture when you'd rather not send content, or when an application or data policy forbids sending it to another service; it omits that content before it enters an OpenTelemetry queue. Received content is stored by Hue; automatic telemetry expiry is not currently available.
 
 With `capture_content=False`, Hue also strips recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes, legacy `gen_ai.*` message events, log bodies and status descriptions from every record it exports, including spans from third-party instrumentors on the same provider. The [compatibility matrix](/sdks/compatibility) lists the keys, which are identical to TypeScript's `contentPrefixes`. The setting does not classify arbitrary attribute names, span names, session IDs or another exporter's records, and unrecognized custom keys pass through. Configure an instrumentor's own content controls before enabling it; it may also send content to other exporters.
 
@@ -98,7 +98,7 @@ if not confirmation.verified:
 print(confirmation.receipt.trace_url)
 ```
 
-Only require fields the request should emit and your capture policy permits. Supported names are `input`, `output`, `model`, `usage`, and `session`; omit content fields for metadata-only capture and usage when the instrumentation does not report it.
+Only require fields the request should emit and your capture policy permits. Supported names are `input`, `output`, `model`, `usage`, and `session`. With content capture, add `input` and `output` to confirm the request's content arrived. Omit them for metadata-only capture, and omit `usage` when the instrumentation does not report it.
 
 The receipt reports stored field presence, span counts, and missing expected spans. It contains no captured values. A successful result confirms the conditions you requested; inspect the trace in Hue to check the content and redaction. See the [verification API](/reference/python#trace-verification) for limits and failures.
 

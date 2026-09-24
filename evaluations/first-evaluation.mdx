@@ -13,8 +13,10 @@ Telemetry capture and evaluation storage are separate choices:
 
 | Choice | This example | Effect |
 | --- | --- | --- |
-| `captureContent` / `capture_content` | `false` | Omit content from Hue telemetry helpers. |
+| `captureContent` / `capture_content` | `true` | Record the case input and target output in the trace, the recommended setting. |
 | `persistResultContent` / `persist_result_content` | `true` | Store the target output so a later run can rescore it. |
+
+Setting the first switch to `false` sends metadata-only telemetry without changing what the evaluation stores.
 
 Dataset inputs and reference answers are intentionally uploaded during setup. The second switch also controls target error messages, scorer evidence, arbitrary explanations, and their copies in local checkpoints. With it disabled, local scores can still be uploaded, but historical scorers skip unavailable output instead of invoking a callback on invented data. Declared metric values are always uploaded, including custom text metrics.
 
@@ -87,7 +89,7 @@ if (fresh) {
 const state = JSON.parse(await readFile(`${directory}/state.json`, "utf8")) as {
   experimentId: string; scorerVersionId: string; rescoreKey: string;
 };
-const hue = createHue({ ...connection, serviceName: "local-evaluation", captureContent: false });
+const hue = createHue({ ...connection, serviceName: "local-evaluation", captureContent: true });
 try {
   // Run the target locally and save its output for later scoring.
   const report = await runExperiment({
@@ -176,7 +178,7 @@ def target(inputs, context):
         raise TypeError("Expected a string dataset input.")
     return inputs.upper()
 
-hue = Hue(api_key=api_key, service_name="local-evaluation", capture_content=False)
+hue = Hue(api_key=api_key, service_name="local-evaluation", capture_content=True)
 try:
     # Run the target locally and save its output for later scoring.
     report = run_experiment(

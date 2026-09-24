@@ -75,8 +75,15 @@
   },
   "skill": {
     "version": "0.4.1",
-    "sha256": "sha256:6e63902ecfa2dac961c0621d22616a9ee7a4873ab5ea9a5765970a6217cd7c4f",
-    "sdkSourceSha256": "sha256:d431c7c41f82dd3cb6d0b34150df7c7c7d8f13b94b3e15115bbb9e6bf8f07bd4"
+    "sha256": "sha256:f1708501bcaf8a643dbbeb03ebf7ec64c181a8700616f03cf50ee6adee0c26a8",
+    "sdkSourceSha256": "sha256:d431c7c41f82dd3cb6d0b34150df7c7c7d8f13b94b3e15115bbb9e6bf8f07bd4",
+    "override": {
+      "baseCommit": "a2f0f418505f6954d0ea6f2656a33f2d3a9bacf8",
+      "sectionCommit": "773f00f5224fa03eb76828f087f1c82c8c54d5ff",
+      "section": "## Capture and instrument full traces",
+      "replaces": "## Capture and instrumentation",
+      "sourceSha256": "sha256:63449f96d1168904d686f9179ff7b6ad57bf9274882a6bb194aa0b50ab4c6b7e"
+    }
   },
   "mcp": {
     "transport": "Streamable HTTP",

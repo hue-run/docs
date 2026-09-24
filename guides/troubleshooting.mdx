@@ -35,7 +35,7 @@ With TypeScript SDK 0.7.0 or Python SDK 0.4.0 or later, Hue shows a trace as **R
 
 ## Input or output is missing
 
-Check the explicit content setting. `captureContent: false` in TypeScript or `capture_content=False` in Python intentionally omits supported content fields in Hue helpers. Both SDKs also strip recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes from every record on Hue's export path, including spans from third-party instrumentors on the same provider; the [compatibility matrix](/sdks/compatibility) lists the keys.
+Check the explicit content setting. `captureContent: false` in TypeScript or `capture_content=False` in Python intentionally omits supported content fields in Hue helpers. Both SDKs also strip recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes from every record on Hue's export path, including spans from third-party instrumentors on the same provider; the [compatibility matrix](/sdks/compatibility) lists the keys. To record inputs and outputs, set `captureContent: true` or `capture_content=True`, the recommended setting, unless an application or data policy forbids sending that content to another service.
 
 Content must also be supplied by the instrumentation. The SDK does not reconstruct prompts, invent an output or estimate missing usage. JSON `null` is a recorded value; an absent output is different. Helper spans never record exception messages or stack traces, only `error.type` and the span status.
 
