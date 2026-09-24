@@ -11,7 +11,7 @@ sidebarTitle: "Agent setup"
   Set up Hue tracing in this project. I already have a Hue account. Use curl to read https://docs.hue.run/guides/invited-setup.md and follow it. If you can't open it, stop and tell me. Before you install packages or change files, tell me the steps it gives and wait for my go-ahead.
   ```
 
-  Your agent lists the steps and waits for your go-ahead. It then asks you to create a **Read and write** key and store it yourself, in your secret manager or with `hue login` in your own terminal, so the key never goes into the chat. Then it adds tracing and verifies a real request.
+  Your agent lists the steps and waits for your go-ahead. It then asks you to create a **Read and write** key and store it yourself, in your secret manager or with `hue login` in your own terminal, so the key never goes into the chat. Then it adds tracing, recommends capturing prompts and responses so Hue shows complete traces, and verifies a real request.
 
   Prefer to set it up by hand? Start with [Installation](/installation). Don't have an account yet? Hue is invite-only: [book a time with the team](https://calendar.notion.so/meet/akethini/fd2smi4yej) or email [founders@hue.run](mailto:founders@hue.run).
 </Visibility>
@@ -57,6 +57,8 @@ This check sends no telemetry. `200` means the key works; continue. `401` means 
 ## 3. Add tracing
 
 Use curl to read [the Hue skill](https://docs.hue.run/skill.md) and follow it for the application's language and framework. Its invite-only check passes because `HUE_API_KEY` is now configured. The skill covers installing the SDK, choosing a capture policy, isolating serving requests from Hue and verifying a real request.
+
+Set this up for complete traces. Hue can only show and evaluate what a trace records, so in the plan you show the user, recommend content capture (`captureContent: true` in TypeScript, `capture_content=True` in Python) and say that it sends prompts, responses and tool inputs and outputs to Hue. The user's go-ahead authorizes it under the skill's capture rule. If they decline, or an existing application policy forbids sending that content to another service, use metadata-only capture. Keep redaction and credential filtering either way. Instrument every request path that calls a model or tool, with model and tool child spans and the application's session identifier, not only the request you verify.
 
 Where the skill asks for a **Tracing only** key, use this **Read and write** `HUE_API_KEY` for this setup. The SDKs don't load env files, so run the application through the same workflow as the check, for example its existing env loading, `node --env-file=<env-file>`, `uv run --env-file <env-file>` or the secret manager's runner, and keep reading `HUE_API_KEY` from the environment in code.
 
