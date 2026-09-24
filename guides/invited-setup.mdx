@@ -7,13 +7,9 @@ sidebarTitle: "Agent setup"
 <Visibility for="humans">
   **Setting up Hue yourself?** Copy this prompt into your coding agent, such as Claude Code, Cursor or Codex, from your application's repository. The rest of this page is written for the agent.
 
-  {/* The description shows the prompt and the body is what Copy prompt copies. Keep them identical. */}
-  <Prompt
-    description="Set up Hue tracing in this project. I already have a Hue account. Use curl to read `https://docs.hue.run/guides/invited-setup.md` and follow it. If you can't open it, stop and tell me. Before you install packages or change files, tell me the steps it gives and wait for my go-ahead."
-    actions={["copy"]}
-  >
-    Set up Hue tracing in this project. I already have a Hue account. Use curl to read `https://docs.hue.run/guides/invited-setup.md` and follow it. If you can't open it, stop and tell me. Before you install packages or change files, tell me the steps it gives and wait for my go-ahead.
-  </Prompt>
+  ```text Prompt wrap
+  Set up Hue tracing in this project. I already have a Hue account. Use curl to read https://docs.hue.run/guides/invited-setup.md and follow it. If you can't open it, stop and tell me. Before you install packages or change files, tell me the steps it gives and wait for my go-ahead.
+  ```
 
   Your agent lists the steps and waits for your go-ahead. It then asks you to create a **Read and write** key and store it yourself, in your secret manager or with `hue login` in your own terminal, so the key never goes into the chat. Then it adds tracing and verifies a real request.
 
