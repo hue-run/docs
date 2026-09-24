@@ -583,7 +583,7 @@
     },
     "python": {
       "name": "hue-run",
-      "version": "0.5.0"
+      "version": "0.5.1"
     }
   },
   "mcp": {
@@ -1478,7 +1478,7 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "c20bb8ebb2e0e272ec340386a0e4b0849767f0728bf28fab57b4bdcd4e3e039b",
+    "catalogSha256": "b1ac6008dc047f67d7111e38e4655a31028d6bfa923ed1058039c7e67b03957a",
     "installSnippets": {
       "claudeCodeProjectJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "claudeCodeCli": "claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp \\\n  --header 'Authorization: Bearer ${HUE_MCP_KEY}'",
