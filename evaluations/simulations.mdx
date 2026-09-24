@@ -6,14 +6,14 @@ description: "Run your existing TypeScript agent callback against a fresh simula
 
 Your agent runs in your process while a disposable simulated world runs in Hue. The world is authoritative and records an ordered journal of every action. Hue does not execute your agent code or hold your provider credentials.
 
-Simulations are available in `@hue-run/sdk` 0.2.0 for TypeScript only. They build on the [local evaluation runner](/evaluations/first-evaluation): each invocation creates a fresh experiment, one isolated world per case and a resumable checkpoint directory. For signatures and types, see the [simulation](/reference/typescript#run-a-simulation) and [environment](/reference/typescript#environment-client) sections of the reference.
+`runSimulation()` is available in `@hue-run/sdk` 0.2.0 and later, for TypeScript only; Python 0.5.0 and later include the lower-level environment client, [`hue_sdk.environment`](/reference/python#environment-client). Simulations build on the [local evaluation runner](/evaluations/first-evaluation): each invocation creates a fresh experiment, one isolated world per case and a resumable checkpoint directory. For signatures and types, see the [simulation](/reference/typescript#run-a-simulation) and [environment](/reference/typescript#environment-client) sections of the reference.
 
 ## Install
 
 Importing `@hue-run/sdk/evals` needs the optional `zod` peer (4.6.5 or later). Install it with the SDK:
 
 ```sh
-npm install @hue-run/sdk@0.7.0 zod
+npm install @hue-run/sdk@0.8.0 zod
 ```
 
 Set `HUE_API_KEY` to a [project service key](/guides/project-keys) created with the **Read and write** preset. The evaluation client and the environment client must use the same Hue origin.
@@ -143,13 +143,22 @@ A definition needs at least one case and one scorer, and case keys must be uniqu
 | `config` / `item` | The frozen experiment configuration and the frozen case, including its immutable environment-version pin. |
 | `tools` | Framework-neutral local callables generated from the world's catalog. `execute(args)` records a tool span, invokes the action and resolves with the world's observation. |
 | `mcp` | A short-lived bearer (`url`, `token`, `expiresAt`) for the same run's closed catalog when a model provider executes MCP remotely. It is scoped to one execution and world and is not the Hue project key. |
+| `world` | Present only for a world served by Hue's simulation gateway, which Hue Cloud does not enable yet. See [worlds with a handoff](#worlds-with-a-handoff). |
 | `executionId` / `environmentRunId` | The target execution and the world. `environmentRunId` identifies the world for adapter control operations such as `environmentClient.recordCoverageGap`; it is not a credential. |
 | `signal` | Cooperative cancellation. Pass it into the provider or agent call. |
 | `connectionBundle` | Present only after a ready provider-profile preflight. See below. |
 
 Configuration alone does not redirect real provider calls; give `tools` or `mcp` to the agent's actual tool boundary. The MCP token is delivered only to the callback and is never written to checkpoints or progress events.
 
+Hue-native `tools` and this `mcp` capability are deprecated in favor of the world handoff below, so `runSimulation()` emits a one-time `DeprecationWarning` (`HUE_NATIVE_SIMULATION_TOOLS`) when it hands them to your callback. On Hue Cloud that happens today, because it does not serve gateway worlds yet; pass `deprecationWarnings: false` to silence the warning. `hue eval` does not emit it.
+
 The local tools are bounded. Each callable accepts only the flat parameters its action declares and rejects unknown arguments; array parameters carry item and length limits. Every call is one journal step against the world's `maxSteps` budget (1–500, set per invocation), and each result reports `stepsRemaining`. Each call becomes an `execute_tool` span under the case span, so the trace and the journal describe the same actions.
+
+## Worlds with a handoff
+
+Where Hue's simulation gateway serves a world, the callback receives `context.world` instead of Hue-native tools. It holds a world token, one mirror URL per pinned provider surface, such as a Gmail MCP or REST mirror, environment variables for a child process and an `mcpServers` configuration. Point your agent's own provider client at the mirror and pass the world token where its provider credential would go. For a transition release, `context.mcp` is the world's first MCP mirror with the world token, so an adapter that reads `mcp` keeps working. Hue Cloud does not serve gateway worlds yet; until it does, `context.world` is absent.
+
+Pass `agentRevision` to `runSimulation()` to send the agent revision under test when each world is created; a gateway world records it in its fingerprint. Changing it while an unfinished simulation is checkpointed fails, like changing the definition. The [world handoff](/reference/typescript#world-handoff) reference covers the helpers that build a child process's environment and an owner-only MCP configuration file without the project key.
 
 ## Evidence and scoring
 
@@ -165,7 +174,7 @@ Cancellation is cooperative. Pass `signal` to `runSimulation()` and forward `con
 
 If the agent may have run without a saved outcome, resume fails explicitly with `UncertainExecutionError` and never calls it again. If Hue cannot confirm whether the world sealed, or a preflight response is lost after a decision may have been committed, the execution stays uncertain and `TargetOutcomeUncertainError` names the execution; a resume neither reacquires credentials nor invokes the callback again. Inspect the execution and its side effects before authorizing a new attempt. Removing the checkpoint directory or its lock is not permission to run the target again.
 
-Running a changed definition while an unfinished simulation is checkpointed in the same directory fails. Recover or finish that simulation first, or use another directory.
+Running a changed definition or agent revision while an unfinished simulation is checkpointed in the same directory fails. Recover or finish that simulation first, or use another directory.
 
 ## Pinned provider-profile preflight
 
@@ -205,7 +214,7 @@ Local scoring and historical rescoring skip incomplete evidence before calling a
 
 ## Current limits
 
-- `runSimulation()` is TypeScript-only. Like the other local runners, it needs POSIX filesystem semantics for its checkpoint directory; use WSL2 or a Linux runner on Windows.
+- `runSimulation()` is TypeScript-only. Python's `hue_sdk.environment` drives worlds directly but binds no tools and runs no agent. Like the other local runners, it needs POSIX filesystem semantics for its checkpoint directory; use WSL2 or a Linux runner on Windows.
 - Definitions use `schemaVersion: 1`, flat parameters and the fixed catalog of kernel semantics listed under `SemanticEntry` in the [reference](/reference/typescript#environmentdefinition). Identity is the only observation projection.
 - A world records at most 500 actions and its lease is at most 86,400 seconds. A published definition may contain up to 240 KB; evidence validation accepts worlds of at most 64 collections and 2,000 entities and evidence of at most 8 MiB; coverage-gap arguments are limited to 16,000 bytes; API responses to 4 MiB and request bodies to 1 MiB.
 - The hosted MCP connection exposes Hue's bounded native actions. It is not general Gmail or Slack HTTP parity and does not proxy arbitrary provider traffic.

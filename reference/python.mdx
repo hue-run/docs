@@ -1,9 +1,9 @@
 ---
 title: "Python API reference"
-description: "Configuration, tracing, delivery and evaluation APIs in hue-run 0.4.0."
+description: "Configuration, tracing, delivery, evaluation and environment APIs in hue-run 0.5.0."
 ---
 
-This reference covers `hue-run` **0.4.0** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
+This reference covers `hue-run` **0.5.0** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -11,6 +11,7 @@ This reference covers `hue-run` **0.4.0** on Python 3.10 or later, tested on 3.1
 | --- | --- |
 | `hue_sdk` | `Hue`, `create_hue_safe`, `HueSpan`, `Project`, `ProjectValidationError`, `Redactor`, `ExportStatus`, `TraceReceipt`, `TraceReceiptField`, `TraceReceiptFields`, `TraceVerificationError`, `TraceVerificationResult`. |
 | `hue_sdk.evals` | `EvaluationClient`, `HueApiError`, `run_experiment`, `rescore`, `builtin_scorers` (with `builtins` as an alias), `define_local_scorer`, `score_locally`, `MISSING`, `TraceEvidence`, `TargetContext`, `ScoreContext`, `Score`, `LocalScorer`, `RunnerReport` and the recovery errors. |
+| `hue_sdk.environment` | `EnvironmentClient`, `HueEnvironmentError`, the [world handoff](#world-handoff) helpers and the simulated-environment types. |
 | `hue_sdk.managed` | `ManagedTargetHandler`, `ManagedTargetContext`, `ManagedInputFile`, `ManagedOutputFile`, `ManagedTargetResult`, `ManagedResponse`. |
 
 The SDK sends OpenTelemetry traces and correlated logs. Your application remains responsible for provider calls and the instrumentation that observes them. The tracing core depends only on the OpenTelemetry packages and `requests`.
@@ -295,7 +296,7 @@ Both are exported from `hue_sdk.evals` and are synchronous entry points. They su
 | `trace_evidence` | Required for `run_experiment`: `TraceEvidence("required")` or `TraceEvidence("omit", "reason")`. |
 | `target` | Receives `(inputs, TargetContext)` and returns the output or an awaitable. `TargetContext` has `config`, `item` and `span`. |
 | `scorers` | Optional list of bound `LocalScorer` objects. |
-| `concurrency` | Default `1`; integer `1–16`. |
+| `concurrency` | Default `1`; integer `1–64`. |
 | `schema_timeout_millis` | Default `2000`; integer `100–60000`; bounds JSON Schema validation, not arbitrary callbacks. |
 
 Telemetry and evaluation clients must use the same project and origin. `rescore` requires an evaluation run created from saved subject IDs and has **no target callback**. `RunnerReport` exposes `run_id`, `subject_ids`, `result_ids` and `deferred_scorer_version_ids`.
@@ -329,6 +330,77 @@ Use one checkpoint directory per experiment or rescore run. Checkpoint files con
 For uncertain work, investigate side effects before starting another attempt. The low-level `start_execution` method requires the latest `previous_execution_id` for a replacement attempt and `allow_uncertain_retry=True` to replace a still-started attempt. Restarting a runner does not grant either permission or automatically adopt an externally created attempt. Use a new experiment for an intentional fresh target run after investigating.
 
 Required evidence waits for both signals after the root span ends. Omission is an explicit policy, never an automatic fallback after export failure. For a runnable example, see the public [first evaluation guide](/evaluations/first-evaluation).
+
+## Environment client
+
+```python
+import os
+
+from hue_sdk.environment import EnvironmentClient
+
+environments = EnvironmentClient(api_key=os.environ["HUE_API_KEY"])
+```
+
+`hue_sdk.environment` is a synchronous client for Hue's simulated worlds. Pass a **Read and write** project service key as `api_key=`; `base_url` defaults to Hue Cloud, and a bare key in the first position raises `TypeError`. `timeout_seconds` (default `10`) bounds each request and `max_attempts` (default `4`, integer `1–10`) bounds retries. It creates, drives, seals and reads worlds of published environment versions; it does not publish environments, bind tools or run your agent. `run_simulation` has no Python counterpart.
+
+| Method | Result or purpose |
+| --- | --- |
+| `create_run(*, idempotency_key, environment_version_id, execution_id=None, seed=None, max_steps=None, ttl_seconds=None, traceparent=None, agent_revision=None)` | `EnvironmentRun`. Creates or replays one fresh isolated world. `traceparent` is the case span's version-00 W3C trace context, whose trace ID must be the trace the execution declared; `agent_revision` (1–256 characters) joins the world's fingerprint. |
+| `get_run(run_id)` | `RunState`, the current or sealed world. Missing coverage fields read as `validity: "not_assessed"` and `coverageGap: None`. |
+| `act(run_id, *, invocation_id, action, args=None)` | `ActionResult`. Repeat the same UUID invocation ID and arguments to replay a recorded result. |
+| `list_steps(run_id, *, after=None, limit=None)` | `StepPage`. Pages the journal by step ordinal; `limit` is 1–100. |
+| `finish_run(run_id, *, idempotency_key, status)` | `SealedRun`. Seals the world as `"completed"` or `"abandoned"`. |
+| `record_coverage_gap(run_id, *, idempotency_key, provider, operation, code, args, description)` | `CoverageGapResult`. Records a known coverage gap; `idempotency_key` is a UUID and `args` at most 16,000 JSON bytes. |
+| `get_evidence(run_id, *, section="all", bodies=True)` | A dictionary with the sealed world's evaluator-only evidence. `section` is `"all"`, `"start"`, `"end"`, `"diff"` or `"ledger"`; `bodies` includes ledger request and response bodies. |
+
+Responses are typed dictionaries that keep the API's camelCase keys, with the same fields as the [TypeScript types](/reference/typescript#runs-actions-and-journals): `EnvironmentRun`, `RunState`, `ActionResult`, `ActionDefinition`, `ActionParameter`, `ActionSchema`, `Observation` (`OkObservation` or `ErrorObservation`), `Effect`, `Step`, `StepPage`, `SealedRun`, `CoverageGap`, `CoverageGapReporter`, `CoverageGapResult` and `EnvironmentCoverage`. `Json`, `RunStatus` and `FinishStatus` are the matching aliases.
+
+Unlike `EvaluationClient`, this client retries every call, including mutations, because each carries an identity Hue deduplicates. It retries transport failures and HTTP 408, 429, 500, 502, 503 and 504 with backoff, and waits Hue's `Retry-After` on 429 and 503, at most 10 seconds. Failures raise `HueEnvironmentError`, whose message never includes response text or credentials; `status` is the HTTP status or `None`, and `retry_after` is the bounded wait in seconds. Responses are limited to 4 MiB and request bodies to 1 MiB.
+
+### World handoff
+
+Where Hue's simulation gateway serves a world, `create_run` also returns its handoff: a world token, one mirror URL per pinned provider surface, environment variables and an MCP configuration. Hand these to the agent instead of the project key. Hue Cloud does not serve gateway worlds yet, so today `world_handoff` returns `None` and `get_evidence` fails with `HueEnvironmentError` status `404`.
+
+```python
+import subprocess
+
+from hue_sdk.environment import agent_environment, mcp_config_file, world_handoff
+
+run = environments.create_run(
+    idempotency_key=f"execution:{execution_id}",
+    environment_version_id=version_id,
+    execution_id=execution_id,
+    traceparent=f"00-{trace_id}-{span_id}-01",
+    agent_revision="my-agent@1.4.2",
+)
+status = "abandoned"
+try:
+    world = world_handoff(run)  # None when the world has no handoff
+    if world is None:
+        raise RuntimeError("This deployment does not serve gateway worlds.")
+    with mcp_config_file(world) as path:  # removed after the block
+        child = {**agent_environment(world), "MCP_CONFIG": path}
+        subprocess.run(agent_command, env=child, check=True)
+    status = "completed"
+finally:
+    # Seal a failed or unrun attempt as abandoned, never as completed.
+    environments.finish_run(
+        run["id"], idempotency_key=f"execution:{execution_id}:{status}", status=status
+    )
+```
+
+| Function | Behavior |
+| --- | --- |
+| `world_handoff(run)` | The `WorldHandoff` of a create or replay response, or `None` for a world without one. |
+| `agent_environment(world, *, parent=None, include_hue_credentials=False, legacy_mcp_variables=True)` | Environment variables for the agent's child process: `parent` (default `os.environ`) without Hue control-plane credentials, then the world's `env`, which wins. `legacy_mcp_variables` also sets `HUE_MCP_URL`, `HUE_MCP_TOKEN` and `HUE_MCP_EXPIRES_AT` from the first MCP mirror. |
+| `mcp_config_file(world, *, directory=None)` | Context manager that writes `mcpConfig` to an owner-only `mcp.json` in a private directory, yields its path and removes the directory afterwards. |
+| `legacy_mcp_capability(world)` | `LegacyMcpCapability`, `{"url", "token", "expiresAt"}` for the first MCP mirror, or `None` without an MCP surface. |
+| `strip_hue_control_plane_credentials(parent)` | A copy of `parent` without Hue control-plane credentials. |
+| `is_hue_control_plane_credential(name, value)` | `True` for a name in `HUE_CONTROL_PLANE_VARIABLES` (`HUE_API_KEY`, `HUE_MCP_KEY`, `HUE_PROJECT_KEY`, `HUE_SERVICE_KEY`) or a value that starts with `hue_sk_`, `hue_mcp_` or `hue_attempt_`. |
+
+`WorldHandoff` has `id`, `token` (a `hue_world_` credential that lives as long as the world), `expiresAt`, `lifecycle` (`WorldLifecycle`: `pending`, `live`, `completing` or `sealed`), `completingUntil`, `traceparent`, `baggage`, `surfaces` (`WorldSurface` entries with `provider`, `surface`, `providerInstanceKey`, `url` and `alias`), `env` (`HUE_WORLD_ID`, `HUE_WORLD_TOKEN`, `BAGGAGE`, `TRACEPARENT` and one `HUE_SIM_<SURFACE ID>_URL` per surface) and `mcpConfig` (`WorldMcpConfig`, the common `mcpServers` shape of `WorldMcpServer` entries with the token as a bearer). `RunState` of a gateway world adds advisory `flags` (`WorldFlag`: `no_calls` or `fingerprint_differs`) and never returns the token; `WorldEvidenceSection` names the evidence sections.
+
+Finishing a gateway world answers `lifecycle: "completing"` with `sealedAt: None`; the seal follows a 5-second grace. `get_evidence` needs the project key, and an open world answers `409` until it is sealed. Nothing in these helpers logs the token. Keep the handoff out of your own logs and checkpoints.
 
 ## Managed target adapter
 
