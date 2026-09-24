@@ -87,7 +87,7 @@ Open **Traces** in the project that owns the key. The root span and its `execute
 You must supply `captureContent: true` or `false`. A disabled client (`enabled: false`) exports nothing and defaults it to `false`.
 
 - `false` disables Hue helper content and removes recognized GenAI, Vercel AI SDK, OpenInference, and OpenLLMetry content fields before Hue exports them, including spans from other instrumentations on a shared provider. It also removes log bodies, status descriptions and exception text. The exported `contentPrefixes` array lists the removed keys.
-- `true` captures content you provide to supported helpers and instrumentations. Hue stores received content; automatic telemetry expiry is not currently available.
+- `true` captures content you provide to supported helpers and instrumentations. Hue stores received content; automatic telemetry expiry is not currently available. Before export, the SDK replaces credentials in recorded tool definitions with `"[redacted]"` and exports an inline file over 64 KiB in recorded messages as its `sha256` and `size`; see the [content policy](/reference/typescript#content-policy).
 - `redact(value, path)` can transform supported strings before export. Redactor and capture failures omit unsafe content and increment instrumentation failure counters without changing application results.
 
 Helper spans record a failed callback's `error.type` (the error's `name`), an ERROR status and an `exception` event carrying only the type. Exception messages and stack traces are never recorded, whatever `captureContent` is; keep them in application logs.
@@ -130,7 +130,7 @@ const response = await hue.model(
 );
 ```
 
-Like `withSpan`, the options come after the callback and also accept `name`, `sessionId`, `userId`, `input` and `parentContext`. `hue.recordMessages({ input, output })` inside the callback emits a correlated `gen_ai.client.inference.operation.details` log record that inherits the request metadata; pass `operation`, `provider` and `model` explicitly outside a `model()` span. Use either span attributes or the log record for a given content event.
+Like `withSpan`, the options come after the callback and also accept `name`, `sessionId`, `userId`, `workspaceId`, `input` and `parentContext`. Pass `systemInstructions` and `tools` when you send them separately from the messages. For tools the provider runs itself, such as OpenAI hosted MCP or web search, call [`hue.recordProviderToolCalls(response)`](/reference/typescript#provider-executed-tools) inside the callback. `hue.recordMessages({ input, output })` inside the callback emits a correlated `gen_ai.client.inference.operation.details` log record that inherits the request metadata; pass `operation`, `provider` and `model` explicitly outside a `model()` span. Use either span attributes or the log record for a given content event.
 
 Across processes, call `hue.inject(carrier)` inside the producing span and pass `hue.extract(carrier)` as `parentContext` in the worker. Both carry W3C `traceparent` only, never the API key or baggage, and `inject()` keeps propagating the application's own trace context when the client is disabled. Hue registers no global propagator or context manager. When your application has registered a context manager, `withSpan`, `tool` and `model` also make their span the active OpenTelemetry span while the callback runs, so spans from instrumentations that use the global API parent under it.
 

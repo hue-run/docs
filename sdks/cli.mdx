@@ -7,11 +7,11 @@ description: "Store a Hue key with hue login, connect your coding agent with hue
 
 <CodeGroup>
 ```sh npm
-npm install @hue-run/sdk@0.8.0
+npm install @hue-run/sdk@0.8.1
 ```
 
 ```sh Bun
-bun add @hue-run/sdk@0.8.0
+bun add @hue-run/sdk@0.8.1
 ```
 </CodeGroup>
 
@@ -33,10 +33,12 @@ A **Read** or **Tracing only** key is refused before anything is stored, because
 | --- | --- |
 | `--keys coding-agent` | Store only `HUE_MCP_KEY`. Accepts a **Read** key for an agent that should only inspect the project. |
 | `--keys evaluations` | Store only `HUE_API_KEY`. |
-| `--env-file PATH` | Write another file instead of `./.env.hue`. |
+| `--env-path PATH` | Write another file instead of `./.env.hue`, creating it when missing. |
 | `--force` | Replace a different value already in the file. |
 | `--origin URL` | Use another Hue origin, such as staging. |
 | `--no-browser` | Print the settings page without opening it. |
+
+`--env-file PATH` is also accepted for a file that already exists. Node.js 22 and 24 read `--env-file` from the whole command line, so when the file does not exist yet they exit with `node: <path>: not found` before `hue` runs; use `--env-path` to create a new file.
 
 To revoke evaluation and agent access separately, run `--keys evaluations` and `--keys coding-agent` with two different keys.
 
@@ -52,7 +54,7 @@ Export `HUE_MCP_KEY` in the shell that starts your client, then ask the agent to
 
 ## Run an evaluation
 
-`hue eval` runs your agent locally against a saved eval set or a published case and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It uses `HUE_API_KEY` from `--env-file` and needs the optional `zod` peer dependency:
+`hue eval` runs your agent locally against a saved eval set or a published case and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It uses `HUE_API_KEY` from `--env-file` (or its alias `--env-path`) and needs the optional `zod` peer dependency:
 
 ```sh
 npm install zod

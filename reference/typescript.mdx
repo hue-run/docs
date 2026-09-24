@@ -1,9 +1,9 @@
 ---
 title: "TypeScript API reference"
-description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.8.0."
+description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.8.1."
 ---
 
-This reference covers `@hue-run/sdk` **0.8.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+This reference covers `@hue-run/sdk` **0.8.1** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -93,23 +93,26 @@ hue.recordMessages(
   messages: {
     input?: unknown;
     output?: unknown;
+    systemInstructions?: unknown;
     operation?: string;
     provider?: string;
     model?: string;
   },
   explicitContext?: Context,
 ): void
+hue.recordProviderToolCalls(response: unknown, options?: ProviderToolCallOptions): void
+hue.recordFile(file: FileRecord, explicitContext?: Context): void
 ```
 
 `withSpan` returns the callback's result, ends the span after the callback settles, and records then rethrows an escaping application error. Consume streams inside the callback if their work belongs to that span. A returned streaming `Response` is not evidence that the stream has finished.
 
-`tool` runs `execute` inside a span named `execute_tool {name}` with `gen_ai.tool.name`, records `input` and a defined result as `gen_ai.tool.call.arguments` / `gen_ai.tool.call.result` according to your content policy, and returns the tool result. An `undefined` result omits result content. `options.parentContext` supplies an explicit parent for the tool span. `ToolOptions` extends `Pick<SpanOptions, "parentContext">` with `callId`, the provider-issued tool-call id recorded as `gen_ai.tool.call.id`, and `mcp`, an `McpServerInfo` (the MCP `initialize` `serverInfo`, passed as `client.getServerVersion()` after connect) recorded as `mcp.server.name` / `mcp.server.version` so a generic tool name is attributed to the server that handled the call.
+`tool` runs `execute` inside a span named `execute_tool {name}` with `gen_ai.tool.name`, records `input` and a defined result as `gen_ai.tool.call.arguments` / `gen_ai.tool.call.result` according to your content policy, and returns the tool result. An `undefined` result omits result content. `options.parentContext` supplies an explicit parent for the tool span. `ToolOptions` extends `Pick<SpanOptions, "parentContext">` with `callId`, the provider-issued tool-call id recorded as `gen_ai.tool.call.id`, and `mcp`, an `McpServerInfo` (the MCP `initialize` `serverInfo`, passed as `client.getServerVersion()` after connect) recorded as `mcp.server.name` / `mcp.server.version` so a generic tool name is attributed to the server that handled the call. When the server is a Hue surface, `McpServerInfo` also takes `provider` and `surface` (for example `google.gmail` and `google.gmail/mcp`), recorded as `hue.mcp.provider` / `hue.mcp.surface`. A blank, over-256-character or otherwise invalid label is omitted and counted as an instrumentation failure; the tool still runs.
 
-`model` runs `callback` inside a GenAI client span for one direct provider call, named `{operation} {model}` unless `options.name` is given, with `gen_ai.operation.name`, `gen_ai.request.model` and `gen_ai.provider.name`. The argument order matches `withSpan`. Inside it, the handle's `setInput` and `setOutput` record `gen_ai.input.messages` / `gen_ai.output.messages`, which should use the GenAI semantic-convention message shape; `recordMessages` inside the callback inherits the request metadata.
+`model` runs `callback` inside a GenAI client span for one direct provider call, named `{operation} {model}` unless `options.name` is given, with `gen_ai.operation.name`, `gen_ai.request.model` and `gen_ai.provider.name`. The argument order matches `withSpan`. Inside it, the handle's `setInput` and `setOutput` record `gen_ai.input.messages` / `gen_ai.output.messages`, which should use the GenAI semantic-convention message shape; `recordMessages` inside the callback inherits the request metadata. When you send system instructions or tools separately from the messages, pass them as `systemInstructions` and `tools` in [ModelOptions](#modeloptions).
 
 Content helpers (`setInput`, `setOutput`, `tool` arguments and results, `recordMessages` and `SpanOptions.input`) accept `unknown` and encode plain JSON data (`JsonValue`) at runtime. A value that is not JSON, such as a `Date` or a class instance, is omitted with an instrumentation failure while the callback result is returned unchanged.
 
-`recordMessages` emits a correlated `gen_ai.client.inference.operation.details` log record with the messages in its body. `gen_ai.operation.name`, `gen_ai.provider.name` and `gen_ai.request.model` are set as record attributes from the caller's `operation`, `provider` and `model` or from the enclosing `model()` span, and `gen_ai.conversation.id` from the active session. With content capture enabled, it requires an active span or explicit span context. With capture disabled, it emits nothing. Use logs or span attributes for the same content event to avoid storing duplicate copies.
+`recordMessages` emits a correlated `gen_ai.client.inference.operation.details` log record with the messages, and optional `systemInstructions` as `gen_ai.system_instructions`, in its body. `gen_ai.operation.name`, `gen_ai.provider.name` and `gen_ai.request.model` are set as record attributes from the caller's `operation`, `provider` and `model` or from the enclosing `model()` span, and `gen_ai.conversation.id` from the active session. With content capture enabled, it requires an active span or explicit span context. With capture disabled, it emits nothing. Use logs or span attributes for the same content event to avoid storing duplicate copies.
 
 `recordError` marks a span failed the way every helper does: `error.type` (the error's `name`), an ERROR status without a description and an `exception` event carrying only `exception.type`. Exception messages and stack traces are never recorded, whatever `captureContent` is.
 
@@ -124,13 +127,14 @@ Content helpers (`setInput`, `setOutput`, `tool` arguments and results, `recordM
 | `input?: unknown` | Optional root input, recorded as `input.value`. Omitted when content capture is disabled. |
 | `sessionId?: string` | Inherits from the surrounding Hue callback; maps to `gen_ai.conversation.id`. |
 | `userId?: string` | Inherits from the surrounding Hue callback; maps to `user.id`. This is your application identity, not a Hue account. |
+| `workspaceId?: string` | Inherits from the surrounding Hue callback; maps to `hue.workspace.id`. The workspace or tenant in your application that the work runs in. |
 | `parentContext?: Context` | Explicit parent, for example from `hue.extract()`; otherwise the surrounding Hue context or active OpenTelemetry context. |
 
-Session and user identifiers must contain 1–4096 valid characters. `hue.tracer` is an OpenTelemetry tracer that preserves Hue's local async context; spans other instrumentations create through it parent under `withSpan` and inherit identifiers. `hue.getContext()` supplies the helper's current context to an integration that accepts an explicit parent. When your application has registered a context manager, `withSpan`, `tool`, `model` and `hue.tracer.startActiveSpan` also make their span the active OpenTelemetry span while the callback runs; Hue registers none itself.
+Session, user and workspace identifiers must contain 1–4096 valid characters. `hue.tracer` is an OpenTelemetry tracer that preserves Hue's local async context; spans other instrumentations create through it parent under `withSpan` and inherit identifiers. `hue.getContext()` supplies the helper's current context to an integration that accepts an explicit parent. When your application has registered a context manager, `withSpan`, `tool`, `model` and `hue.tracer.startActiveSpan` also make their span the active OpenTelemetry span while the callback runs; Hue registers none itself.
 
 ### ModelOptions
 
-`ModelOptions` extends the `sessionId`, `userId`, `input` and `parentContext` members of `SpanOptions`.
+`ModelOptions` extends the `sessionId`, `userId`, `workspaceId`, `input` and `parentContext` members of `SpanOptions`.
 
 | Option | Behavior |
 | --- | --- |
@@ -138,6 +142,8 @@ Session and user identifiers must contain 1–4096 valid characters. `hue.tracer
 | `operation?: string` | Recorded as `gen_ai.operation.name`; defaults to `"chat"`. |
 | `name?: string` | Span name; defaults to `"{operation} {model}"`. |
 | `input?: unknown` | Recorded as `gen_ai.input.messages` when `captureContent` is true. |
+| `systemInstructions?: unknown` | System instructions sent separately from the messages, for example `[{ type: "text", content: instructions }]`. Recorded as `gen_ai.system_instructions` when `captureContent` is true. |
+| `tools?: unknown` | Tool definitions offered to the model, for example `[{ type: "function", name, description, parameters }]`. Recorded as `gen_ai.tool.definitions` when `captureContent` is true, after [credential scrubbing](#content-policy). |
 
 Labels must be non-empty strings of at most 256 characters; other values fall back to `"unknown"` or `"chat"` and count as instrumentation failures.
 
@@ -146,6 +152,51 @@ Labels must be non-empty strings of at most 256 characters; other values fall ba
 The callback receives `span` (the underlying OpenTelemetry span), `context`, `traceId`, `spanId`, `setInput(value: unknown)`, `setOutput(value: unknown)` and `setUsage(usage: TokenUsage)`. Inside `model()`, `setInput` and `setOutput` record `gen_ai.input.messages` and `gen_ai.output.messages`; elsewhere they record `input.value` and `output.value`. `TokenUsage` is `{ inputTokens?: number; outputTokens?: number }`, recorded as `gen_ai.usage.input_tokens` and `gen_ai.usage.output_tokens`; invalid values are omitted and counted as instrumentation failures. IDs are all zeros for a disabled client.
 
 Use `span.setAttribute(...)`, `span.addEvent(...)` and the other standard OpenTelemetry APIs for additional metadata. Hue does not estimate absent token counts or cost. Captured JSON `null`, `false`, `0` and `""` remain present values; they are distinct from an omitted field. Helper content must serialize as JSON and fit within 256 KiB per field.
+
+### Provider-executed tools
+
+Tools the provider runs itself, such as OpenAI hosted MCP, web search, file search and code interpreter, or Anthropic's MCP connector and server tools, never pass through `hue.tool()`. Inside the same `model()` callback, hand the response to `recordProviderToolCalls`:
+
+```ts
+await hue.model(
+  "gpt-5-mini",
+  async (span) => {
+    const response = await openai.responses.create(request);
+    span.setOutput(response.output_text);
+    hue.recordProviderToolCalls(response, { request });
+    return response;
+  },
+  { provider: "openai" },
+);
+```
+
+Each OpenAI Responses `mcp_call`, `web_search_call`, `file_search_call` or `code_interpreter_call` item, and each Anthropic `mcp_tool_use` or `server_tool_use` block with its result, becomes an `execute_tool {name}` child span with `gen_ai.tool.type` `extension`, `gen_ai.tool.call.id` and, for MCP calls, `mcp.server.name` (the provider's label). Arguments and results follow `captureContent`; a failed call carries `error.type` (`mcp_error`, or the provider's status or error code) and an ERROR status. An OpenAI `mcp_list_tools` item becomes a `tools/list` child span with that server's `gen_ai.tool.definitions`. The spans have no duration of their own: the provider ran the tools inside the model request. Unreadable items are skipped and counted as instrumentation failures; nothing is thrown.
+
+`ProviderToolCallOptions` extends `Pick<SpanOptions, "parentContext">`:
+
+| Option | Behavior |
+| --- | --- |
+| `provider?: HostedToolProvider` | `"openai"` (Responses API) or `"anthropic"` (Messages API). Defaults to the enclosing `model()` call's provider when it is one of these. |
+| `request?: unknown` | The request the response answers. Only hosted MCP server URLs are read from it, never credentials, to record each server's host as `server.address`. |
+| `servers?: Record<string, HostedServerInfo>` | Identity of each hosted MCP server, keyed by the label the provider uses for it. `HostedServerInfo` has `name` (recorded as `mcp.server.name`, defaulting to the label), `version`, and the Hue `provider` and `surface`. |
+
+### Files
+
+`recordFile` adds a `hue.file` event to the active span, or to the span of an explicit context passed second, for a file the work read, received or produced. Files are linked by content hash, so a trace can be matched to the same file elsewhere without exporting its bytes:
+
+```ts
+import { readFile } from "node:fs/promises";
+
+await hue.withSpan("review contract", async () => {
+  const pdf = await readFile("contract.pdf");
+  hue.recordFile({ role: "input", mediaType: "application/pdf", data: pdf, name: "contract.pdf" });
+  // ...
+});
+```
+
+A `FileRecord` has `role` (`"input"` given to the agent, `"attachment"` from a tool or message, or `"output"` produced by the agent), `mediaType`, and either `data` (a `Uint8Array`, or a string hashed as UTF-8) or `sha256`, with optional `byteSize` and `name`. `data` up to 25 MiB is hashed and measured locally and never exported; larger data is omitted and counted as an instrumentation failure, so pass `sha256` and `byteSize` when you already have them. A supplied `sha256` or `byteSize` must match `data`.
+
+The event carries `hue.file.sha256`, `hue.file.role`, `hue.file.media_type` and, when known, `hue.file.size`. It is metadata, so it is recorded in both capture modes; `hue.file.name` is recorded only when `captureContent` is true. An invalid record, or one without an active span, is omitted and counted as an instrumentation failure.
 
 ## Vercel AI SDK adapter
 
@@ -174,12 +225,17 @@ const result = await generateText({
 
 `hueExperimentalTelemetry(hue: HueClient): ExperimentalTelemetrySettings` returns `{ isEnabled, recordInputs, recordOutputs, tracer }`: `isEnabled` mirrors the client's `enabled` flag, the record flags mirror `captureContent`, and `tracer` is Hue's tracer, so AI SDK 6 spans parent under `withSpan` and inherit identifiers. It needs no `@ai-sdk/otel` peer. Do not upgrade an existing app's AI SDK just to install Hue. For an app that already emits OpenTelemetry spans, assess the [existing-provider path](/integrations/opentelemetry) and its installed OpenTelemetry versions using the [compatibility guide](/sdks/compatibility).
 
+Provider-executed tools, such as OpenAI hosted MCP (`openai.tools.mcp`), appear as `execute_tool mcp.<name>` spans with `gen_ai.tool.type` `extension`. The server is named only by `serverLabel` inside the recorded result, so before export the SDK copies it to `mcp.server.name`, and a result carrying an MCP `error` sets an ERROR status and `error.type` `mcp_error`. Both attributes survive metadata-only export. The label can only be read when AI SDK recorded the result: `hueTelemetry(hue)` with `captureContent: false` records none, whereas an application whose AI SDK integration records outputs and exports through Hue's attached processors keeps the label.
+
 AI SDK per-call integrations replace the global integrations for that call. If your app already has telemetry, preserve its setup and attach Hue to the existing provider. See [OpenTelemetry](/integrations/opentelemetry) and the [reference chatbot](/integrations/reference-chatbot).
 
 ## Content policy
 
 - `captureContent: false` disables Hue helper content and removes recognized GenAI, Vercel AI SDK, OpenInference and OpenLLMetry content, legacy GenAI content events, log bodies, status messages and exception text before Hue exports records, including records from other instrumentations on a shared provider. The exported `contentPrefixes` array lists the attribute keys, and their dotted children, that are removed; the [compatibility matrix](/sdks/compatibility) reproduces it. It does not classify every custom attribute name.
 - `captureContent: true` permits supplied content. Received content is stored by Hue; the SDK does not set a retention timer. Helpers still omit exception messages and stack traces.
+- With `captureContent: false`, a record whose tool definitions are removed keeps a summary of them: `hue.tool.names` lists each definition's `name` (Chat Completions `function.name`, or the `type` of an unnamed built-in tool such as `mcp`) in order, and `hue.tool.definitions.sha256` is the lowercase hex SHA-256 of the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical JSON of the credential-scrubbed definition list. The digest does not change when a credential rotates. Only definitions another integration recorded can be summarized: `hueTelemetry(hue)` with `captureContent: false` records none.
+- Hosted tools carry credentials in their definitions, such as the `authorization` and `headers` of an OpenAI hosted MCP tool. Before export, and before `redact`, Hue replaces the values of credential-like fields (`authorization`, `authorization_token`, `headers`, `api_key`, `access_token`, `x-api-key`, and keys ending in `token`, `secret`, `password`, `apikey` or `credential`, case-insensitively and ignoring `-` and `_`) with `"[redacted]"` in `gen_ai.tool.definitions`, `ai.prompt.tools` and `llm.tools.*.tool.json_schema`, and in the `tools` and `mcp_servers` entries of a raw provider request or response recorded as `input.value`, `output.value` or `llm.invocation_parameters`. Parameters named in a JSON Schema `properties` object keep their schemas, so a tool that takes a `headers` argument is still described. A definition nested more than 256 levels deep rejects its record.
+- A `blob` part in `gen_ai.input.messages` / `gen_ai.output.messages` or a `file` part in `ai.prompt.messages` whose inline content is longer than 64 KiB is exported without its payload: Hue replaces its `content` or `data` with the file's `sha256` (of the decoded bytes for base64 and `data:` URLs, of the UTF-8 text otherwise) and `size`, and keeps the part's other fields. The digest matches `hue.file.sha256` from [`recordFile`](#files) for the same bytes. Smaller inline files are exported as recorded.
 - `redact(value, path)` transforms supported strings in attributes, resources, event/link attributes and log bodies before Hue exports them. It must return a string. A redactor failure rejects the affected record and becomes an export issue.
 - This policy applies to Hue's export path. Another exporter and arbitrary span/scope names remain your application's responsibility.
 
@@ -740,7 +796,7 @@ bindEnvironmentTools(options: BindEnvironmentToolsOptions): Record<string, Envir
 
 `bindEnvironmentTools` binds a run's generated catalog to plain local callables without changing the agent framework. `BindEnvironmentToolsOptions` requires `hue`, the client that records each action as tool telemetry, `client`, an environment client bound to the same Hue origin (only `act` is used), and `run`, the fresh `EnvironmentRun` whose closed catalog becomes callables. `parentContext` supplies an optional parent span context for the generated tool spans; `invocationId(action)` is an optional durable invocation-ID factory for caller-owned resume state, and without it each call uses a random UUID.
 
-Each `EnvironmentTool` has `name`, `description?`, `inputSchema` (the action's `ActionSchema`) and `execute(args?)`, which runs the action inside `hue.tool(name, args, ...)` and resolves with the world's `Observation`. Transport failures reject with `HueEnvironmentError`.
+Each `EnvironmentTool` has `name`, `description?`, `inputSchema` (the action's `ActionSchema`) and `execute(args?)`, which runs the action inside `hue.tool(name, args, ...)` and resolves with the world's `Observation`. When the catalog entry names its MCP server, the tool span also carries `mcp.server.name` and `mcp.server.version`, plus `hue.mcp.provider` and `hue.mcp.surface` when the entry includes them. Transport failures reject with `HueEnvironmentError`.
 
 ### World handoff
 
