@@ -758,20 +758,25 @@ const run = await environments.createRun({
   traceparent: `00-${span.traceId}-${span.spanId}-01`,
   agentRevision: "my-agent@1.4.2",
 });
-const world = worldHandoff(run); // null when the world has no handoff
-if (world) {
+let status: "completed" | "abandoned" = "abandoned";
+try {
+  const world = worldHandoff(run); // null when the world has no handoff
+  if (!world) throw new Error("This deployment does not serve gateway worlds");
   const config = await writeMcpConfig(world);
   try {
     // spawnAgent is your application function, not an SDK method.
     await spawnAgent({ env: agentEnvironment(world), mcpConfigPath: config.path });
+    status = "completed";
   } finally {
     await config.dispose();
   }
+} finally {
+  // Seal a failed or unrun attempt as abandoned, never as completed.
+  await environments.finishRun(run.id, {
+    idempotencyKey: `execution:${executionId}:${status}`,
+    status,
+  });
 }
-await environments.finishRun(run.id, {
-  idempotencyKey: `execution:${executionId}:completed`,
-  status: "completed",
-});
 ```
 
 | Function | Behavior |
