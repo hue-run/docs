@@ -10,7 +10,7 @@ sidebarTitle: "Agent setup (invited)"
 
 ## 1. Get a Read and write key
 
-Hue grants access through a project key. This setup uses one **Read and write** key: it sends traces, checks stored traces and lets you run evaluations and connect to the [Hue MCP server](/agents/mcp-server). If the repository already has an `.env.hue` file with `HUE_API_KEY`, go to step 2 without reading its values.
+Hue grants access through a project key. This setup uses one **Read and write** key: it sends traces, checks stored traces and lets you run evaluations and connect to the [Hue MCP server](/agents/mcp-server). If the repository already has an `.env.hue` file with both `HUE_API_KEY` and `HUE_MCP_KEY`, `hue login` wrote it with a **Read and write** key; go to step 2 without reading its values. A `HUE_API_KEY` stored anywhere else, such as the application's environment or secret manager, may be a **Tracing only** key for a server: leave it in place and still create the key below.
 
 Otherwise, ask the user to:
 
@@ -52,7 +52,7 @@ Once a real request is verified, offer to connect the coding agent to the [Hue M
 npx --yes --package @hue-run/sdk@0.8.0 hue mcp install --client claude-code
 ```
 
-The command writes a server named `hue` that reads `HUE_MCP_KEY` from the environment; it never writes the key. The user exports `HUE_MCP_KEY` from `.env.hue` in the shell that starts the client and restarts it. The same `.env.hue` also runs evaluations with `hue eval`; see the [Hue CLI](/sdks/cli).
+The command writes a server named `hue` that reads `HUE_MCP_KEY` from the environment; it never writes the key. For Gemini CLI it runs `gemini mcp add` with the literal `$HUE_MCP_KEY` reference, which Gemini resolves at runtime. The user exports `HUE_MCP_KEY` from `.env.hue` in the shell that starts the client and restarts it. The same `.env.hue` also runs evaluations with `hue eval`; see the [Hue CLI](/sdks/cli).
 
 ## If you are a person reading this
 
