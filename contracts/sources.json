@@ -3,7 +3,7 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "f61896175b61ce618f7c1cb870f7b0d8a019d213",
+      "commit": "5a1e50bfa8a341d155f343e30c122568a1892ef4",
       "contractFile": "contracts/fern-public-docs.json",
       "sha256": "sha256:298f81e9cfe9f8a4dcbcf7c4502619724a0fb9fff6dd7e6e4ec491d937357f00"
     },
