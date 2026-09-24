@@ -25,7 +25,7 @@ import { createHue } from "@hue-run/sdk";
 const hue = createHue({
   apiKey: process.env.HUE_API_KEY!, // Read the key from server configuration.
   serviceName: "my-agent",
-  captureContent: false, // Omit supported input/output content.
+  captureContent: true, // Record supported input/output content.
 });
 ```
 
@@ -38,7 +38,7 @@ const hue = createHue({
 | `apiKey` | `string` | Required when enabled; ignored for `enabled: false`. Use **Tracing only** for tracing and known-trace receipts; use **Read and write** when this process also calls evaluation APIs. Keep it in server-only configuration. |
 | `serviceName` | `string` | Required when enabled; 1–256 characters with non-whitespace content. Sets `service.name` on providers created by Hue. |
 | `enabled` | `boolean` | `true`; `false` creates a disabled client without attaching processors or requiring a key. |
-| `captureContent` | `boolean` | Required explicit choice for an enabled client; there is no default. A disabled client defaults it to `false`. |
+| `captureContent` | `boolean` | Required explicit choice for an enabled client; there is no default. `true`, the recommended setting, records supported content; `false` sends metadata only. See [content policy](#content-policy). A disabled client defaults it to `false`. |
 | `baseUrl` | `string` | `https://app.hue.run`. Supply an origin, without an API path, query, fragment or credentials. HTTPS is required except for loopback HTTP. |
 | `allowInsecureHttp` | `boolean` | `false`. `true` permits `http://` to hosts other than loopback, for example a docker-compose or in-cluster collector, and records a one-time `warning` issue because the key then travels unencrypted. |
 | `serviceVersion` | `string` | Optional `service.version` on providers created by Hue. |

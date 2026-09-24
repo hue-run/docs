@@ -43,7 +43,7 @@ if (!apiKey) throw new Error("Set HUE_API_KEY in your server environment.");
 const transport = createHueTransport({
   apiKey,
   serviceName: "existing-otel-demo",
-  captureContent: false,
+  captureContent: true, // Keep recorded prompts, responses and tool inputs/outputs.
 });
 const resource = resourceFromAttributes({ "service.name": "existing-otel-demo" });
 // Add Hue processors when constructing your application's providers.
@@ -133,7 +133,7 @@ A child can arrive before its parent, and a correlated log can arrive before its
 
 ## Control content at its source
 
-When using an external exporter directly, configure capture and redaction in your instrumentation or collector. Hue stores the content it receives; it does not reconstruct missing prompts or apply an automatic retention timer.
+Hue can only show and evaluate what a trace records, so enable your instrumentation's capture of prompts, responses and tool inputs and outputs unless you'd rather not send that content or an application or data policy forbids sending it to another service. When using an external exporter directly, configure capture and redaction in your instrumentation or collector. Hue stores the content it receives; it does not reconstruct missing prompts or apply an automatic retention timer.
 
 Both Hue SDKs strip recognized content attributes from every record on their export path when `captureContent` / `capture_content` is false, including records from third-party instrumentors on a borrowed provider; unrecognized custom keys pass through, so keep the instrumentor's own capture controls configured. Avoid sensitive values in custom metadata regardless of your chosen SDK.
 

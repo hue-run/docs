@@ -39,7 +39,7 @@ Start with one request. Inspect its input, output, model calls and tool calls, t
 
 Use the [TypeScript SDK](/sdks/typescript) or [Python SDK](/sdks/python) for explicit tracing and local evaluation workflows. If your application already has OpenTelemetry, follow the [existing instrumentation guide](/integrations/opentelemetry) to add Hue without replacing your provider.
 
-Your application must emit telemetry. Calling a model API alone does not send data to Hue. Choose explicitly whether telemetry includes prompt and output content or only metadata.
+Your application must emit telemetry. Calling a model API alone does not send data to Hue. The SDKs ask you to choose explicitly whether telemetry includes content. Capture it: Hue can only show and evaluate what a trace records, so record prompts, responses and tool inputs and outputs alongside model, usage, timing and errors. Send metadata only when you'd rather not share that content, or when an application or data policy forbids sending it to another service.
 
 ## Tracing and evaluation
 
