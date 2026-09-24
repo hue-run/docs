@@ -1,9 +1,9 @@
 ---
 title: "Python API reference"
-description: "Configuration, tracing, delivery, evaluation and environment APIs in hue-run 0.5.0."
+description: "Configuration, tracing, delivery, evaluation and environment APIs in hue-run 0.5.1."
 ---
 
-This reference covers `hue-run` **0.5.0** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
+This reference covers `hue-run` **0.5.1** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -82,10 +82,10 @@ with hue.context(session_id="conversation-1", user_id="application-user"):
 
 | Method | Parameters and behavior |
 | --- | --- |
-| `hue.context(*, session_id=None, user_id=None)` | Adds task-local identifiers inherited by nested Hue helpers. Maps to `gen_ai.conversation.id` and `user.id`; does not modify global baggage. |
+| `hue.context(*, session_id=None, user_id=None, workspace_id=None)` | Adds task-local identifiers inherited by nested Hue helpers. Maps to `gen_ai.conversation.id`, `user.id` and `hue.workspace.id` (the application workspace or tenant); does not modify global baggage. |
 | `hue.span(name, *, attributes=None, kind=SpanKind.INTERNAL, parent_context=None)` | Yields `HueSpan`, activates its OpenTelemetry context and ends it on exit. Explicit attributes override inherited attributes with the same name. |
-| `hue.model(model, *, provider, operation="chat", name=None)` | Yields a client span with model/provider/operation attributes. Default name is `"{operation} {model}"`. It does not invoke a model or estimate usage. |
-| `hue.tool(name, *, call_id=None)` | Yields a tool span named `"execute_tool {name}"`, with an optional tool-call identifier. |
+| `hue.model(model, *, provider, operation="chat", name=None, system_instructions=..., tools=...)` | Yields a client span with model/provider/operation attributes. Default name is `"{operation} {model}"`. Optional `system_instructions` and `tools` (any JSON value, ideally in the GenAI shapes) are recorded as `gen_ai.system_instructions` and `gen_ai.tool.definitions` when content is captured; omit them to record nothing. It does not invoke a model or estimate usage. |
+| `hue.tool(name, *, call_id=None, mcp=None)` | Yields a tool span named `"execute_tool {name}"`, with an optional tool-call identifier. `mcp` is a mapping with optional `name`, `version`, `provider` and `surface`, recorded as `mcp.server.name`, `mcp.server.version`, `hue.mcp.provider` and `hue.mcp.surface`; an invalid value is omitted and counted as an instrumentation failure. |
 | `Hue.inject(headers)` | Adds the active W3C trace context to a mutable string mapping. Does not insert the Hue key or baggage. |
 | `Hue.extract(headers)` | Returns an OpenTelemetry `Context` to pass as `parent_context`. |
 
@@ -101,13 +101,16 @@ An exception escaping a Hue span records error type/status, then propagates unch
 | `set_input(value)` / `set_output(value)` | Captures JSON helper content according to `capture_content` and the redactor. Model/tool helpers choose their corresponding GenAI field names. |
 | `set_usage(*, input_tokens=None, output_tokens=None)` | Sets known nonnegative integer token counts. `None` omits a count; booleans and negative counts are rejected. |
 | `record_error(error)` | Records error type and status without exception text. Does not raise the supplied error itself. |
-| `log_inference(...)` | Accepts optional keyword-only `input`, `output`, `operation`, `provider` and `model`. Emits an inference-details log correlated to this span, even outside its active scope, with a structured body and `gen_ai.*` request attributes from the enclosing `model()` block or those keywords plus `gen_ai.conversation.id` from `context()`. Omit a content keyword for an absent field; passing `None` keeps the key with an empty value. Nothing is emitted when `capture_content` is False. |
+| `record_file(*, role, media_type, sha256=None, data=None, byte_size=None, name=None)` | Adds a `hue.file` event for a file the work read, received or produced. `role` is `input`, `attachment` or `output`. `data` is hashed and measured locally and never exported (a `str` is hashed as UTF-8); pass `sha256` and `byte_size` instead when you already have them. The event carries `hue.file.sha256`, `hue.file.role`, `hue.file.media_type`, `hue.file.size` when known and, only when content is captured, `hue.file.name`. It is recorded in both capture modes; an invalid record is omitted and counted. |
+| `log_inference(...)` | Accepts optional keyword-only `input`, `output`, `operation`, `provider`, `model` and `system_instructions`. Emits an inference-details log correlated to this span, even outside its active scope, with a structured body and `gen_ai.*` request attributes from the enclosing `model()` block or those keywords plus `gen_ai.conversation.id` from `context()`. Omit a content keyword for an absent field; passing `None` keeps the key with an empty value. Nothing is emitted when `capture_content` is False. |
 
 Choose logs or span attributes for the same content event to avoid duplicate storage. `log_inference` emits no record when content capture is disabled. `hue.tracer`, `hue.tracer_provider` and `hue.logger_provider` expose the configured OpenTelemetry objects for integrations that accept explicit instances.
 
 ## Content policy
 
 `capture_content=False` omits input/output content from Hue's helpers **before it enters an OpenTelemetry queue** and, at export, strips recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes, legacy `gen_ai.*` message events, log bodies and status descriptions from every record on Hue's export path, including spans from third-party instrumentors on a borrowed provider. The key list is identical to TypeScript's `contentPrefixes` and is reproduced in the [compatibility matrix](/sdks/compatibility). `True` permits that content. The policy does not classify arbitrary attribute names, span names, session identifiers or another exporter's records; unrecognized custom keys pass through. Configure an external instrumentor's own content policy before enabling it.
+
+When content is captured, export replaces hosted-tool credentials (such as `authorization`, `authorization_token`, `headers` and `api_key`) in recorded tool definitions and in the `tools` and `mcp_servers` entries of recorded raw requests with `"[redacted]"`, and exports a `blob` or `file` message part over 64 KiB as its `sha256` and `size` instead of its payload. When `capture_content=False` removes tool definitions, the record keeps `hue.tool.names` and `hue.tool.definitions.sha256`. The [compatibility matrix](/sdks/compatibility) lists the exact fields.
 
 `redactor(field, value)` receives a bounded, detached content snapshot before helper JSON serialization. Supported inputs are ordinary built-in JSON-compatible scalars, dictionaries and lists, plus built-in tuples and scalar dictionary keys accepted by Python's JSON encoder. Container shape and nested values are preserved without sharing mutable application containers. Custom objects and subclasses, cycles, non-finite numbers, integers above 14,000 bits, depth beyond 64, more than 65,536 visited values/keys, or a conservative value budget above 1 MiB are rejected before the callback. The budget counts UTF-8 string bytes plus value overhead; it is not a process-memory limit. The initial snapshot also runs when no redactor is configured. A redactor's returned value passes through a fresh snapshot with the same independent bounds before JSON encoding, so oversized nested output or custom serialization hooks cannot bypass this check.
 
