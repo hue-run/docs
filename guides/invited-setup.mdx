@@ -32,13 +32,17 @@ Don't run `hue login` yourself: it waits for the key at a hidden prompt. Never a
 
 ## 2. Check the key
 
-Run this check with the key loaded the same way the application loads it, without echoing the key:
+Run the check with the key loaded the same way the application loads it, without echoing the key. For an env file, Node's own env-file parser reads it; replace `<env-file>` with the file's path, such as `.env.local` or `.env.hue`:
+
+```sh
+node --env-file=<env-file> -e 'fetch("https://app.hue.run/api/v1/projects/current", { headers: { authorization: `Bearer ${process.env.HUE_API_KEY}` } }).then((r) => console.log(r.status))'
+```
+
+For a secret manager, run this through its command runner inside `sh -c '…'`, so the variable is expanded after the manager injects it:
 
 ```sh
 curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $HUE_API_KEY" https://app.hue.run/api/v1/projects/current
 ```
-
-For an env file, load that file in a subshell first: `(set -a; . ./<env-file>; set +a; curl …)`, where `<env-file>` is the file the key is in, such as `.env.local` or `.env.hue`. For a secret manager, run the check through its command runner inside `sh -c '…'`, so the variable is expanded after the manager injects it.
 
 This check sends no telemetry. `200` means the key works; continue. `401` means the key is missing, mistyped or revoked: ask the user to check it, or create a new one and store it again, then check again. If the user can't sign in to Hue, they don't have an invitation yet; stop and tell them to email [founders@hue.run](mailto:founders@hue.run).
 
