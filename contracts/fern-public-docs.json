@@ -28,6 +28,16 @@
     "documentation": {
       "origin": "https://docs.hue.run",
       "mcpEndpoint": "https://docs.hue.run/mcp"
+    },
+    "simulationGateway": {
+      "production": {
+        "origin": "https://sim.hue.run",
+        "applicationMount": "https://app.hue.run/api/sim"
+      },
+      "staging": {
+        "origin": "https://sim.staging.hue.run",
+        "applicationMount": "https://staging.hue.run/api/sim"
+      }
     }
   },
   "setup": {
@@ -569,11 +579,11 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.7.0"
+      "version": "0.8.0"
     },
     "python": {
       "name": "hue-run",
-      "version": "0.4.0"
+      "version": "0.5.0"
     }
   },
   "mcp": {
@@ -1468,7 +1478,7 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "bc1c49ddb8bad4a7fbd1917e703921d3b2562eef030ff4b959a940df92326079",
+    "catalogSha256": "e65671a2d8c7b023f43b2e9a7373bbc792bf913894e7536f6501bd93ddeba27d",
     "installSnippets": {
       "claudeCodeProjectJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "claudeCodeCli": "claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp \\\n  --header 'Authorization: Bearer ${HUE_MCP_KEY}'",
@@ -1482,5 +1492,34 @@
       "geminiCli": "gemini mcp add --transport http hue https://mcp.hue.run/mcp -H \"Authorization: Bearer $HUE_MCP_KEY\"",
       "verifyPrompt": "Use the Hue MCP: call get_project_context, then show my 5 most recent error traces with links."
     }
+  },
+  "simulationGateway": {
+    "status": "deployed_inactive",
+    "owner": "hue-run/fern",
+    "runtime": "feature-flagged /api/sim catch-all in the Fern web artifact",
+    "hosts": {
+      "production": {
+        "origin": "https://sim.hue.run",
+        "applicationMount": "https://app.hue.run/api/sim"
+      },
+      "staging": {
+        "origin": "https://sim.staging.hue.run",
+        "applicationMount": "https://staging.hue.run/api/sim"
+      }
+    },
+    "forms": {
+      "production": {
+        "path": "https://sim.hue.run/{real-host}/{real-path}",
+        "alias": "https://{alias}.sim.hue.run/{real-path}",
+        "application": "https://app.hue.run/api/sim/{real-host}/{real-path}"
+      },
+      "staging": {
+        "path": "https://sim.staging.hue.run/{real-host}/{real-path}",
+        "alias": "https://{alias}.sim.staging.hue.run/{real-path}",
+        "application": "https://staging.hue.run/api/sim/{real-host}/{real-path}"
+      }
+    },
+    "aliasRule": "{alias} is the real host with every dot replaced by a dash, one DNS label",
+    "releaseBoundary": "The route is mounted but SIM_GATEWAY_ENABLED is off in every hosted environment and no provider surface is registered. Staging sim hosts are being configured and proven first; production sim hosts are not configured. Customer documentation must not name a mirror host until docs/simulation-hosts.md records it as proven."
   }
 }

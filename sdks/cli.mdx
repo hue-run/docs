@@ -7,11 +7,11 @@ description: "Store a Hue key with hue login, connect your coding agent with hue
 
 <CodeGroup>
 ```sh npm
-npm install @hue-run/sdk@0.7.0
+npm install @hue-run/sdk@0.8.0
 ```
 
 ```sh Bun
-bun add @hue-run/sdk@0.7.0
+bun add @hue-run/sdk@0.8.0
 ```
 </CodeGroup>
 
@@ -59,5 +59,7 @@ npm install zod
 npx hue eval --set "Billing regressions" --scorer <evaluator-slug> ./hue-agent.ts --env-file .env.hue
 npx hue eval --worker ./hue-agent.ts --env-file .env.hue
 ```
+
+To run an agent that is not a TypeScript module, pass `--command "<shell command>"` instead of an adapter file. `hue eval` starts the command once per case with the case on stdin and reads the answer from stdout. The command inherits your environment except Hue's own credentials: `HUE_API_KEY`, `HUE_MCP_KEY` and any other variable holding a Hue key are removed unless you pass `--allow-hue-credentials`, so your model keys and settings still reach the agent but the project key does not. For a case with a simulated world, the command also receives a world-scoped MCP URL and token in `HUE_MCP_URL` and `HUE_MCP_TOKEN`; the token is never logged. `--revision` names the agent revision under test, and `--concurrency` runs up to 64 cases at once (default 1).
 
 `--worker` registers your agent so runs started from Hue execute on your machine. See [simulations](/evaluations/simulations) for the agent adapter that receives each case's inputs and tools, and the [TypeScript reference](/reference/typescript) for the underlying `runSimulation`, `runLocalAgent` and `runExperiment` APIs.

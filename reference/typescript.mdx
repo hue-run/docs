@@ -1,9 +1,9 @@
 ---
 title: "TypeScript API reference"
-description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.7.0."
+description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.8.0."
 ---
 
-This reference covers `@hue-run/sdk` **0.7.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+This reference covers `@hue-run/sdk` **0.8.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -12,7 +12,7 @@ This reference covers `@hue-run/sdk` **0.7.0** on Node.js 22 or 24 and Bun 1.4. 
 | `@hue-run/sdk` | `createHue`, `createHueSafe`, `HueClient`, `createHueTransport`, `HueTransport`, `hueExperimentalTelemetry`, `contentPrefixes`, `HueConnectionError`, `HueExportError`, `HueTraceVerificationError` and the tracing types below. |
 | `@hue-run/sdk/ai-sdk` | `hueTelemetry` for Vercel AI SDK 7. Requires the optional `ai` and `@ai-sdk/otel` peers. |
 | `@hue-run/sdk/evals` | Evaluation client, local runners including `runSimulation` and `runLocalAgent`, scorer definitions, file-based case helpers, published Scenario resolvers, verdict helpers, attempt-preflight validators, evaluation errors and types. Requires the optional `zod` peer (4.6.5 or later). |
-| `@hue-run/sdk/environment` | `createEnvironmentClient`, `EnvironmentClient`, `bindEnvironmentTools`, `HueEnvironmentError` and the simulated-environment types. |
+| `@hue-run/sdk/environment` | `createEnvironmentClient`, `EnvironmentClient`, `bindEnvironmentTools`, `HueEnvironmentError`, the [world handoff](#world-handoff) helpers and the simulated-environment types. |
 | `@hue-run/sdk/managed` | `createManagedTargetHandler` and the managed-target types. |
 
 The package is ESM; CommonJS applications on Node.js 22.12 or later load every entry point with `require()`. The SDK runs on the server. It does not call a model provider for you or automatically instrument provider calls that emit no telemetry. Every exported type, option and member carries API documentation in the published declarations.
@@ -423,7 +423,7 @@ Both functions are exported from `@hue-run/sdk/evals`.
 | `checkpointDirectory` | Required dedicated local directory for this run. Preserve it for upload recovery; keep it out of Git. |
 | `persistResultContent` | Required boolean, independent of telemetry capture. |
 | `scorers` | Optional array of bound `LocalScorer` definitions/callbacks. |
-| `concurrency` | Default `1`; integer `1–16`. |
+| `concurrency` | Default `1`; integer `1–64`. |
 | `schemaTimeoutMillis` | Default `2000`; integer `100–60000`; applies to JSON Schema validation, not arbitrary callbacks. |
 | `environmentEvidence` | Optional `"required"`: resolve sealed world evidence for local scoring and historical rescoring. `runSimulation` sets it. `"when_pinned"` skips the read for cases that pin no world while still requiring it for cases that do. |
 | `filesDirectory` | Default `<checkpointDirectory>/files`. Holds verified input copies and generated files. |
@@ -521,7 +521,7 @@ runLocalAgent(options: RunLocalAgentOptions): Promise<void>
 
 `runLocalAgent` starts an outbound-only worker for one fixed local TypeScript agent entry point. Hue chooses only the registered key and revision; no command or source is received from the cloud. The worker is exported from `@hue-run/sdk/evals` and uses the same provider-aware world lifecycle as `runSimulation`. A matching Hue API deployment is required. Official Gmail and Slack registrations remain inactive.
 
-Register the process first with `registerLocalAgent(input: LocalAgentRegistration)`, which returns a `RegisteredLocalAgent`. The worker then claims queued runs as a `LocalAgentClaim`. Candidate callbacks receive a `LocalAgentTargetContext`: case identity and cloned task inputs only, not expected criteria, case metadata or environment pins.
+Register the process first with `registerLocalAgent(input: LocalAgentRegistration)`, which returns a `RegisteredLocalAgent`. The worker then claims queued runs as a `LocalAgentClaim`. Candidate callbacks receive a `LocalAgentTargetContext`: case identity and cloned task inputs only, not expected criteria, case metadata or environment pins. Like `SimulationTargetContext`, it carries an optional `world` and an optional `mcp`. The worker sends the registered `agent.revision` as the agent revision of every world it creates.
 
 ### RunLocalAgentOptions
 
@@ -535,10 +535,11 @@ Register the process first with `registerLocalAgent(input: LocalAgentRegistratio
 | `target(inputs, tools, context)` | Runs cases pinned to a hosted world (`environment:v1`). Invokes the existing local agent with isolated `EnvironmentTool`s and a `LocalAgentTargetContext`. Supply `target`, `directTarget` or both. |
 | `directTarget(inputs, context)` | Runs ordinary cases without a world (`direct:v1`) with a `LocalAgentDirectContext`; returns a JSON value, a `TargetResult` from `withFiles`, `undefined` or a promise of any of these. |
 | `scorers` | Optional `LocalScorer[]` matching published source digests. |
-| `concurrency` | Default `1`; integer `1–16`. |
+| `concurrency` | Default `1`; integer `1–64`. |
 | `pollIntervalMillis` | Default `2000`; integer `250–60000`. |
 | `signal` | Optional `AbortSignal`; stops polling cooperatively and does not cancel an active callback. |
 | `maxRuns` | Optional. Useful for one-shot jobs; omit to keep polling. |
+| `deprecationWarnings` | Default `true`. Emits a one-time `DeprecationWarning` when a case runs on a world without a [handoff](#world-handoff). |
 | `actualAgentManifest` / `requestedProviders` / `mcpSurface` | Optional V2 provider-profile preflight, validated together before the worker polls. |
 | `onCompleted(report)` | Optional callback after the experiment and queue completion are acknowledged. |
 
@@ -563,16 +564,18 @@ Provider-profile preflight is a control-plane contract. The provider-facade rout
 | `client` | Required `EvaluationClient` for the target Hue project. |
 | `environmentClient` | Required `EnvironmentClient` for the same Hue origin and project. |
 | `hue` | Required `HueClient` used for target and tool spans. |
-| `checkpointDirectory` | Required dedicated private directory for resumable checkpoints. Running a changed definition while an unfinished simulation is checkpointed there fails; recover that simulation first. |
+| `checkpointDirectory` | Required dedicated private directory for resumable checkpoints. Running a changed definition or agent revision while an unfinished simulation is checkpointed there fails; recover that simulation first. |
 | `definition` | Required `SimulationDefinition`. The deprecated `scenario` option accepts the same value and is still accepted. |
 | `persistResultContent` | Required boolean for saved target and scorer content. |
 | `traceEvidence` | Required `{ mode: "required" }` or `{ mode: "omit", reason }`. |
 | `target(inputs, context)` | Required. Invokes the existing local agent exactly once for this attempt with a `SimulationTargetContext`; returns a JSON value, `undefined` or a promise of either. |
 | `localScorers` | Optional `LocalScorer[]` bound by their declared source digests. |
-| `concurrency` | Default `1`; integer `1–16`. |
+| `concurrency` | Default `1`; integer `1–64`. |
 | `schemaTimeoutMillis` | JSON Schema worker deadline in milliseconds. |
 | `maxSteps` | Per-world action ceiling, `1–500`. |
 | `ttlSeconds` | Per-world lease in seconds, `1–86400`. |
+| `agentRevision` | Optional agent revision under test, 1–256 characters, sent when each world is created. |
+| `deprecationWarnings` | Default `true`. Emits a one-time `DeprecationWarning` when a case runs on a world without a [handoff](#world-handoff), or when you pass provider-profile options. |
 | `signal` | Optional `AbortSignal`; cancellation is cooperative. |
 | `runName` | Optional display name for the fresh experiment; defaults to the source experiment or definition name. |
 | `onProgress(event)` | Optional callback receiving bounded nonsecret `SimulationProgress` events. |
@@ -580,7 +583,7 @@ Provider-profile preflight is a control-plane contract. The provider-facade rout
 | `requestedProviders` | Optional `RequestedAttemptProviderV2[]`: the exact provider instances and ordered surfaces asserted for strict preflight. Supplied together with `mcpSurface`. |
 | `mcpSurface` | Optional `{ providerInstanceKey, surfaceKey: "google.gmail/mcp" \| "slack/mcp" }` selected from `requestedProviders` and projected to `context.mcp`. |
 
-`SimulationReport` extends `RunnerReport` with `experimentId`, the fresh experiment created for this invocation, and `runUrl`, the browser URL joining task, trace, world evidence and scoring. Invalid bounds throw `RangeError`; mismatched origins and an unfinished checkpointed definition throw `Error`.
+`SimulationReport` extends `RunnerReport` with `experimentId`, the fresh experiment created for this invocation, and `runUrl`, the browser URL joining task, trace, world evidence and scoring. Invalid bounds throw `RangeError`; mismatched origins and an unfinished checkpointed definition or agent revision throw `Error`.
 
 ### SimulationDefinition
 
@@ -600,8 +603,9 @@ Provider-profile preflight is a control-plane contract. The provider-facade rout
 | --- | --- |
 | `config` / `item` | Frozen experiment configuration / the frozen `ExperimentCase`, including its immutable environment-version pin. |
 | `executionId` / `environmentRunId` | Target execution identity / stable world identity for adapter control operations such as coverage reporting. Neither is a credential. |
-| `tools` | `Record<string, EnvironmentTool>`: framework-neutral local callables backed by this attempt's isolated world. |
-| `mcp` | `SimulationMcpCapability` for providers that execute MCP remotely; scoped to one execution and world. |
+| `tools` | `Record<string, EnvironmentTool>`: framework-neutral local callables backed by this attempt's isolated world. Empty for a world with a handoff, whose calls go to the provider mirrors in `world`. |
+| `world` | Optional `WorldHandoff`: the provider mirror URLs, world token, environment variables and MCP configuration. Present only when Hue's simulation gateway serves the world; see [world handoff](#world-handoff). |
+| `mcp` | Optional `SimulationMcpCapability` (`url`, `token`, `expiresAt`) for providers that execute MCP remotely; scoped to one execution and world. With a handoff it is the world's first MCP mirror with the world token; without one it is the deprecated `hue_sim_` capability. |
 | `connectionBundle` | Optional `AttemptConnectionBundleV2` with credential-bearing provider connections for this callback only. Hue never checkpoints, logs or adds it to parity digests. |
 | `signal` | Optional `AbortSignal`; pass it into the real agent or provider call. |
 
@@ -669,7 +673,7 @@ const environments = createEnvironmentClient({ apiKey: process.env.HUE_API_KEY! 
 | `timeoutMillis` | `number` | `10000`. Per-request deadline in milliseconds, with the same range as the evaluation client. |
 | `maxAttempts` | `number` | `4`; integer `1–10`. Attempts for idempotent run mutations. |
 
-Run mutations retry on transport failure and on HTTP 408, 429, 500, 502, 503 and 504 with exponential backoff, reusing the same invocation or idempotency identity. `createEnvironment` and `publishVersion` are non-idempotent registry writes and are not retried. Failures throw `HueEnvironmentError`, whose fixed message never includes response text or credentials; `status` carries the HTTP status when Hue answered and is absent for transport, timeout or parse failure. Responses are limited to 4 MiB and request bodies to 1 MiB; a published definition may contain up to 240 KB.
+Run mutations retry on transport failure and on HTTP 408, 429, 500, 502, 503 and 504 with exponential backoff, reusing the same invocation or idempotency identity. When a 429 or 503 carries `Retry-After`, the client waits that long instead, at most 10 seconds. `createEnvironment` and `publishVersion` are non-idempotent registry writes and are not retried. Failures throw `HueEnvironmentError`, whose fixed message never includes response text or credentials; `status` carries the HTTP status when Hue answered and is absent for transport, timeout or parse failure, and `retryAfterMs` carries Hue's bounded `Retry-After` from a 429 or 503. Responses are limited to 4 MiB and request bodies to 1 MiB; a published definition may contain up to 240 KB.
 
 ### Environments and versions
 
@@ -712,18 +716,19 @@ Publishing generates one `ActionDefinition` per action: `name`, `description?` a
 | `listSteps(runId, page?: StepPageOptions)` | `StepPage`. Pages the immutable journal by step ordinal. |
 | `finishRun(runId, input: FinishRunInput)` | `SealedRun`. Seals a world as `completed` or `abandoned` and freezes its evidence. |
 | `recordCoverageGap(runId, input: CoverageGapInput)` | `CoverageGapResult`. Records a known coverage gap with durable identity; retries reuse the exact request. |
+| `getEvidence(runId, options?: WorldEvidenceOptions)` | `WorldEvidence`. Reads a sealed world's evaluator-only evidence; see [world handoff](#world-handoff). |
 
-`CreateRunInput` requires `idempotencyKey` and `environmentVersionId`; optional fields are `executionId` (the target execution linked to this world), `seed` (32 lowercase hexadecimal characters), `maxSteps` (`1–500`) and `ttlSeconds` (`1–86400`). Invalid bounds throw `RangeError` or `TypeError` before any request. `ActionInput` is `{ invocationId, action, args? }`; omitted `args` means an empty object. `FinishRunInput` is `{ idempotencyKey, status }`, `completed` for accepted outcomes and `abandoned` for failures or cancellation. `StepPageOptions` is `{ after?, limit? }`: `after` is the last seen ordinal (`-1` starts at the first step) and `limit` is 1–100.
+`CreateRunInput` requires `idempotencyKey` and `environmentVersionId`; optional fields are `executionId` (the target execution linked to this world), `seed` (32 lowercase hexadecimal characters), `maxSteps` (`1–500`), `ttlSeconds` (`1–86400`), `traceparent` (the case span's version-00 W3C trace context, whose trace ID must be the trace the execution declared; the world span is parented on it) and `agentRevision` (1–256 characters, part of the world's fingerprint). Invalid bounds throw `RangeError` or `TypeError` before any request. `ActionInput` is `{ invocationId, action, args? }`; omitted `args` means an empty object. `FinishRunInput` is `{ idempotencyKey, status }`, `completed` for accepted outcomes and `abandoned` for failures or cancellation. `StepPageOptions` is `{ after?, limit? }`: `after` is the last seen ordinal (`-1` starts at the first step) and `limit` is 1–100.
 
 | Type | Meaning |
 | --- | --- |
-| `EnvironmentRun` | Newly created isolated world: `id`, `environmentVersionId`, `clockNs`, `stateDigest`, `maxSteps`, `expiresAt` and the closed generated `actions` catalog. |
+| `EnvironmentRun` | Newly created isolated world: `id`, `environmentVersionId`, `clockNs`, `stateDigest`, `maxSteps`, `expiresAt` and the closed generated `actions` catalog. A world the simulation gateway serves also carries `worldId`, `token`, `lifecycle`, `completingUntil`, `baggage`, `traceparent`, `surfaces`, `env` and `mcpConfig`; read them with `worldHandoff`. |
 | `ActionResult` | `runId`, zero-based `stepOrdinal`, the `observation`, normalized `effects`, `stateDigest` and `clockNs` after the action, `replayed` and `stepsRemaining`. |
 | `Observation` | The recorded answer returned by the simulated world: `status` `"ok"` or `"error"` plus additional bounded fields. An error observation is a world answer, not a transport exception. |
 | `Effect` | One normalized world-state effect: `kind` (`created`, `updated` or `deleted`), `collection`, `entityId` and changed `fields`. |
-| `RunState` | `id`, `environmentVersionId`, `executionId` (`null` for a standalone run), `seed`, `status` (`open`, `completed`, `abandoned` or `expired`), `stepCount`, `maxSteps`, `clockNs`, `expiresAt`, `createdAt`, `sealedAt`, `stateDigest`, `finalState` after sealing and the `EnvironmentCoverage` fields. |
+| `RunState` | `id`, `environmentVersionId`, `executionId` (`null` for a standalone run), `seed`, `status` (`open`, `completed`, `abandoned` or `expired`), `stepCount`, `maxSteps`, `clockNs`, `expiresAt`, `createdAt`, `sealedAt`, `stateDigest`, `finalState` after sealing and the `EnvironmentCoverage` fields. A gateway world adds `worldId`, `lifecycle`, `completingUntil`, `traceExternalId`, `surfaces` and advisory `flags` (`WorldFlag`: `no_calls` or `fingerprint_differs`); a status read never returns the token. |
 | `Step` / `StepPage` | One immutable journal entry: `id`, `ordinal`, `invocationId`, `action`, validated `args`, `observation`, `effects`, `mutated`, `clockNs` and `stateDigest` / `{ items, nextCursor }` with a numeric cursor. |
-| `SealedRun` | `id`, requested terminal `status`, final `stepCount`, `stateDigest` and `sealedAt`. |
+| `SealedRun` | `id`, requested terminal `status`, final `stepCount`, `stateDigest` and `sealedAt`. For a gateway world, `lifecycle` is `completing` or `sealed`, and `sealedAt` is `null` until the seal follows the `completingUntil` grace. |
 | `CoverageGapInput` / `CoverageGap` / `CoverageGapResult` | A durable first-fault report for known missing provider behavior (`idempotencyKey`, `provider`, `operation`, `code`, `args` bounded to 16,000 JSON bytes and a nonsecret `description`) / the stored gap with `reportedAt` and `reportedBy` (`{ kind: "project_key" \| "user", id }`) / `{ runId, validity: "environment_incomplete", coverageGap }`. |
 | `EnvironmentCoverage` | `validity` (`"not_assessed"` or `"environment_incomplete"`) and `coverageGap` (`null` when none was reported). Missing fields from older servers mean `not_assessed`, never verified parity. |
 
@@ -737,6 +742,59 @@ bindEnvironmentTools(options: BindEnvironmentToolsOptions): Record<string, Envir
 
 Each `EnvironmentTool` has `name`, `description?`, `inputSchema` (the action's `ActionSchema`) and `execute(args?)`, which runs the action inside `hue.tool(name, args, ...)` and resolves with the world's `Observation`. Transport failures reject with `HueEnvironmentError`.
 
+### World handoff
+
+Where Hue's simulation gateway serves a world, `createRun` also returns its handoff: a world token and one mirror URL per pinned provider surface, such as a Gmail MCP or REST mirror. Point the agent's own provider client at the mirror and pass the world token where the provider credential would go; the project key stays with the runner. Hue Cloud does not serve gateway worlds yet, so today `worldHandoff` returns `null`, callbacks receive `tools` and the `hue_sim_` MCP capability, and `getEvidence` answers `404`.
+
+`runSimulation`, `runLocalAgent` and `hue eval` do this for you. They create each world with the execution, a stable idempotency key, the case span's trace context and the agent revision, pass the handoff as `context.world`, and finish the world before completing the execution. To drive a world yourself:
+
+```ts
+import { agentEnvironment, worldHandoff, writeMcpConfig } from "@hue-run/sdk/environment";
+
+const run = await environments.createRun({
+  idempotencyKey: `execution:${executionId}`,
+  environmentVersionId,
+  executionId,
+  traceparent: `00-${span.traceId}-${span.spanId}-01`,
+  agentRevision: "my-agent@1.4.2",
+});
+const world = worldHandoff(run); // null when the world has no handoff
+if (world) {
+  const config = await writeMcpConfig(world);
+  try {
+    // spawnAgent is your application function, not an SDK method.
+    await spawnAgent({ env: agentEnvironment(world), mcpConfigPath: config.path });
+  } finally {
+    await config.dispose();
+  }
+}
+await environments.finishRun(run.id, {
+  idempotencyKey: `execution:${executionId}:completed`,
+  status: "completed",
+});
+```
+
+| Function | Behavior |
+| --- | --- |
+| `worldHandoff(run)` | The `WorldHandoff` of a create or replay response, or `null` for a world without one. |
+| `agentEnvironment(world, options?: AgentEnvironmentOptions)` | Environment variables for the agent's child process: `parent` (default `process.env`) without Hue control-plane credentials, then the world's `env`, which wins. Also sets `HUE_MCP_URL`, `HUE_MCP_TOKEN` and `HUE_MCP_EXPIRES_AT` from the first MCP mirror unless `legacyMcpVariables: false`. Pass `includeHueCredentials: true` only for an agent that must call Hue's own API. |
+| `writeMcpConfig(world, { directory? }?)` | Writes `mcpConfig` to an owner-only `mcp.json` in a private directory → `McpConfigFile`, `{ path, dispose() }`. Call `dispose` after the run; it removes the file and directory. |
+| `legacyMcpCapability(world)` | `LegacyMcpCapability`, `{ url, token, expiresAt }` for the first MCP mirror, the shape adapters written for `hue_sim_` read; `undefined` without an MCP surface. |
+| `stripHueControlPlaneCredentials(parent)` | A copy of `parent` without Hue control-plane credentials or `undefined` values. |
+| `isHueControlPlaneCredential(name, value)` | `true` for a name in `HUE_CONTROL_PLANE_VARIABLES` (`HUE_API_KEY`, `HUE_MCP_KEY`, `HUE_PROJECT_KEY`, `HUE_SERVICE_KEY`) or a value that starts with `hue_sk_`, `hue_mcp_` or `hue_attempt_`. |
+
+| Type | Meaning |
+| --- | --- |
+| `WorldHandoff` | `id`, `token` (a `hue_world_` credential that lives as long as the world), `expiresAt`, `lifecycle`, `completingUntil`, `traceparent` (`null` when none was sent), `baggage` (`hue-world=<id>`), `surfaces`, `env` and `mcpConfig`. `env` holds `HUE_WORLD_ID`, `HUE_WORLD_TOKEN`, `BAGGAGE`, `TRACEPARENT` and one `HUE_SIM_<SURFACE ID>_URL` per surface. |
+| `WorldLifecycle` / `WorldFlag` | `pending`, `live`, `completing` or `sealed` / advisory status flags, `no_calls` or `fingerprint_differs`. |
+| `WorldSurface` | `provider` (such as `google.gmail`), `surface` (such as `google.gmail/mcp`), `providerInstanceKey`, the mirror `url` and `alias` (`null` while unavailable). |
+| `WorldMcpConfig` / `WorldMcpServer` / `WorldMcpHeaders` | The common `mcpServers` shape, keyed by provider instance / one Streamable HTTP server, `{ type: "http", url, headers }` / `{ Authorization }`, the world token as a bearer. |
+| `WorldEvidenceOptions` / `WorldEvidenceSection` | `{ section?, bodies? }`: one section or `all` (default), and whether to include ledger request and response bodies (default `true`) / `all`, `start`, `end`, `diff` or `ledger`. |
+| `WorldEvidence` | The sealed world's evaluator-only evidence as Hue returns it: start and end state, the diff, the call ledger, coverage and the fingerprint. |
+
+Finishing a gateway world answers `lifecycle: "completing"` with `sealedAt: null`; the seal follows a 5-second grace so in-flight calls land. A later finish answers `409`, which the runners treat as the seal they can no longer change. `getEvidence` needs the project key; a world token can never read evidence, and an open world answers `409` until it is sealed. Nothing in these helpers logs the token. Keep the handoff out of your own logs and checkpoints.
+
+Hue-native `tools` and the `hue_sim_` capability are deprecated. When a case runs on a world without a handoff, `runSimulation` and `runLocalAgent` emit a one-time `DeprecationWarning` with code `HUE_NATIVE_SIMULATION_TOOLS`, and provider-profile preflight emits `HUE_PROVIDER_FACADE`; for a gateway world, provider-profile options are ignored with `HUE_PROVIDER_FACADE_IGNORED`. Because Hue Cloud does not serve gateway worlds yet, you see the first warning today; pass `deprecationWarnings: false` to silence it. `hue eval` never emits these warnings.
 
 ## Local setup session
 
