@@ -27,7 +27,7 @@ import { createHueSafe, type JsonValue } from "@hue-run/sdk";
 export const hue = createHueSafe({
   apiKey: process.env.HUE_API_KEY ?? "",
   serviceName: "customer-agent",
-  captureContent: process.env.HUE_CAPTURE_CONTENT === "true", // Set to true (recommended) to record content.
+  captureContent: process.env.HUE_CAPTURE_CONTENT === "true", // Set HUE_CAPTURE_CONTENT=true (recommended) to record content; any other value sends metadata only.
   enabled: process.env.HUE_TRACING_ENABLED !== "false",
   maxQueueBytes: 8 * 1024 * 1024,
 });
@@ -57,7 +57,7 @@ from hue_sdk import create_hue_safe
 hue = create_hue_safe(
     api_key=os.environ.get("HUE_API_KEY"),
     service_name="customer-agent",
-    capture_content=os.environ.get("HUE_CAPTURE_CONTENT") == "true",  # Set to true (recommended) to record content.
+    capture_content=os.environ.get("HUE_CAPTURE_CONTENT") == "true",  # Set HUE_CAPTURE_CONTENT=true (recommended) to record content; any other value sends metadata only.
     enabled=os.environ.get("HUE_TRACING_ENABLED") != "false",
     max_queue_bytes=8 * 1024 * 1024,
 )
