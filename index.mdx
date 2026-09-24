@@ -14,9 +14,17 @@ Start with one request. Inspect its input, output, model calls and tool calls, t
     Connect your application and inspect a trace without making a paid model call.
   </Card>
 
-  <Card title="For agents" href="/guides/agent-setup">
-    Hue Cloud is invite-only; this page explains how to request access. Point your coding agent here first and it hands the next step back to you.
-  </Card>
+  <Visibility for="humans">
+    <Card title="Set up with your coding agent" href="/guides/invited-setup">
+      Have a Hue account? Copy one prompt into your coding agent and it adds tracing to your application.
+    </Card>
+  </Visibility>
+
+  <Visibility for="agents">
+    <Card title="For agents" href="/guides/agent-setup">
+      Hue Cloud is invite-only; this page explains how to request access. Point your coding agent here first and it hands the next step back to you.
+    </Card>
+  </Visibility>
 
   <Card title="Install the SDK" href="/installation">
     Get the TypeScript or Python package for your application.

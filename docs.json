@@ -85,6 +85,9 @@
       "href": "https://app.hue.run"
     }
   },
+  "seo": {
+    "indexing": "all"
+  },
   "contextual": {
     "options": [
       "copy",

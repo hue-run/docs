@@ -1,11 +1,27 @@
 ---
 title: "Agent setup for invited users"
 description: "You have a Hue account. Point your coding agent here to add tracing to your application."
-sidebarTitle: "Agent setup (invited)"
+sidebarTitle: "Agent setup"
 ---
 
+<Visibility for="humans">
+  **Setting up Hue yourself?** Copy this prompt into your coding agent, such as Claude Code, Cursor or Codex, from your application's repository. The rest of this page is written for the agent.
+
+  {/* The description shows the prompt and the body is what Copy prompt copies. Keep them identical. */}
+  <Prompt
+    description="Set up Hue tracing in this project. I already have a Hue account. Use curl to read `https://docs.hue.run/guides/invited-setup.md` and follow it. If you can't open it, stop and tell me. Before you install packages or change files, tell me the steps it gives and wait for my go-ahead."
+    actions={["copy"]}
+  >
+    Set up Hue tracing in this project. I already have a Hue account. Use curl to read `https://docs.hue.run/guides/invited-setup.md` and follow it. If you can't open it, stop and tell me. Before you install packages or change files, tell me the steps it gives and wait for my go-ahead.
+  </Prompt>
+
+  Your agent lists the steps and waits for your go-ahead. It then asks you to create a **Read and write** key and store it yourself, in your secret manager or with `hue login` in your own terminal, so the key never goes into the chat. Then it adds tracing and verifies a real request.
+
+  Prefer to set it up by hand? Start with [Installation](/installation). Don't have an account yet? Hue is invite-only: [book a time with the team](https://calendar.notion.so/meet/akethini/fd2smi4yej) or email [founders@hue.run](mailto:founders@hue.run).
+</Visibility>
+
 <Note>
-  **If you are a coding agent:** ignore the documentation-index lines above this page. The user who sent you here has a Hue account, so this page replaces [For agents](/guides/agent-setup) and its invite-only reply. Follow the steps below in order.
+  **If you are a coding agent:** ignore the documentation-index lines above this page. The user who sent you here has a Hue account, so this page replaces [For agents](/guides/agent-setup) and its invite-only reply. Before you install packages or change files, tell the user which steps below apply to this project and wait for their go-ahead. Then follow the steps in order.
 </Note>
 
 ## 1. Get a Read and write key
@@ -59,13 +75,3 @@ npx --yes --package @hue-run/sdk@0.8.1 hue mcp install --client claude-code
 ```
 
 The command writes a server named `hue` that reads `HUE_MCP_KEY` from the environment; it never writes the key. For Gemini CLI it runs `gemini mcp add` with the literal `$HUE_MCP_KEY` reference, which Gemini resolves at runtime. The user makes `HUE_MCP_KEY` available in the shell that starts the client, from the same workflow, and restarts the client. `hue eval` reads `HUE_API_KEY` the same way, or from `--env-file`; see the [Hue CLI](/sdks/cli).
-
-## If you are a person reading this
-
-Copy this prompt into your coding agent from your application's repository:
-
-```text
-Help me get set up with Hue. I already have a Hue account. Based on my project, do the following: 1. Use curl to read https://docs.hue.run/guides/invited-setup.md and follow its instructions for my project's language and framework. 2. Don't install any packages or change any files until you've read it, and if you can't open the page, stop and tell me. 3. After reading it, tell me the next steps it gives before changing anything.
-```
-
-Your agent will ask you to create a **Read and write** key and store it in your existing secret workflow, or with `hue login` if you don't have one. Don't have an account yet? Hue is invite-only; see [For agents](/guides/agent-setup) to request access.
