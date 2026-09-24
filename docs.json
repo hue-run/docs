@@ -76,12 +76,12 @@
     "links": [
       {
         "href": "https://hue.run",
-        "label": "Website"
+        "label": "hue.run"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Open Hue",
+      "label": "Open app",
       "href": "https://app.hue.run"
     }
   },
@@ -100,11 +100,11 @@
         "header": "Hue",
         "items": [
           {
-            "label": "Website",
+            "label": "hue.run",
             "href": "https://hue.run"
           },
           {
-            "label": "Open Hue",
+            "label": "Open app",
             "href": "https://app.hue.run"
           }
         ]

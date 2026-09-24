@@ -1,0 +1,14 @@
+/* The theme fills the navbar button with the pale dark-theme accent under white text in both
+   themes. Use the primary blue in light mode and dark text on the pale accent in dark mode. */
+#topbar-cta-button .bg-primary-dark {
+  background-color: rgb(var(--primary));
+}
+
+.dark #topbar-cta-button .bg-primary-dark {
+  background-color: rgb(var(--primary-dark));
+}
+
+.dark #topbar-cta-button .text-white,
+.dark #topbar-cta-button svg {
+  color: rgb(var(--background-dark));
+}
