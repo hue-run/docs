@@ -4,15 +4,15 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "7021310350006fd7f583084b200a0aa6c8f31fba",
+      "commit": "fc5e1773c4b850abc2fddeb7fe1f8a027549a7fb",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:2953bb3f3010294f8f2da4eba01e56d06e723c6a0353255e159912272cfb9618"
+      "sha256": "sha256:aa5741f0cee622dba2de63f3c7b06dd829081ebcefb5fa9de97dd88acd3edb6f"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "a2f0f418505f6954d0ea6f2656a33f2d3a9bacf8",
+      "commit": "1d0e7607de9c7770b10c2f59f7d4bf60b37719a3",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:b058d3bbf0b464309f653b0c728f9d281a3c395e47727817547db3d20bbcf721"
+      "sha256": "sha256:7c3df1170e8db962cff59e9cc113aae99d95c5f4c5ec51787a09d0c9a03361e7"
     }
   },
   "site": {
@@ -53,7 +53,7 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.8.1",
+      "version": "0.10.0",
       "entrypoints": [
         "@hue-run/sdk",
         "@hue-run/sdk/ai-sdk",
@@ -65,7 +65,7 @@
     },
     "python": {
       "name": "hue-run",
-      "version": "0.5.1",
+      "version": "0.6.1",
       "modules": [
         "hue_sdk",
         "hue_sdk.evals",
@@ -74,15 +74,14 @@
     }
   },
   "skill": {
-    "version": "0.4.1",
-    "sha256": "sha256:f1708501bcaf8a643dbbeb03ebf7ec64c181a8700616f03cf50ee6adee0c26a8",
-    "sdkSourceSha256": "sha256:d431c7c41f82dd3cb6d0b34150df7c7c7d8f13b94b3e15115bbb9e6bf8f07bd4",
+    "version": "0.4.5",
+    "sha256": "sha256:e69b53891eb9f6435e5d4a2a1094283af1cd68bcf495af0df5b29357af36e717",
+    "sdkSourceSha256": "sha256:a1952f05fddf5000fefedde733361c5b055a9d584a3792c2bd1486e1291c8d83",
     "override": {
-      "baseCommit": "a2f0f418505f6954d0ea6f2656a33f2d3a9bacf8",
-      "sectionCommit": "773f00f5224fa03eb76828f087f1c82c8c54d5ff",
-      "section": "## Capture and instrument full traces",
-      "replaces": "## Capture and instrumentation",
-      "sourceSha256": "sha256:63449f96d1168904d686f9179ff7b6ad57bf9274882a6bb194aa0b50ab4c6b7e"
+      "baseCommit": "1d0e7607de9c7770b10c2f59f7d4bf60b37719a3",
+      "sourceCommit": "632864f736df5d565bcc7b7b32a270e7ed933417",
+      "source": "skills/hue/SKILL.md",
+      "sourceSha256": "sha256:f00996bc5cceb0e00e09bb0ba269953a2984540243f6e3a4e5bad29abfc978d1"
     }
   },
   "mcp": {
@@ -161,7 +160,7 @@
       "search_hue_docs",
       "load_hue_guide"
     ],
-    "catalogSha256": "b1ac6008dc047f67d7111e38e4655a31028d6bfa923ed1058039c7e67b03957a"
+    "catalogSha256": "1ba29711a86a1e2f78ebf74d413264ff29e03b956d2741c3806a94bb218011d8"
   },
   "pages": [
     "index",

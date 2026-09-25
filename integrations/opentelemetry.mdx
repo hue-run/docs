@@ -83,6 +83,49 @@ Run `node otel.ts` after setting your environment. An export rejection makes the
 
 Your providers own the resource in this mode: set `service.name`, `deployment.environment.name` and similar attributes on them. `resourceAttributes` on the transport options is ignored and reported as a `warning` issue. The Python SDK attaches the same way through `tracer_provider=` and `logger_provider=`; a provider Hue creates for the other signal reuses the borrowed provider's resource. See the [Python guide](/sdks/python#use-an-existing-provider).
 
+## Keep Langfuse and add Hue
+
+If Langfuse already receives your application's spans, keep its instrumentation and exporter. Add Hue's span processor to the **same provider at construction time**. Find the module that creates your existing `NodeSDK`, `NodeTracerProvider` or framework-owned provider; do not create or register a second global provider. Preserve its resources, sampling, context propagation, existing processors and Langfuse filters. See [Langfuse's existing OpenTelemetry guidance](https://langfuse.com/faq/all/existing-otel-setup).
+
+For example, this is the change to an existing `NodeSDK` setup after installing `@hue-run/sdk`; keep the rest of that application's initialization:
+
+```diff
++ import { createHueTransport } from "@hue-run/sdk";
+
+  const langfuseSpanProcessor = new LangfuseSpanProcessor();
++ let hueTransport: ReturnType<typeof createHueTransport> | undefined;
++ try {
++   hueTransport = createHueTransport({
++     apiKey: process.env.HUE_API_KEY ?? "",
++     enabled: process.env.HUE_TRACING_ENABLED !== "false",
++     serviceName: "my-agent",
++     captureContent: true, // Authorize capture and configure redaction for Hue too.
++   });
++ } catch {
++   // Keep existing tracing available. Do not log the key or exception object.
++   try { console.warn("Hue tracing initialization failed"); } catch {}
++ }
+
+  const sdk = new NodeSDK({
+    spanProcessors: [
+      langfuseSpanProcessor,
++     ...(hueTransport ? [hueTransport.spanProcessor] : []),
+    ],
+  });
+```
+
+This illustrates the attachment point, not a replacement bootstrap or a compatibility certification for your installed versions. In a serving application, construct the optional Hue transport inside your existing fail-open initialization boundary and append its processor only when initialization succeeds; the rest of tracing must still start. The [production-safety guide](/guides/production-safety) explains bounded cleanup and failure isolation. If a framework owns the provider, use its supported processor configuration instead of starting another provider.
+
+Keep the AI SDK instrumentation that already feeds Langfuse: AI SDK 6 uses `experimental_telemetry`, while AI SDK 7 uses its registered telemetry integration. Do not replace that integration with a per-call `hueTelemetry()` helper: a per-call integration list replaces the global list for that call. Follow [Langfuse's version-specific AI SDK setup](https://langfuse.com/integrations/frameworks/vercel-ai-sdk) and [Hue's tested compatibility](/sdks/compatibility).
+
+Langfuse's `mask` hook belongs to its export path. Do not assume it redacts the copy sent through Hue's processor. Apply the same approved policy before both exporters or configure each exporter's redaction separately, and inspect both outputs using synthetic content. See [Langfuse masking](https://langfuse.com/docs/observability/features/masking) and [Hue capture policy](/guides/production-safety#capture-titles-and-retention).
+
+Hue SDK 0.10.0's metadata-only filter recognizes its [documented content fields](/reference/typescript#content-policy), not every custom attribute. In particular, `captureContent: false` alone does not remove native `langfuse.observation.input` or `langfuse.observation.output` attributes. Omit or redact those fields before they reach Hue, using a producer/collector policy or the Hue transport's `redact` hook. Apply the same rule to custom evidence attributes. Verify the exported result before relying on metadata-only capture.
+
+Verify one controlled request through the application's real entry point. Include a model span and tool span, preserve their OpenTelemetry IDs, finish the stream and flush both exporters within the host's allowed lifetime. Confirm those same IDs, parent relationships, content policy and expected fields in both destinations. Hue's [trace receipt](/sdks/typescript#verify-stored-trace-evidence) proves requested span and field presence; it does not certify payload correctness or Langfuse delivery. A Hue connection check alone proves neither. Repeat for a controlled error and cancellation before enabling ordinary traffic.
+
+A second exporter can only send what the existing instrumentation records. A Python tool's final stdout cannot recover an original response that the application truncated earlier. If later analysis needs original and retained results, instrument that reduction boundary explicitly within your content policy.
+
 ## Flush streamed responses in Next.js
 
 For an existing AI SDK 7 app, add Hue's processors to your existing OpenTelemetry providers at startup and retain a `hue` client around that transport and those providers. Keep these instances for the server's lifetime, including your existing exporters and normal provider registration.
