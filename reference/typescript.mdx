@@ -1,9 +1,9 @@
 ---
 title: "TypeScript API reference"
-description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.9.0."
+description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.10.0."
 ---
 
-This reference covers `@hue-run/sdk` **0.9.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+This reference covers `@hue-run/sdk` **0.10.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -487,6 +487,8 @@ Both functions are exported from `@hue-run/sdk/evals`.
 
 `runExperiment` additionally requires `hue`, `experimentId`, `traceEvidence` and `target(inputs, context)`, where `context` is a `RunExperimentTargetContext`. The target may return a JSON value, a `TargetResult` from `withFiles`, `undefined`, or a promise of any of these. Evidence must be `{ mode: "required" }` or `{ mode: "omit", reason: "..." }`. Telemetry and evaluation clients must use the same project and origin.
 
+For required trace evidence, `traceNotAccepted` defaults to `"stop"`: a rejected export stops the runner. Choose `"fail_case"` to complete that case as failed without its output or generated files and continue with other cases. `onTelemetryNotAccepted(entry)` reports each newly failed case before continuing. The `RunnerReport.telemetryNotAccepted` array contains `TelemetryNotAccepted` entries with `caseId`, `caseKey`, `executionId` and `issues`. Each `TelemetryIssueCount` records the signal (`traces` or `logs`), kind (`rejected`, `failed`, `dropped` or `invalid`), optional HTTP status and record count; it contains no captured content.
+
 `rescore` additionally requires `runId` and has **no target callback**. Create its evaluation run from existing subject IDs first. Both return a `RunnerReport`, `{ runId, subjectIds, resultIds, deferredScorerVersionIds }`.
 
 With `persistResultContent: false`, completions and checkpoints omit raw output, target error messages, scorer evidence and arbitrary explanations. Declared metric values remain stored, including text metrics. Already stored dataset inputs/references are independent of this setting. Historical scoring skips unavailable output; it does not rerun a target to reconstruct it.
@@ -512,6 +514,8 @@ To save generated documents, return `withFiles(output, files)`: it takes a JSON 
 | `outputContentTypes` | Accepted generated content types: PDF, Word (`.docx`), PowerPoint (`.pptx`) and Excel (`.xlsx`) documents, `application/json`, `text/plain`, `text/csv`, `image/png`, `image/jpeg` and `image/webp`. |
 | `safeFilename(name)` | Reduces a declared file name to one printable path segment of at most 200 characters, or `"file"` when nothing remains. |
 | `OutputFileError` | Thrown when declared files cannot be used: too many, more than one `primary`, a missing or duplicate filename, an unsupported type, or a file that is unreadable, empty or larger than 25 MiB. The runner records it as the target's `TargetError`, not an uncertain execution. |
+| `ArtifactSizeError` | Stops an artifact download that exceeds the caller's expected byte count, exposed as `maxBytes`. |
+| `CaseFileError` / `CaseFileErrorCode` | Refuses a pinned input file before execution, world creation or target invocation. `artifactId` identifies the file; `code` is `case_file_mismatch` for a size or SHA-256 mismatch, or `case_file_name_refused` for an unsafe file name in a simulated world. |
 
 ### Local scorer exports
 
@@ -563,9 +567,9 @@ Scorers that Hue executes grade after the runner returns, so a caller that wants
 | Type | Meaning |
 | --- | --- |
 | `VerdictResults` | `complete`, the waited-for `items` (`{ id, subjectId }`) and `results`, one `VerdictResult` per item and scorer version read so far. |
-| `VerdictResult` | `id`, `itemId`, `subjectId`, `scorerVersionId`, `state`, `metrics` (empty unless scored), `explanation` and `error` (`null` when absent). |
-| `CaseVerdict` | One row per case: `caseId`, `externalKey`, `subjectId` (`null` before completion), `state` (`passed`, `failed`, `error`, `skipped` or `pending`), `passed`, `metrics` tagged with their `scorerVersionId`, the persisted `explanations` of results that did not pass and the `errors` types. A case passes only when every pinned scorer scored it without a failing metric. |
-| `VerdictSummary` | `cases` (`CaseVerdict[]`) and `totals`: counts of `cases`, `passed`, `failed`, `error`, `skipped` and `pending`. |
+| `VerdictResult` | `id`, `itemId`, `subjectId`, `scorerVersionId`, `state`, `metrics` (empty unless scored), `explanation` and `error` (`null` when absent). Optional `notApplicable` and `requires` identify an evaluator that does not apply and the missing requirement. |
+| `CaseVerdict` | One row per case: `caseId`, `externalKey`, `subjectId` (`null` before completion), `state` (`passed`, `failed`, `error`, `skipped` or `pending`), `passed`, `metrics` tagged with their `scorerVersionId`, the persisted `explanations` of results that did not pass and the `errors` types. Evaluators marked not applicable are neither passes nor failures. A case needs at least one applicable evaluator and must pass every applicable pinned evaluator; no applicable evaluator produces an error. |
+| `VerdictSummary` | `cases` (`CaseVerdict[]`) and `totals`: counts of `cases`, `passed`, `failed`, `error`, `skipped` and `pending`, plus `notApplicable`, the number of evaluator results that do not apply. |
 | `VerdictComparison` | `improvements`, `regressions`, `unchanged` and `cases`, one `{ externalKey, before, after, change }` per case key in either run; `before` and `after` are `missing` for a case absent from that run, and `change` is `improved`, `regressed` or `unchanged`. |
 | `ExperimentVerdicts` | `experimentId`, `runId`, the pinned `scorerVersionIds`, the raw `results` and the per-case `summary`. |
 

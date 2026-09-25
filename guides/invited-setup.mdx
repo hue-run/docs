@@ -35,7 +35,7 @@ Otherwise, ask the user to:
    - **An ignored env file, or no secret workflow yet:** in their own terminal, from the repository root, the user runs the command below and pastes the key at its prompt. Add `--env-path` with the file's path to write there; without it, the command creates `.env.hue`.
 
      ```sh
-     npx --yes --package @hue-run/sdk@0.9.0 hue login --gitignore
+     npx --yes --package @hue-run/sdk@0.10.0 hue login --gitignore
      ```
 
      `hue login` checks the key against Hue, writes both variables and adds the file to `.gitignore` if it isn't ignored yet. It refuses a **Read** or **Tracing only** key and never prints the key. If the file already holds a different `HUE_API_KEY` or `HUE_MCP_KEY`, add `--force` to replace it.
@@ -71,7 +71,7 @@ Keep the **Read and write** key on development machines. Before the application 
 Once a real request is verified, offer to connect the coding agent to the [Hue MCP server](/agents/mcp-server) so it can search traces and check what Hue stored without asking the user to open the app. Replace `claude-code` with the user's client (`cursor`, `codex`, `vscode`, `windsurf` or `gemini`):
 
 ```sh
-npx --yes --package @hue-run/sdk@0.9.0 hue mcp install --client claude-code
+npx --yes --package @hue-run/sdk@0.10.0 hue mcp install --client claude-code
 ```
 
 The command writes a server named `hue` that reads `HUE_MCP_KEY` from the environment; it never writes the key. For Gemini CLI it runs `gemini mcp add` with the literal `$HUE_MCP_KEY` reference, which Gemini resolves at runtime. The user makes `HUE_MCP_KEY` available in the shell that starts the client, from the same workflow, and restarts the client. `hue eval` reads `HUE_API_KEY` the same way, or from `--env-file`; see the [Hue CLI](/sdks/cli).

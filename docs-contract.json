@@ -4,15 +4,15 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "734c793d8a3202c68cf73fb7569dd74b01d2b67d",
+      "commit": "fc5e1773c4b850abc2fddeb7fe1f8a027549a7fb",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:b909e3e2ec1d5f5a46ba581b0b3c2638baa64cb501da51c5861d3cc97e58b329"
+      "sha256": "sha256:aa5741f0cee622dba2de63f3c7b06dd829081ebcefb5fa9de97dd88acd3edb6f"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "8d6e7f7a3eb8e07d134ccfbe3c2b43cdd6b30748",
+      "commit": "1d0e7607de9c7770b10c2f59f7d4bf60b37719a3",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:c8b51c0cfa982be4fef4ae781af3097fa2c7b08bd1a3b90a68b0d3736f20ea2b"
+      "sha256": "sha256:7c3df1170e8db962cff59e9cc113aae99d95c5f4c5ec51787a09d0c9a03361e7"
     }
   },
   "site": {
@@ -53,7 +53,7 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.9.0",
+      "version": "0.10.0",
       "entrypoints": [
         "@hue-run/sdk",
         "@hue-run/sdk/ai-sdk",
@@ -65,7 +65,7 @@
     },
     "python": {
       "name": "hue-run",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "modules": [
         "hue_sdk",
         "hue_sdk.evals",
@@ -74,14 +74,14 @@
     }
   },
   "skill": {
-    "version": "0.4.4",
-    "sha256": "sha256:775f626291a75fbfde5e4bd3efd3a7eb2ffc9a1ba3a277899bdda3a038408bff",
-    "sdkSourceSha256": "sha256:d431c7c41f82dd3cb6d0b34150df7c7c7d8f13b94b3e15115bbb9e6bf8f07bd4",
+    "version": "0.4.5",
+    "sha256": "sha256:9f8b01d12ecfbb8122cb04bdf10c9df9b0e0765b8ee5410abf4a856f5b0535d4",
+    "sdkSourceSha256": "sha256:a1952f05fddf5000fefedde733361c5b055a9d584a3792c2bd1486e1291c8d83",
     "override": {
-      "baseCommit": "8d6e7f7a3eb8e07d134ccfbe3c2b43cdd6b30748",
-      "sourceCommit": "eb6541907acd27e0d12a63be99158d0b8f7624b5",
+      "baseCommit": "1d0e7607de9c7770b10c2f59f7d4bf60b37719a3",
+      "sourceCommit": "c0c3f14554a77a89c01dac963a93c526cd506f66",
       "source": "skills/hue/SKILL.md",
-      "sourceSha256": "sha256:726cad0ef6e1ce15f89ad6ebb074213f64d06bfac6905e4c283c567a17208ad0"
+      "sourceSha256": "sha256:aa5633482910d71448de8b8ad9f5084de0caca3320a8ce2c0707dff974725f69"
     }
   },
   "mcp": {
@@ -160,7 +160,7 @@
       "search_hue_docs",
       "load_hue_guide"
     ],
-    "catalogSha256": "b471e274d06ddefff7f79029f8d7680f85f75971598f07e16f83eb65730a8d05"
+    "catalogSha256": "1ba29711a86a1e2f78ebf74d413264ff29e03b956d2741c3806a94bb218011d8"
   },
   "pages": [
     "index",

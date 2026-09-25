@@ -46,7 +46,7 @@
       "App-launched local agents",
       "Scorer forward compatibility"
     ],
-    "sha256": "sha256:2fa25f9f902610ce6ff0d28d851edc3f180bf2cf3f1a14965bd43512ede1a87f",
+    "sha256": "sha256:b6d20a44c01a9d57b1b23db3d8373eb955def6a18320c53d5a1dd758520fa658",
     "source": "COMPATIBILITY.md"
   },
   "packages": {
@@ -102,7 +102,7 @@
         }
       },
       "name": "hue-run",
-      "version": "0.6.0"
+      "version": "0.6.1"
     },
     "typescript": {
       "bins": {
@@ -231,6 +231,7 @@
             "ActualAgentManifestInputV2",
             "ActualAgentManifestV2",
             "ArtifactReservation",
+            "ArtifactSizeError",
             "ArtifactUpload",
             "AttemptBaselineV2",
             "AttemptBindingRead",
@@ -240,6 +241,8 @@
             "CaseConversionPublication",
             "CaseConversionSummary",
             "CaseFile",
+            "CaseFileError",
+            "CaseFileErrorCode",
             "CaseVerdict",
             "CaseWrite",
             "CollectExperimentVerdictsOptions",
@@ -342,6 +345,8 @@
             "TargetCancelledError",
             "TargetOutcomeUncertainError",
             "TargetResult",
+            "TelemetryIssueCount",
+            "TelemetryNotAccepted",
             "TerminalState",
             "TypedError",
             "UncertainExecutionError",
@@ -488,7 +493,7 @@
           "source": "packages/sdk-typescript/setup-events.schema.json"
         }
       },
-      "version": "0.9.0"
+      "version": "0.10.0"
     }
   },
   "repository": "https://github.com/hue-run/hue-sdk",
@@ -497,10 +502,10 @@
     "description": "Add or troubleshoot Hue tracing in an existing application, preserving its provider, framework, and OpenTelemetry setup. Use when a developer asks to integrate Hue or verify that requests reach Hue.",
     "metadata": {
       "author": "hue-run",
-      "version": "0.4.1"
+      "version": "0.4.4"
     },
     "name": "hue",
-    "sha256": "sha256:d431c7c41f82dd3cb6d0b34150df7c7c7d8f13b94b3e15115bbb9e6bf8f07bd4",
+    "sha256": "sha256:a1952f05fddf5000fefedde733361c5b055a9d584a3792c2bd1486e1291c8d83",
     "source": "skills/hue/SKILL.md"
   }
 }
