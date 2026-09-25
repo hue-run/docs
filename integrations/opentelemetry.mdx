@@ -93,16 +93,23 @@ For example, this is the change to an existing `NodeSDK` setup after installing 
 + import { createHueTransport } from "@hue-run/sdk";
 
   const langfuseSpanProcessor = new LangfuseSpanProcessor();
-+ const hueTransport = createHueTransport({
-+   apiKey: process.env.HUE_API_KEY,
-+   serviceName: "my-agent",
-+   captureContent: true, // Authorize capture and configure redaction for Hue too.
-+ });
++ let hueTransport: ReturnType<typeof createHueTransport> | undefined;
++ try {
++   hueTransport = createHueTransport({
++     apiKey: process.env.HUE_API_KEY ?? "",
++     enabled: process.env.HUE_TRACING_ENABLED !== "false",
++     serviceName: "my-agent",
++     captureContent: true, // Authorize capture and configure redaction for Hue too.
++   });
++ } catch {
++   // Keep existing tracing available. Do not log the key or exception object.
++   try { console.warn("Hue tracing initialization failed"); } catch {}
++ }
 
   const sdk = new NodeSDK({
     spanProcessors: [
       langfuseSpanProcessor,
-+     hueTransport.spanProcessor,
++     ...(hueTransport ? [hueTransport.spanProcessor] : []),
     ],
   });
 ```
