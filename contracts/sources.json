@@ -3,30 +3,37 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "7021310350006fd7f583084b200a0aa6c8f31fba",
+      "commit": "734c793d8a3202c68cf73fb7569dd74b01d2b67d",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:2953bb3f3010294f8f2da4eba01e56d06e723c6a0353255e159912272cfb9618"
+      "sha256": "sha256:b909e3e2ec1d5f5a46ba581b0b3c2638baa64cb501da51c5861d3cc97e58b329"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "a2f0f418505f6954d0ea6f2656a33f2d3a9bacf8",
+      "commit": "8d6e7f7a3eb8e07d134ccfbe3c2b43cdd6b30748",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:b058d3bbf0b464309f653b0c728f9d281a3c395e47727817547db3d20bbcf721"
+      "sha256": "sha256:c8b51c0cfa982be4fef4ae781af3097fa2c7b08bd1a3b90a68b0d3736f20ea2b"
     }
   },
   "skillOverride": {
     "base": {
-      "commit": "a2f0f418505f6954d0ea6f2656a33f2d3a9bacf8",
+      "commit": "8d6e7f7a3eb8e07d134ccfbe3c2b43cdd6b30748",
       "source": "skills/hue/SKILL.md",
       "sha256": "sha256:d431c7c41f82dd3cb6d0b34150df7c7c7d8f13b94b3e15115bbb9e6bf8f07bd4"
     },
-    "section": {
+    "source": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "773f00f5224fa03eb76828f087f1c82c8c54d5ff",
-      "heading": "## Capture and instrument full traces",
-      "replaces": "## Capture and instrumentation",
-      "sha256": "sha256:faf9c9f063bc57412f0aafc4c617186e249ed7389c53ec6843f4b7f824c87e2f"
+      "commit": "c97bab543ee3949c3c93b86b496744af8cfac838",
+      "skill": {
+        "description": "Add or troubleshoot Hue tracing in an existing application, preserving its provider, framework, and OpenTelemetry setup. Use when a developer asks to integrate Hue or verify that requests reach Hue.",
+        "metadata": {
+          "author": "hue-run",
+          "version": "0.4.4"
+        },
+        "name": "hue",
+        "sha256": "sha256:6f44a7aca901a92d332856722912ec92d468dca3a596e17175ca8d9f6bceefdb",
+        "source": "skills/hue/SKILL.md"
+      }
     },
-    "sha256": "sha256:63449f96d1168904d686f9179ff7b6ad57bf9274882a6bb194aa0b50ab4c6b7e"
+    "sha256": "sha256:6f44a7aca901a92d332856722912ec92d468dca3a596e17175ca8d9f6bceefdb"
   }
 }

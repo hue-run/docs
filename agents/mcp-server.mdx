@@ -12,7 +12,7 @@ The project-data server is a dynamic Node.js route in Hue's main web application
 
 An owner or admin opens **Settings → Integrations & API keys**, chooses the project and creates a **Read** key, or a **Read and write** key if the agent should change project data. Save it in your secret manager and expose it to the agent's machine as `HUE_MCP_KEY`.
 
-Keep this key separate from the application's `HUE_API_KEY`, which uses **Tracing only**. A **Read** key cannot send telemetry or change project data, so a leaked agent key cannot alter your project. Do not auto-approve write tools. The key should never be wired into application code or committed. See [project keys](/guides/project-keys).
+Keep this key separate from the application's `HUE_API_KEY`, which uses **Tracing only**. A **Read** key cannot send telemetry or change project data; it can still read project data, including captured content when explicitly requested. Do not auto-approve write tools. The key should never be wired into application code or committed. See [project keys](/guides/project-keys).
 
 <Note>
   The server speaks Streamable HTTP and is stateless. It serves both current MCP protocol revisions, so Claude Code, Codex, Cursor, Windsurf and Gemini CLI connect without extra flags. Clients that only support stdio need a remote-capable MCP client. Use the canonical `https://mcp.hue.run/mcp` address for new configurations.
@@ -113,7 +113,9 @@ Prefer to set it up yourself? Every snippet below references the `HUE_MCP_KEY` e
   </Tab>
 </Tabs>
 
-Other clients — VS Code, GitHub Copilot's coding agent, Amp, Zed, JetBrains Junie, OpenCode — take the same `url` and `Authorization` header in their own configuration format. Hosted assistants that require OAuth, such as claude.ai connectors and ChatGPT, are not supported in this release.
+Other clients need Streamable HTTP and a way to send `Authorization: Bearer <token>` on each request. Use the client's secret storage or environment reference, never a literal key in shared configuration. Check its current configuration format before installing.
+
+A hosted assistant must support that same authenticated transport. A URL field alone, or a successful coding-agent connection, does not establish hosted-assistant support. Confirm that it can store the project key privately and send the header, then call `get_project_context` from that assistant. Hue does not provide an OAuth authorization flow in this release; a connector that requires OAuth cannot connect through this setup.
 
 ## Verify the connection
 
@@ -206,6 +208,6 @@ Hue served the earlier tool names below as aliases of the current tools for one 
 
 `401` means the key is missing, malformed, revoked or expired. `403` means the key has no read access: create a **Read** or **Read and write** key. **Tracing only** and legacy **Tracing and evaluations** keys cannot use this server. `405` on `GET` and `404` for `Mcp-Session-Id` are expected: the server accepts stateless `POST` requests only. An unknown-tool error means the tool is not registered for this connection: write tools are hidden for a **Read** key or a URL with `?read_only=true`, and [retired tool names](#retired-tool-names) are no longer served. See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent).
 
-## What is next
+## Release boundaries
 
-OAuth sign-in for hosted assistants is not in this release. Tools can be renamed or removed between releases; [retired tool names](#retired-tool-names) lists the names this server no longer serves. This server does not change billing or plans, ingest OTLP payloads, invite members or change roles, return artifact bytes, or create cases from traces.
+Use the tools returned by your connection's `tools/list`. A tool described in a development branch is not available until its platform release is deployed; an unknown tool is not evidence that the client should broaden its permissions. Case conversion, review and publication are supported through the tools above. Billing and plan changes remain in Settings.

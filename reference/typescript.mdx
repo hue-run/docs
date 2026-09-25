@@ -3,7 +3,7 @@ title: "TypeScript API reference"
 description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.8.1."
 ---
 
-This reference covers `@hue-run/sdk` **0.8.1** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+This reference covers `@hue-run/sdk` **0.9.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -760,7 +760,9 @@ Each `EnvironmentActionDeclaration` has a unique `name`, an optional agent-visib
 
 Publishing generates one `ActionDefinition` per action: `name`, `description?` and `inputSchema`, an `ActionSchema`. That is the JSON Schema subset `{ type: "object", properties, required, additionalProperties: false }` whose properties are scalar types with an optional `enum` or bounded string arrays with `maxItems` and item `maxLength`. Unknown action arguments are rejected.
 
-`EnvironmentDefinitionV2` extends that V1 document with `schemaVersion: 2` and `providerInstances: GmailProviderInstance[]`. Each `GmailProviderInstance` is `{ providerInstanceKey, providerId: "google.gmail", syntheticPrincipalId, configuration: { kind: "gmail_mailbox/v1", messagesCollection, draftsCollection, mailboxAddress } }`. Hue canonicalizes `syntheticPrincipalId` to a lowercase UUID. These bindings are immutable attempt-profile inputs; they do not establish hosted Gmail calls.
+`EnvironmentDefinitionV2` extends that V1 document with `schemaVersion: 2` and `providerInstances: GmailProviderInstance[]`. Each `GmailProviderInstance` supplies `providerInstanceKey`, `providerId: "google.gmail"`, `syntheticPrincipalId` and a `GmailMailboxConfiguration`. That configuration is either `GmailMailboxConfigurationV1` (`kind: "gmail_mailbox/v1"`, `messagesCollection`, `draftsCollection`, `mailboxAddress`) or `GmailMailboxConfigurationV2` (`kind: "gmail_mailbox/v2"` with the additional `labelsCollection`). These are SDK configuration types; they do not establish that a hosted provider is available. Hue canonicalizes `syntheticPrincipalId` to a lowercase UUID. These bindings are immutable attempt-profile inputs; they do not establish hosted Gmail calls.
+
+`isTransientEnvironmentError(error)` reports whether an environment error is a connection failure or a retryable HTTP status (`408`, `429`, `500`, `502`, `503`, `504`). It classifies a failure; calling it does not retry an action.
 
 ### Runs, actions and journals
 

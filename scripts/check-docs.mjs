@@ -265,25 +265,26 @@ if (platform.packages.typescript.version !== typescriptVersion || platform.packa
   fail("platform and SDK package-version contracts disagree");
 }
 
+const sourceMetadata = readJson("contracts/sources.json");
+const mirroredSkill = sourceMetadata.skillOverride?.source?.skill ?? sdk.skill;
 const publicSkill = read("skill.md");
 const expectedSkillFrontmatter = [
   "---",
-  `name: "${sdk.skill.name}"`,
+  `name: "${mirroredSkill.name}"`,
   'title: "skill.md"',
-  `description: "${sdk.skill.description}"`,
+  `description: "${mirroredSkill.description}"`,
   "metadata:",
-  `  author: "${sdk.skill.metadata.author}"`,
-  `  version: "${sdk.skill.metadata.version}"`,
+  `  author: "${mirroredSkill.metadata.author}"`,
+  `  version: "${mirroredSkill.metadata.version}"`,
   "---",
 ].join("\n");
 if (!publicSkill.startsWith(`${expectedSkillFrontmatter}\n`)) {
   fail("skill.md frontmatter differs from the SDK-owned skill metadata");
 }
-const skillSource = canonicalSkill(publicSkill, sdk);
+const skillSource = canonicalSkill(publicSkill, { skill: mirroredSkill });
 // A skill override is the one documented exception to mirroring the pinned SDK skill verbatim: the
-// released skill with exactly one section replaced by that section from a later SDK commit. It is
+// released skill with one section, or the complete skill, from a later SDK commit. It is
 // bound to the current snapshot, so refreshing contracts/sdk-docs.json forces its removal or renewal.
-const sourceMetadata = readJson("contracts/sources.json");
 const skillOverride = sourceMetadata.skillOverride;
 if (skillOverride) {
   const { base, section } = skillOverride;
@@ -293,18 +294,28 @@ if (skillOverride) {
   if (base.source !== sdk.skill.source || base.sha256 !== sdk.skill.sha256) {
     fail("contracts/sources.json skillOverride.base no longer matches the SDK snapshot's skill; re-mirror the skill and drop the override");
   }
-  if (!/^[0-9a-f]{40}$/.test(section.commit) || section.repository !== sdk.repository) {
-    fail("contracts/sources.json skillOverride.section must name a full hue-sdk commit");
+  if (skillOverride.source) {
+    const { source } = skillOverride;
+    if (!/^[0-9a-f]{40}$/.test(source.commit) || source.repository !== sdk.repository)
+      fail("skillOverride.source must identify a full hue-sdk commit");
+    if (source.skill.source !== sdk.skill.source || source.skill.sha256 !== skillOverride.sha256)
+      fail("skillOverride.source must name the SDK-owned skill and its exact digest");
+    if (digest(skillSource) !== source.skill.sha256)
+      fail("skill.md differs from the later SDK-owned skill source");
+  } else {
+    if (!/^[0-9a-f]{40}$/.test(section.commit) || section.repository !== sdk.repository) {
+      fail("contracts/sources.json skillOverride.section must name a full hue-sdk commit");
+    }
+    if (digest(skillSource) !== skillOverride.sha256) fail("skill.md differs from the recorded skill override");
+    const body = bodyAfterFrontmatter(publicSkill) ?? "";
+    const start = body.indexOf(`\n${section.heading}\n`);
+    const end = start === -1 ? -1 : body.indexOf("\n## ", start + section.heading.length + 1);
+    if (start === -1 || end === -1) fail(`skill.md is missing the overriding section ${section.heading}`);
+    else if (digest(body.slice(start + 1, end + 1)) !== section.sha256) {
+      fail(`skill.md section ${section.heading} differs from hue-sdk ${section.commit}`);
+    }
+    if (body.includes(`\n${section.replaces}\n`)) fail(`skill.md still contains the replaced section ${section.replaces}`);
   }
-  if (digest(skillSource) !== skillOverride.sha256) fail("skill.md differs from the recorded skill override");
-  const body = bodyAfterFrontmatter(publicSkill) ?? "";
-  const start = body.indexOf(`\n${section.heading}\n`);
-  const end = start === -1 ? -1 : body.indexOf("\n## ", start + section.heading.length + 1);
-  if (start === -1 || end === -1) fail(`skill.md is missing the overriding section ${section.heading}`);
-  else if (digest(body.slice(start + 1, end + 1)) !== section.sha256) {
-    fail(`skill.md section ${section.heading} differs from hue-sdk ${section.commit}`);
-  }
-  if (body.includes(`\n${section.replaces}\n`)) fail(`skill.md still contains the replaced section ${section.replaces}`);
 } else if (digest(skillSource) !== sdk.skill.sha256) {
   fail("skill.md differs from the SDK-owned skill source");
 }

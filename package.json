@@ -9,7 +9,7 @@
     "dev": "mint dev",
     "docs:contract": "node scripts/generate-docs-contract.mjs",
     "docs:contract:check": "node scripts/generate-docs-contract.mjs --check",
-    "check:contract": "node scripts/check-docs.mjs",
+    "check:contract": "node --test scripts/check-docs.test.mjs && node scripts/check-docs.mjs",
     "check:mint": "mint validate && mint broken-links --check-anchors && mint a11y --skip-contrast",
     "check": "bun run check:contract && bun run check:mint"
   },
