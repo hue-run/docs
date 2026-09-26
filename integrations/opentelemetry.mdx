@@ -189,6 +189,97 @@ A coding agent that reads your traces over the [Hue MCP server](/agents/investig
 - **Record the release.** Set `service.version` on the resource. Hue keeps it with the telemetry, but the MCP server does not return or filter by it, so also note deploy times to compare releases.
 - **Keep development traffic out of production.** Send development and staging traces to a separate Hue project with its own **Tracing only** key, so searches, attention states and intents cover production only.
 
+## Instrument for trace checks and request timing
+
+[Trace checks](/agents/investigate-production#trace-checks) judge delegation, scope and omitted tool output, and request timing measures how long a user waited for a useful answer. Both read attributes and events that your application records on purpose; Hue does not infer them. They produce results only while trace checks are active for the project: an owner or admin turns on trace-check consent (`set_trace_checks_consent`), saves and tests a version (`save_trace_checks`, `test_trace_checks`), and activates it with labelled traces (`activate_trace_checks`). Traces from evaluation runs are never checked.
+
+### Mark the request on the root span
+
+The trace that owns a user request carries these on its root span. Keep them, the timing events and the manifest below on that one span: Hue reads all three from the span that carries `hue.trace_checks`, or from the parentless root when there is no manifest.
+
+| Attribute | Value |
+| --- | --- |
+| `hue.request.id` | A non-empty string of up to 200 characters, unique per user request. |
+| `hue.request.owner` | `true` on the one trace that owns the request. Sub-agent and background traces leave it out. |
+| `hue.request.origin` | `foreground` when a user waits for the answer, `background` otherwise. Only foreground requests count toward request timing. |
+| `hue.request.start_source` | Where the wait starts: `speech_end`, `submission` or `server_received` (the default). |
+| `hue.request.clock_verified` | `true` when client timestamps are trustworthy. `speech_end` and `submission` need it; on `server_received`, a value other than `true` drops playback timing. |
+| `hue.agent.release` | Optional release label of up to 200 characters, which `get_trace_check_summary` filters as `release`. |
+| `gen_ai.request.model` | Optional model label, which `get_trace_check_summary` filters as `model`. |
+
+Record timing as events on the same root span. Each event carries the attribute `hue.request.id` with the request's id; Hue reads the earliest event of each name and at most 128 events on the root.
+
+| Event | Records |
+| --- | --- |
+| `hue.request.speech_ended`, `hue.request.submitted`, `hue.request.received` | The start of the wait, matching `hue.request.start_source`. After a client start, a recorded `hue.request.received` must not precede it. |
+| `hue.response.first` | The first response of any kind, such as an acknowledgement. |
+| `hue.response.useful` | The first useful answer, available on the server. |
+| `hue.response.playback_useful` | The first useful answer, played or shown to the user. |
+| `hue.request.completed` | The end of the request. |
+| `hue.request.interrupted` | The user interrupted; later responses do not count. |
+
+Your application decides what is useful: Hue never treats an acknowledgement as an answer. `first_useful_answer_ms` on a trace is the playback time when recorded, else the server time. Events out of order, such as an answer before the start or a completion before the answer, are dropped from the timing and reported as incomplete.
+
+```ts
+import { trace } from "@opentelemetry/api";
+
+const tracer = trace.getTracer("support-agent");
+
+export function handleRequest(input: string) {
+  return tracer.startActiveSpan("agent.support_reply", async (root) => {
+    const requestId = crypto.randomUUID();
+    const mark = (name: string) => root.addEvent(name, { "hue.request.id": requestId });
+    root.setAttributes({
+      "hue.request.id": requestId,
+      "hue.request.owner": true,
+      "hue.request.origin": "foreground",
+      "hue.agent.release": process.env.APP_RELEASE ?? "development",
+    });
+    mark("hue.request.received");
+    try {
+      const reply = await runAgent(input, { onFirstToken: () => mark("hue.response.first") });
+      mark("hue.response.useful");
+      return reply;
+    } finally {
+      mark("hue.request.completed");
+      root.end();
+    }
+  });
+}
+```
+
+`runAgent` stands for your agent. Put `hue.response.useful` where your application knows the answer is ready, not where it sends a placeholder.
+
+### Declare the checked boundaries
+
+Trace checks read a manifest in the root span's `hue.trace_checks` attribute: a JSON object, or a JSON string of up to 64,000 characters, on exactly one span of the trace. It declares the request and every boundary the checks should judge. Hue never infers a boundary from spans the manifest leaves out.
+
+```json
+{
+  "version": 1,
+  "requestKind": "task",
+  "request": { "spanId": "<root span id>", "field": "attributes", "path": ["app.user_request"], "start": 0, "end": 64 },
+  "authorization": [],
+  "boundaries": [
+    { "kind": "action", "spanId": "<tool span id>", "content": { "spanId": "<tool span id>", "field": "attributes", "path": ["gen_ai.tool.call.arguments"], "start": 0, "end": 120 } },
+    { "kind": "delegation", "spanId": "<handoff span id>", "parent": { "spanId": "<root span id>", "field": "attributes", "path": ["app.user_request"], "start": 0, "end": 64 }, "content": { "spanId": "<handoff span id>", "field": "attributes", "path": ["app.delegated_task"], "start": 0, "end": 88 } }
+  ],
+  "linkedTraces": [{ "traceId": "<sub-agent trace id>", "parentSpanId": "<handoff span id>" }],
+  "complete": true
+}
+```
+
+- `requestKind` is `task` for a request that asks for work, which needs at least one `action` boundary, or `conversation`.
+- `request` points at the user's request, and `authorization` at up to eight earlier messages that authorized extra work. Both must cover their whole string.
+- `boundaries` lists up to 32 boundaries. An `action` is a step the agent took itself, judged by `action_scope`. A `delegation` is a handoff to a sub-agent, judged by `delegation_scope`, with `parent` pointing at the task the delegating agent was given. An `output_reduction` is code that reduced a tool's output before the agent used it, judged by `output_omission`; it points at `task`, the whole `original` and `retained` outputs, the reduction `code`, the next `decision` and the later `use`. The `delegation` check reads the request with every action and handoff.
+- Each boundary's span carries `hue.agent.role`, `orchestrator` or `subagent`.
+- `linkedTraces` lists up to four sub-agent traces that started their own root, each with the handoff span in this trace that its top span hangs from.
+- `complete: true` says the list names every boundary of the request.
+
+A source reference names a span by its 16-hex `spanId` (and a linked trace's `traceId`), a `field` of `input`, `output` or `attributes`, a `path` of keys or indexes into it, and a half-open `start` and `end` in UTF-16 code units of the exact recorded string, at most 8,000 characters. Pointing at a string attribute your application sets, with `field: "attributes"` and the attribute key as the path, keeps the offsets exact; set `end` to the string's length when a reference must cover it whole. The trace-check model reads only what the manifest points at, at most 16,000 characters per check.
+
+Checks read at most 128 spans per trace, linked traces included, each with attributes, input and output of at most 64 KiB. A trace without a valid manifest, or whose evidence exceeds those bounds, reports `unavailable` for every check rather than a guess. The `delegation` check is `not_applicable` for a conversation with no actions or handoffs, and each other check is `not_applicable` when the manifest declares none of its boundaries.
+
 ## Control content at its source
 
 Hue can only show and evaluate what a trace records, so enable your instrumentation's capture of prompts, responses and tool inputs and outputs unless you'd rather not send that content or an application or data policy forbids sending it to another service. When using an external exporter directly, configure capture and redaction in your instrumentation or collector. Hue stores the content it receives; it does not reconstruct missing prompts or apply an automatic retention timer.
