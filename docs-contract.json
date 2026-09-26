@@ -21,7 +21,7 @@
     "projectMcpAlias": "https://app.hue.run/api/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
     "skillUrl": "https://docs.hue.run/skill.md",
-    "pageCount": 22
+    "pageCount": 23
   },
   "serviceKeyPresets": [
     {
@@ -190,6 +190,7 @@
     "quickstart",
     "agents/overview",
     "agents/mcp-server",
+    "agents/investigate-production",
     "guides/agent-setup",
     "guides/invited-setup",
     "sdks/typescript",
