@@ -112,7 +112,7 @@ test("an undeployed pin proceeds when production cannot be read; an ordinary syn
       0,
     );
     assert.ok(messages.some((line) => /Could not read the commit production serves \(health timed out\)/.test(line)));
-    assert.match(messages.at(-1), /does not serve yet\. Hold/);
+    assert.match(messages.at(-1), /as undeployed\. Whether production serves it could not be verified/);
     assert.equal(JSON.parse(files()["contracts/sources.json"]).sources.platform.commit, later);
   });
 });

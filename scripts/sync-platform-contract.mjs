@@ -130,8 +130,10 @@ export async function run(argv, { served = fetchProductionCommit, contractAt = p
     error(`Nothing changed: ${cause instanceof Error ? cause.message : String(cause)}`);
     return 1;
   }
-  if (target !== production)
-    log(`Pinned the platform snapshot to ${target}, which production does not serve yet${production ? ` (it serves ${production})` : ""}. Hold this change until ${target} deploys.`);
+  if (!production)
+    log(`Pinned the platform snapshot to ${target} as undeployed. Whether production serves it could not be verified; run \`bun run docs:platform:check\` once production answers.`);
+  else if (target !== production)
+    log(`Pinned the platform snapshot to ${target}, which production does not serve yet (it serves ${production}). Hold this change until ${target} deploys.`);
   else if (pinned === target) log(`The platform snapshot was already pinned to ${target}.`);
   else log(`Pinned the platform snapshot to ${target} (was ${pinned}). Run \`bun run check\` and update the pages it names.`);
   return 0;
