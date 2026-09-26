@@ -4,9 +4,9 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "8e1a07b6240cbe5c8fb7ee3e25463d431706cc9f",
+      "commit": "fc6b562c6131f32e327fdf8e43f3dfa2580ada82",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:4459ae4101ad90bb335625f58803e400542255f3cb482d83e17ae53eadfc9ed0"
+      "sha256": "sha256:bc77952664d7a379806d37f0011db1ebb21f1a06902a2bad89209f840a76b473"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
@@ -74,14 +74,14 @@
     }
   },
   "skill": {
-    "version": "0.5.6",
-    "sha256": "sha256:47ee99cb4f9c0832c5785f2f5add7bcdfe65dd821307fc1df95960a258a5f3ea",
+    "version": "0.5.7",
+    "sha256": "sha256:a45500e7770a86ade57147218ea7317e179fd22eeeb5a5b2ac0b6befcf416e37",
     "sdkSourceSha256": "sha256:64b2695a8dde763338b331bfb1d7cb0e105678076b477d78bffcfc1281960697",
     "override": {
       "baseCommit": "0836a549ea340b965f6a17cdb937971ac49bbbc5",
-      "sourceCommit": "45be430295e915a0ac0e3d19c59a2a818a5f2016",
+      "sourceCommit": "2f4feeb404b404c4363928846b386e0392a24934",
       "source": "skills/hue/SKILL.md",
-      "sourceSha256": "sha256:8ac665c20c8d7c0a1edf3ac7704adefe6f768abaab6a326518018181d19a44a9"
+      "sourceSha256": "sha256:228c2df2bfdf56c1d89e48bcaf83968066c0180f376e8176df950f21f3ffc13d"
     }
   },
   "mcp": {
@@ -185,7 +185,7 @@
       "search_hue_docs",
       "load_hue_guide"
     ],
-    "catalogSha256": "62daf1c8b7b70c6080b9f89dab86d2c1f26dc721a3d8d46a82954b675e0f9b60"
+    "catalogSha256": "aa03e185ed64d5f6a603a9e4a0435e15042a89694dd40b296e94a7ae2a7c444b"
   },
   "pages": [
     "index",

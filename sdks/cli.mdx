@@ -61,6 +61,8 @@ npx --yes --package @hue-run/sdk@0.11.1 hue mcp install --client claude-code
 
 A Codex configuration sets `supports_parallel_tool_calls = true`, so Codex runs Hue's calls in parallel; `codex mcp add` cannot set it, so after registering with Codex the command names the line to add to `~/.codex/config.toml`.
 
+MCP arguments and results use the product object's name: for example, evaluation tools use `eval_set_id`, `eval_set_version_id`, `eval_set_case_id`, `evaluator_version_id`, `run_id`, `scoring_run_id` and `scoring_item_id`. Their list results are `eval_sets`, `evaluators`, `runs`, `scoring_runs` and `cases`; a row's own identifier remains `id`.
+
 With a key, export `HUE_MCP_KEY` in the shell that starts your client; an app started from the Dock or a launcher does not see that shell's variables. Then ask the agent to call `list_projects` and `get_project_context` to confirm which project it reached. The [MCP guide](/agents/mcp-server) covers connection settings, verification and what the server can do.
 
 ## Run an evaluation

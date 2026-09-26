@@ -150,6 +150,29 @@ for (const legacy of [
   if (allPublicText.includes(legacy)) fail(`public content contains retired text: ${legacy}`);
 }
 
+const mcpVocabularyText = [
+  publicText["agents/mcp-server.mdx"],
+  publicText["agents/investigate-production.mdx"],
+].join("\n");
+for (const legacy of [
+  "dataset_id",
+  "dataset_version_id",
+  "version_id",
+  "from_version_id",
+  "scorer_id",
+  "scorer_version_id",
+  "scorer_version_ids",
+  "experiment_id",
+  "baseline_experiment_id",
+  "scenario_id",
+  "evaluation_item_id",
+  "active_version_id",
+]) {
+  if (new RegExp(`\\b${legacy}\\b`).test(mcpVocabularyText)) {
+    fail(`MCP documentation contains retired field name: ${legacy}`);
+  }
+}
+
 const canonicalMcp = "https://mcp.hue.run/mcp";
 const aliasMcp = "https://app.hue.run/api/mcp";
 const docsMcp = "https://docs.hue.run/mcp";

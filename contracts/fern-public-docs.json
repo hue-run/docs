@@ -1781,12 +1781,12 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "62daf1c8b7b70c6080b9f89dab86d2c1f26dc721a3d8d46a82954b675e0f9b60",
+    "catalogSha256": "aa03e185ed64d5f6a603a9e4a0435e15042a89694dd40b296e94a7ae2a7c444b",
     "serverInstructionsSha256": "af588665843e8345ec1de2b317b42dd2f49a6d959ceb581a976e9b49cf6ddf9a",
     "guides": {
       "data-model": {
         "title": "Hue data model",
-        "sha256": "2541e060e56b61a7c69f76c2efff6cd41a52d06ff7edab870a7cef18f4b81716"
+        "sha256": "e7d704a0e796cb7aeddb6cc3d0d6015c58168974a3d2dda805f80da5afd49076"
       },
       "production": {
         "title": "Read production traces with Hue",
@@ -1798,11 +1798,11 @@
       },
       "author": {
         "title": "Author evaluations with Hue",
-        "sha256": "5241c5169e34f7289671f0a16e02e160bd54dca83791fc79c126ad5b383fc26a"
+        "sha256": "8e0690f3abf5507b65391d53d202c10cfb11af7a69f5801f7370556175cf9524"
       },
       "evaluate": {
         "title": "Run your agent against a case",
-        "sha256": "d670634d963a78a86b105e7640414bb6aa5c6c8b6490a0b10cbc39719daaec5d"
+        "sha256": "f2913a0e897a795c841a044a74a78c1ab78746b38aacb6e6557e1f69d44db09f"
       }
     },
     "toolsets": {
