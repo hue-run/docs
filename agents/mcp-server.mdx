@@ -115,19 +115,11 @@ Start with **Any MCP client** for the connection settings, or choose your client
     </Accordion>
   </Tab>
   <Tab title="Cursor">
-    Add only the URL to `.cursor/mcp.json`, replacing any earlier `hue` entry that includes a key header. Turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue`. Cursor then shows **Needs login** for `hue` (`requires_authentication` in the CLI); select it, or run `cursor-agent mcp login hue`.
+    <Warning>
+      Cursor's native browser sign-in is currently blocked: Hue rejects its `cursor://anysphere.cursor-mcp/oauth/callback` redirect. Use a project key below until the compatibility fix is deployed, or use Claude Code or Codex for browser sign-in.
+    </Warning>
 
-    ```json .cursor/mcp.json
-    {
-      "mcpServers": {
-        "hue": {
-          "url": "https://mcp.hue.run/mcp"
-        }
-      }
-    }
-    ```
-
-    <Accordion title="Use a project key instead">
+    <Accordion title="Connect with a project key" defaultOpen>
       First [prepare the key](#connect-with-a-project-key), then configure this client.
 
       Add the server to `.cursor/mcp.json` in the repository, or to `~/.cursor/mcp.json` for all projects:
@@ -263,13 +255,13 @@ For key-based connections, the [curl check](#verify-the-connection) shows Hue's 
 | `503` with `Retry-After: 1` | The server is momentarily busy | Retry after a second. |
 | The client reports `invalid HTTP header` | The stored key ends with a newline | Store the key without a trailing newline. |
 | Cursor shows `not loaded (needs approval)` or `has not been approved` | Cursor has not approved the server, or `HUE_MCP_KEY` changed or became unset since you approved it | Check that `HUE_MCP_KEY` is exported and holds the key you intend, then turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue`. Cursor asks again after every change. |
-| A client you connected by signing in shows **Needs authentication** or `The hue MCP server is not logged in` | The approval ended: 30 days passed, someone disconnected it in **Settings → Connected apps**, you reset your password or signed out everywhere, or you left the organization or the project was archived | Sign in again: `/mcp` → **Authenticate** in Claude Code, `codex mcp login hue`, or `cursor-agent mcp login hue`. |
+| A client you connected by signing in shows **Needs authentication** or `The hue MCP server is not logged in` | The approval ended: 30 days passed, someone disconnected it in **Settings → Connected apps**, you reset your password or signed out everywhere, or you left the organization or the project was archived | Use your client’s authentication action to sign in again: `/mcp` → **Authenticate** in Claude Code or `codex mcp login hue` in Codex. For Cursor, use the project-key instructions in its tab until native sign-in is supported. |
 | A tool call fails as an unknown tool | Write tools are hidden for **Read** access and for a URL with `?read_only=true`; [retired tool names](#retired-tool-names) are no longer served; a tool described in a development branch is not available until its platform release is deployed | Use a **Read and write** key without `?read_only=true`, approve **Read and write** at sign-in, or call the current tool name. Use the tools your connection's `tools/list` returns; an unknown tool is not evidence that the client should broaden its permissions. |
 
 See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent) for tracing problems that are not specific to MCP.
 
 <Accordion title="Endpoints and protocol details">
-  The project-data server is a dynamic Node.js route in Hue's main web application, not a separate data service. `https://app.hue.run/api/mcp` remains a supported compatibility alias. The `search_hue_docs` tool delegates documentation searches to the Mintlify-hosted documentation endpoint without changing the project-data server's authentication boundary.
+  The project-data server is a dynamic Node.js route in Hue's main web application, not a separate data service. `https://app.hue.run/api/mcp` remains a compatibility alias for project keys. Use the canonical URL for browser sign-in: the alias can fail when a client omits the OAuth resource parameter. The `search_hue_docs` tool delegates documentation searches to the Mintlify-hosted documentation endpoint without changing the project-data server's authentication boundary.
 
   The server is stateless and accepts clients that start with `initialize` (MCP revisions up to 2025-11-25) as well as clients on the stateless 2026-07-28 revision, so clients need no extra flags. It accepts `POST` only. A `GET` with no `Authorization` header gets `401` with the sign-in challenge. A `GET` with an `Authorization` header gets `405` with `Allow: POST`; the header value is not checked. Use the POST key check above to diagnose a failing key. A request carrying `Mcp-Session-Id` gets `404`, because the server keeps no sessions. MCP clients handle these answers themselves.
 </Accordion>
