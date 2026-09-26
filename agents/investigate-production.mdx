@@ -154,7 +154,7 @@ The `attention` filter of `search_traces` takes `needs_attention` or `uncertain`
 | `possible_unsupported_completion` | Model and rule | The reply appears to say the action was done, but no recorded tool call succeeded, or a tool it called failed with no later success. |
 | `possible_action_not_taken` | Model and rule | The request asks for an action, the reply neither reports it done nor asks for input, and no recorded tool call succeeded. |
 
-Model findings need the project's **AI trace findings** setting, which is on by default; see [production safety](/guides/production-safety). The MCP returns the attention state, not the individual findings; the trace's page in Hue lists them.
+Model findings need the project's **AI trace findings** setting, which is on by default; see [production safety](/guides/production-safety#what-hue-computes-from-your-traces). The MCP returns the attention state, not the individual findings; the trace's page in Hue lists them.
 
 ### Trace checks
 
@@ -185,7 +185,7 @@ Hue reads these span attributes into its fields. When several are present, the f
 | Trace title | Derived from recorded request text first; a producer name from `hue.trace.name`, then `langfuse.trace.name`, is the fallback |
 | Release | Not stored on the trace. A span attribute such as `langfuse.release` stays among the raw attributes. |
 
-Langfuse metadata (`langfuse.observation.metadata.*`, `langfuse.trace.metadata.*`), `langfuse.release`, `langfuse.environment`, tags and levels are kept as raw attributes. `get_span` lists their names in `attributeKeys` and returns their values only with `include_content: true`. The [OpenTelemetry guide](/integrations/opentelemetry) covers recording these attributes.
+Langfuse metadata (`langfuse.observation.metadata.*`, `langfuse.trace.metadata.*`), `langfuse.release`, `langfuse.environment`, tags and levels are kept as raw attributes. `get_span` lists their names in `attributeKeys` and returns their values only with `include_content: true`. The [OpenTelemetry guide](/integrations/opentelemetry#make-traces-useful-to-a-coding-agent) lists the attributes worth recording so these fields are filled.
 
 ## Limits and errors
 
