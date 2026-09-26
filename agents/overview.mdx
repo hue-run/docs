@@ -11,7 +11,7 @@ The installable project-data server runs at `https://mcp.hue.run/mcp`. A separat
 | Surface | Use it when | It owns | It never does |
 | --- | --- | --- | --- |
 | [Hue skill](https://docs.hue.run/skill.md) | The agent is adding or troubleshooting tracing in an application | How to install the SDK, choose a capture policy, keep serving requests independent of telemetry and verify a real request | Grant credentials, read your project's data |
-| [Hue MCP server](/agents/mcp-server) | The agent needs live project data: see what needs attention in production, find failing or slow traces, inspect a span, read trace checks and intents, check a receipt, read or author evaluations, inspect reviewed cases, or inspect settings | Project-scoped tools with pagination, deep links and documentation search. Writes appear only with **Read and write** access. IAM, AI-processing consent, taxonomy and managed-target writes need an owner or admin; through sign-in, trace-check changes do too | Billing and plan changes; OTLP ingest; artifact bytes; org invites or role changes; access to other projects |
+| [Hue MCP server](/agents/mcp-server) | The agent needs live project data: see what needs attention in production, find failing or slow traces, inspect a span, read trace checks and intents, check a receipt, read or author evaluations, inspect reviewed cases, or inspect settings | Tools for a selected project, with pagination, deep links and documentation search. Writes appear only with **Read and write** access. IAM, AI-processing consent, taxonomy and managed-target writes need an owner or admin; through sign-in, trace-check changes do too | Billing and plan changes; OTLP ingest; artifact bytes; org invites or role changes; access beyond the connection’s approved projects |
 | [SDKs](/sdks/typescript) and REST | CI jobs and agents that can run a shell and prefer to filter data in code | Tracing, receipts, datasets, scorers, experiments and evaluation runs | Browse traces — the clients expose no trace-search API |
 
 ## Which one to reach for
@@ -26,7 +26,7 @@ The installable project-data server runs at `https://mcp.hue.run/mcp`. A separat
 Application telemetry and agent access have different authentication needs:
 
 - The application's `HUE_API_KEY` uses **Tracing only** for telemetry and known-trace receipts. Use **Read and write** only when that process also manages datasets, scorers, experiments, simulations, environments, or managed runs.
-- For MCP access, [sign in with Hue](/agents/mcp-server#sign-in-with-hue-instead-of-a-key) and approve **Read** or **Read and write** for one project. Clients that accept project keys can instead use `HUE_MCP_KEY` with the same access choices. Configure that key in the MCP client, never in application code. The [MCP connection guide](/agents/mcp-server) covers both methods and client setup.
+- For MCP access, [sign in with Hue](/agents/mcp-server#sign-in-with-hue-instead-of-a-key) and approve **Read and write** for all current and future active projects in one organization. Use `list_projects` and pass the chosen `project_id` on each subsequent tool call. Existing sign-in connections keep their original project and access until you disconnect and reconnect. Clients that accept project keys can instead use `HUE_MCP_KEY` with **Read** or **Read and write** for one project. Configure that key in the MCP client, never in application code. The [MCP connection guide](/agents/mcp-server) covers both methods and client setup.
 
 See [project keys](/guides/project-keys) for the presets and rotation.
 

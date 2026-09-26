@@ -4,9 +4,9 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "7f3cce7fbcda160e39bcac6c0b72b0f2aa82d163",
+      "commit": "85b851000bd9a3f81bc08b9dda94f8082b939e21",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:5ba413b8a15153f1b3c91a74a114cbfc52290237766f17382f49008023b212fa"
+      "sha256": "sha256:dd106fbba775b422f544dbbad70c572261056218dbda3beb840d627ab098b0b0"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
@@ -88,6 +88,7 @@
     "transport": "Streamable HTTP",
     "authentication": "OAuth 2.1 authorization code with PKCE, discovered from the endpoint's protected-resource metadata and the issuer's authorization-server metadata, or a Bearer project service key",
     "tools": [
+      "list_projects",
       "get_project_context",
       "list_api_keys",
       "add_api_key",
@@ -125,6 +126,12 @@
       "copy_evaluator",
       "archive_eval_set",
       "archive_evaluator",
+      "list_judge_results",
+      "get_judge_alignment",
+      "label_judge_result",
+      "set_judge_promotion",
+      "check_judge_regression",
+      "set_judge_alignment_bar",
       "list_runs",
       "get_run",
       "add_run",
@@ -145,6 +152,11 @@
       "update_case_conversion",
       "publish_case_conversion",
       "archive_case_conversion",
+      "get_case_divergence",
+      "list_suggested_cases",
+      "add_case_conversion_batch",
+      "get_case_conversion_batch",
+      "update_case_conversion_batch",
       "list_environments",
       "get_environment",
       "add_environment",
@@ -170,7 +182,7 @@
       "search_hue_docs",
       "load_hue_guide"
     ],
-    "catalogSha256": "ed0826c46095a660746848df91bd1317c3d2916606d6df32e8c7633ade9c7430"
+    "catalogSha256": "897393f87d9bbbf2903679534330b58c861a230ac9a412072cd2d7161457a9c0"
   },
   "pages": [
     "index",
