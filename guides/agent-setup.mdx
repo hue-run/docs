@@ -8,7 +8,7 @@ sidebarTitle: "Agent setup"
   **Setting up Hue yourself?** Copy this prompt into your coding agent, such as Claude Code, Cursor or Codex, from your application's repository. The rest of this page is written for the agent.
 
   ```text Prompt wrap
-  Set up Hue in this project. Use curl to read https://docs.hue.run/guides/agent-setup.md and follow it, and show me the plan before you change anything. If you can't open it, stop and tell me why.
+  Set up Hue in this project. Use curl to read https://docs.hue.run/guides/agent-setup.md and follow it, and show me the plan before you change anything.
   ```
 
   Your agent shows you its plan and asks you to create a **Read and write** API key in Hue and store it yourself, so the key never goes into the chat. It then adds tracing, verifies a real request and connects the Hue MCP server, which your agent can use once you restart it.
