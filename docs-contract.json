@@ -74,14 +74,14 @@
     }
   },
   "skill": {
-    "version": "0.5.1",
-    "sha256": "sha256:bc74314ff440cd57bf74e68b67f4c1706eba82f8336670dd40e2d6693700d95e",
+    "version": "0.5.2",
+    "sha256": "sha256:052ba841bd1813086051db01657e6d4454c60038b002472bb7c0817418431e73",
     "sdkSourceSha256": "sha256:a1952f05fddf5000fefedde733361c5b055a9d584a3792c2bd1486e1291c8d83",
     "override": {
       "baseCommit": "1d0e7607de9c7770b10c2f59f7d4bf60b37719a3",
-      "sourceCommit": "bfb28eaca7352f0df4e0344b73a69c22cba51cc3",
+      "sourceCommit": "38f2b4ba7dd34ab85a5a00b783a6e2083ec0fc14",
       "source": "skills/hue/SKILL.md",
-      "sourceSha256": "sha256:5db12c333cc17e3f7df2632783ba0ff28d8d6eb4dec8b6b183ac50557b1b8d6a"
+      "sourceSha256": "sha256:65091817df6d13716ff3aa5716069f643e58fbd5e2fb74e6bdf07c8844ff9f46"
     }
   },
   "mcp": {

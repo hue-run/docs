@@ -184,7 +184,7 @@ Leave out the `Authorization` header and any bearer-token environment-variable s
 
 ## Connect with a project key
 
-1. An owner or admin creates a **Read** key, or a **Read and write** key if the agent should change project data, in **Settings → Integrations & API keys**. Save the key in your secret manager; it is shown once. Keep it separate from the application's **Tracing only** key.
+1. An owner or admin creates a **Read** key, or a **Read and write** key if the agent should change project data, in **Settings → Integrations & API keys**. Save the key in your secret manager; it is shown once. On a production server, keep it separate from the application's **Tracing only** `HUE_API_KEY`; on a development machine, the one **Read and write** key from [`hue login`](/sdks/cli#store-your-key) serves both.
 2. For clients that read `HUE_MCP_KEY`, export the key alone, without `Bearer `, from your secret manager into the shell that starts the client. If your client offers a secure credential prompt, use that instead.
 3. Follow your [client's tab](#connect-your-client), restart it from that shell and approve **hue** if asked. Desktop apps started from the Dock or a launcher do not inherit a terminal's variables.
 
