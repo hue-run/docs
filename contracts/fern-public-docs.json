@@ -1790,6 +1790,6 @@
       }
     },
     "aliasRule": "{alias} is the real host with every dot replaced by a dash, one DNS label",
-    "releaseBoundary": "The route is mounted but SIM_GATEWAY_ENABLED is off in every hosted environment and no provider surface is registered. Staging sim hosts are being configured and proven first; production sim hosts are not configured. Customer documentation must not name a mirror host until docs/simulation-hosts.md records it as proven."
+    "releaseBoundary": "The route is mounted and registers the Gmail MCP, Gmail REST, Slack Web API and Slack MCP mirrors, but SIM_GATEWAY_ENABLED is off in production; staging serves them for verification. Production sim hosts are not configured. Customer documentation must not name a mirror host until docs/simulation-hosts.md records it as proven."
   }
 }
