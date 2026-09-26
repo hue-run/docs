@@ -23,6 +23,7 @@
         "pages": [
           "agents/overview",
           "agents/mcp-server",
+          "agents/investigate-production",
           "guides/agent-setup",
           "guides/invited-setup"
         ]

@@ -81,8 +81,10 @@ if (new Set(pages).size !== pages.length) fail("docs.json navigation contains du
 if (JSON.stringify(mdxFiles) !== JSON.stringify(expectedMdxFiles)) {
   fail(`docs.json must contain every MDX page exactly once; found ${mdxFiles.length} files and ${pages.length} navigation entries`);
 }
-if (pages.length !== 21 || pages.length + 1 !== 22) {
-  fail(`expected 21 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
+// A new page is a deliberate change: agents/investigate-production holds the production recipes,
+// data model, field glossary and limits that the connection guide links to.
+if (pages.length !== 22 || pages.length + 1 !== 23) {
+  fail(`expected 22 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
 }
 
 for (const page of expectedMdxFiles) {
