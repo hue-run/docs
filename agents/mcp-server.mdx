@@ -139,7 +139,7 @@ Start with **Any MCP client** for the connection settings, or choose your client
 
       Cursor loads a new server only after you approve it: turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue` with the Cursor CLI. Check that `HUE_MCP_KEY` holds the key you intend before you approve.
 
-      **Verify:** `cursor-agent mcp list` shows `hue: ready`, and `cursor-agent mcp list-tools hue` lists the `observe` tools, from `list_projects` to `load_hue_guide`. Without `?toolsets=observe`, it lists 96 tools for a **Read and write** key or 50 tools for a **Read** key.
+      **Verify:** `cursor-agent mcp list` shows `hue: ready`, and `cursor-agent mcp list-tools hue` lists the `observe` tools, from `list_projects` to `load_hue_guide`. `observe` holds reads only: to use write tools or the evaluation, case and judge tools with Cursor, change the URL to another [toolset](#choose-toolsets) or remove `?toolsets=observe`, which lists 96 tools for a **Read and write** key or 50 tools for a **Read** key.
 
       <Accordion title="If the Cursor check fails">
         The approval covers the expanded header, so Cursor asks again whenever `HUE_MCP_KEY` changes or becomes unset. If `HUE_MCP_KEY` is unset, Cursor sends the unexpanded reference without a warning, and Hue refuses it. For a key Hue refuses with `401`, Cursor shows only `requires_authentication` and suggests `agent mcp login hue`. Don't run it; run the [curl check](#verify-the-connection) to see Hue's reason.
