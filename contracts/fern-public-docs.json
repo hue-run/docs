@@ -582,7 +582,7 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.11.0"
+      "version": "0.11.1"
     },
     "python": {
       "name": "hue-run",
@@ -851,7 +851,7 @@
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
-          "idempotentHint": false,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -930,7 +930,7 @@
       {
         "name": "list_eval_sets",
         "title": "Hue: list eval sets",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -942,7 +942,7 @@
       {
         "name": "get_eval_set",
         "title": "Hue: get eval set",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -954,7 +954,7 @@
       {
         "name": "list_evaluators",
         "title": "Hue: list evaluators",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -966,7 +966,7 @@
       {
         "name": "get_evaluator",
         "title": "Hue: get evaluator",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -978,7 +978,7 @@
       {
         "name": "add_eval_set",
         "title": "Hue: add eval set",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -990,7 +990,7 @@
       {
         "name": "update_eval_set",
         "title": "Hue: update eval set",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1002,7 +1002,7 @@
       {
         "name": "add_eval_set_draft",
         "title": "Hue: add eval set draft",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1014,7 +1014,7 @@
       {
         "name": "add_eval_set_cases",
         "title": "Hue: add eval set cases",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1026,7 +1026,7 @@
       {
         "name": "update_eval_set_case",
         "title": "Hue: update eval set case",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1038,7 +1038,7 @@
       {
         "name": "delete_eval_set_case",
         "title": "Hue: delete eval set case",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1050,7 +1050,7 @@
       {
         "name": "freeze_eval_set_version",
         "title": "Hue: freeze eval set version",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1062,7 +1062,7 @@
       {
         "name": "add_evaluator",
         "title": "Hue: add evaluator",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1074,7 +1074,7 @@
       {
         "name": "publish_evaluator",
         "title": "Hue: publish evaluator",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1086,7 +1086,7 @@
       {
         "name": "copy_evaluator",
         "title": "Hue: copy evaluator",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1098,7 +1098,7 @@
       {
         "name": "archive_eval_set",
         "title": "Hue: archive eval set",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1110,7 +1110,7 @@
       {
         "name": "archive_evaluator",
         "title": "Hue: archive evaluator",
-        "toolset": "evals",
+        "toolset": "eval_sets",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1122,7 +1122,7 @@
       {
         "name": "list_judge_results",
         "title": "Hue: list judge results",
-        "toolset": "evals",
+        "toolset": "judges",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1134,7 +1134,7 @@
       {
         "name": "get_judge_alignment",
         "title": "Hue: get judge alignment",
-        "toolset": "evals",
+        "toolset": "judges",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1146,7 +1146,7 @@
       {
         "name": "label_judge_result",
         "title": "Hue: label judge result",
-        "toolset": "evals",
+        "toolset": "judges",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1158,19 +1158,19 @@
       {
         "name": "set_judge_promotion",
         "title": "Hue: promote or demote judge",
-        "toolset": "evals",
+        "toolset": "judges",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
-          "idempotentHint": false,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
       {
         "name": "check_judge_regression",
         "title": "Hue: check judge regression",
-        "toolset": "evals",
+        "toolset": "judges",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1182,19 +1182,19 @@
       {
         "name": "set_judge_alignment_bar",
         "title": "Hue: set judge alignment bar",
-        "toolset": "evals",
+        "toolset": "judges",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
-          "idempotentHint": false,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
       {
         "name": "list_runs",
         "title": "Hue: list runs",
-        "toolset": "evals",
+        "toolset": "runs",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1206,7 +1206,7 @@
       {
         "name": "get_run",
         "title": "Hue: get run",
-        "toolset": "evals",
+        "toolset": "runs",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1218,7 +1218,7 @@
       {
         "name": "add_run",
         "title": "Hue: add run",
-        "toolset": "evals",
+        "toolset": "runs",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1230,7 +1230,7 @@
       {
         "name": "list_run_items",
         "title": "Hue: list run items",
-        "toolset": "evals",
+        "toolset": "runs",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1242,7 +1242,7 @@
       {
         "name": "get_run_item",
         "title": "Hue: get run item",
-        "toolset": "evals",
+        "toolset": "runs",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1254,7 +1254,7 @@
       {
         "name": "get_run_execution",
         "title": "Hue: get run execution",
-        "toolset": "evals",
+        "toolset": "runs",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1266,7 +1266,7 @@
       {
         "name": "start_run_case",
         "title": "Hue: start run case",
-        "toolset": "evals",
+        "toolset": "runs",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1278,7 +1278,7 @@
       {
         "name": "complete_run_case",
         "title": "Hue: complete run case",
-        "toolset": "evals",
+        "toolset": "runs",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1290,7 +1290,7 @@
       {
         "name": "finish_run",
         "title": "Hue: finish run",
-        "toolset": "evals",
+        "toolset": "runs",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1302,7 +1302,7 @@
       {
         "name": "list_scoring_runs",
         "title": "Hue: list scoring runs",
-        "toolset": "evals",
+        "toolset": "runs",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1314,7 +1314,7 @@
       {
         "name": "get_scoring_run",
         "title": "Hue: get scoring run",
-        "toolset": "evals",
+        "toolset": "runs",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1326,7 +1326,7 @@
       {
         "name": "add_scoring_run",
         "title": "Hue: add scoring run",
-        "toolset": "evals",
+        "toolset": "runs",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1338,7 +1338,7 @@
       {
         "name": "add_scoring_results",
         "title": "Hue: add scoring results",
-        "toolset": "evals",
+        "toolset": "runs",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1350,7 +1350,7 @@
       {
         "name": "list_cases",
         "title": "Hue: list cases",
-        "toolset": "evals",
+        "toolset": "cases",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1362,7 +1362,7 @@
       {
         "name": "get_case",
         "title": "Hue: get case",
-        "toolset": "evals",
+        "toolset": "cases",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1374,7 +1374,7 @@
       {
         "name": "add_case_conversion",
         "title": "Hue: add case conversion",
-        "toolset": "evals",
+        "toolset": "cases",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1386,7 +1386,7 @@
       {
         "name": "get_case_conversion",
         "title": "Hue: get case conversion",
-        "toolset": "evals",
+        "toolset": "cases",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1398,7 +1398,7 @@
       {
         "name": "update_case_conversion",
         "title": "Hue: update case conversion",
-        "toolset": "evals",
+        "toolset": "cases",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1410,7 +1410,7 @@
       {
         "name": "publish_case_conversion",
         "title": "Hue: publish case conversion",
-        "toolset": "evals",
+        "toolset": "cases",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1422,7 +1422,7 @@
       {
         "name": "archive_case_conversion",
         "title": "Hue: archive case conversion",
-        "toolset": "evals",
+        "toolset": "cases",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1434,7 +1434,7 @@
       {
         "name": "get_case_divergence",
         "title": "Hue: get case divergence",
-        "toolset": "evals",
+        "toolset": "cases",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1446,7 +1446,7 @@
       {
         "name": "list_suggested_cases",
         "title": "Hue: list suggested cases",
-        "toolset": "evals",
+        "toolset": "cases",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1458,7 +1458,7 @@
       {
         "name": "add_case_conversion_batch",
         "title": "Hue: add case conversion batch",
-        "toolset": "evals",
+        "toolset": "cases",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1470,7 +1470,7 @@
       {
         "name": "get_case_conversion_batch",
         "title": "Hue: get case conversion batch",
-        "toolset": "evals",
+        "toolset": "cases",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1482,7 +1482,7 @@
       {
         "name": "update_case_conversion_batch",
         "title": "Hue: update case conversion batch",
-        "toolset": "evals",
+        "toolset": "cases",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1602,7 +1602,7 @@
       {
         "name": "list_managed_targets",
         "title": "Hue: list managed targets",
-        "toolset": "evals",
+        "toolset": "runners",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1614,7 +1614,7 @@
       {
         "name": "add_managed_target",
         "title": "Hue: add managed target",
-        "toolset": "evals",
+        "toolset": "runners",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1626,7 +1626,7 @@
       {
         "name": "preflight_managed_run",
         "title": "Hue: preflight managed run",
-        "toolset": "evals",
+        "toolset": "runners",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1638,19 +1638,19 @@
       {
         "name": "launch_managed_run",
         "title": "Hue: launch managed run",
-        "toolset": "evals",
+        "toolset": "runners",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
           "idempotentHint": true,
-          "openWorldHint": false
+          "openWorldHint": true
         }
       },
       {
         "name": "get_managed_run",
         "title": "Hue: get managed run",
-        "toolset": "evals",
+        "toolset": "runners",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1662,7 +1662,7 @@
       {
         "name": "cancel_managed_run",
         "title": "Hue: cancel managed run",
-        "toolset": "evals",
+        "toolset": "runners",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1674,7 +1674,7 @@
       {
         "name": "list_local_agents",
         "title": "Hue: list local agents",
-        "toolset": "evals",
+        "toolset": "runners",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1686,7 +1686,7 @@
       {
         "name": "launch_local_run",
         "title": "Hue: launch local run",
-        "toolset": "evals",
+        "toolset": "runners",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1698,7 +1698,7 @@
       {
         "name": "get_local_run",
         "title": "Hue: get local run",
-        "toolset": "evals",
+        "toolset": "runners",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1710,7 +1710,7 @@
       {
         "name": "list_artifacts",
         "title": "Hue: list artifacts",
-        "toolset": "evals",
+        "toolset": "runners",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1722,7 +1722,7 @@
       {
         "name": "get_artifact",
         "title": "Hue: get artifact",
-        "toolset": "evals",
+        "toolset": "runners",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1734,7 +1734,7 @@
       {
         "name": "get_judge_budget",
         "title": "Hue: get judge budget",
-        "toolset": "evals",
+        "toolset": "judges",
         "access": "read",
         "annotations": {
           "readOnlyHint": true,
@@ -1746,7 +1746,7 @@
       {
         "name": "add_judge_jobs",
         "title": "Hue: add judge jobs",
-        "toolset": "evals",
+        "toolset": "judges",
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
@@ -1764,7 +1764,7 @@
           "readOnlyHint": true,
           "destructiveHint": false,
           "idempotentHint": true,
-          "openWorldHint": false
+          "openWorldHint": true
         }
       },
       {
@@ -1781,16 +1781,16 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "3bd0ea678c1f00cb3ee80e001dd68ed9bbf6659ff4260a18f8904068b7e87c2e",
-    "serverInstructionsSha256": "54f30d02852e5fab0b6deb56cf92b7d55714bb6c7abf9268572375b44fc4ce28",
+    "catalogSha256": "62daf1c8b7b70c6080b9f89dab86d2c1f26dc721a3d8d46a82954b675e0f9b60",
+    "serverInstructionsSha256": "af588665843e8345ec1de2b317b42dd2f49a6d959ceb581a976e9b49cf6ddf9a",
     "guides": {
       "data-model": {
         "title": "Hue data model",
-        "sha256": "268d9bbfa82f828ea4c8a7004757a710de26daf420ae20bd469cfcac5b4faed7"
+        "sha256": "2541e060e56b61a7c69f76c2efff6cd41a52d06ff7edab870a7cef18f4b81716"
       },
       "production": {
         "title": "Read production traces with Hue",
-        "sha256": "966a3b4d3327ed30a0a3271b0847dd285f2f140248872c72faec935f361858e8"
+        "sha256": "0b8a741ced41a28ce484b1c86b48f8c446f8ba43452f1913c8cfb689a89ae376"
       },
       "investigate": {
         "title": "Investigate a failure with Hue",
@@ -1798,18 +1798,22 @@
       },
       "author": {
         "title": "Author evaluations with Hue",
-        "sha256": "80073608cd44e91376d239e395b175336e9ff7fed249dcbe1b1e0ccc964caf66"
+        "sha256": "5241c5169e34f7289671f0a16e02e160bd54dca83791fc79c126ad5b383fc26a"
       },
       "evaluate": {
         "title": "Run your agent against a case",
-        "sha256": "6c2c5a676d51c6613491fdbe6a8417a36e7476659485d48f8fd4de81665b5460"
+        "sha256": "d670634d963a78a86b105e7640414bb6aa5c6c8b6490a0b10cbc39719daaec5d"
       }
     },
     "toolsets": {
       "groups": [
         "project",
         "traces",
-        "evals",
+        "eval_sets",
+        "runs",
+        "judges",
+        "cases",
+        "runners",
         "environments",
         "intents",
         "docs"
@@ -1833,6 +1837,61 @@
           "list_intent_traces",
           "search_hue_docs",
           "load_hue_guide"
+        ],
+        "author": [
+          "get_trace",
+          "list_eval_sets",
+          "get_eval_set",
+          "add_eval_set",
+          "update_eval_set",
+          "add_eval_set_draft",
+          "add_eval_set_cases",
+          "update_eval_set_case",
+          "delete_eval_set_case",
+          "freeze_eval_set_version",
+          "list_evaluators",
+          "get_evaluator",
+          "add_evaluator",
+          "publish_evaluator",
+          "copy_evaluator",
+          "list_runs",
+          "get_run",
+          "add_run",
+          "list_run_items",
+          "get_run_item",
+          "start_run_case",
+          "complete_run_case",
+          "finish_run",
+          "launch_managed_run",
+          "launch_local_run",
+          "add_case_conversion",
+          "get_case_conversion",
+          "update_case_conversion",
+          "publish_case_conversion",
+          "archive_case_conversion",
+          "list_environments",
+          "get_environment",
+          "add_environment",
+          "publish_environment_version"
+        ],
+        "evaluate": [
+          "load_hue_guide",
+          "get_trace",
+          "get_span",
+          "list_cases",
+          "get_case",
+          "add_case_conversion",
+          "get_case_conversion",
+          "update_case_conversion",
+          "publish_case_conversion",
+          "get_environment",
+          "list_local_agents",
+          "launch_local_run",
+          "get_local_run",
+          "get_run",
+          "list_run_items",
+          "get_run_item",
+          "get_run_execution"
         ]
       },
       "default": [
