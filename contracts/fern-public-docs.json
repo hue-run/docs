@@ -588,7 +588,7 @@
   },
   "mcp": {
     "transport": "Streamable HTTP",
-    "authentication": "Bearer project service key",
+    "authentication": "OAuth 2.1 authorization code with PKCE, discovered from the endpoint's protected-resource metadata and the issuer's authorization-server metadata, or a Bearer project service key",
     "variants": {
       "product": {
         "status": "released",
@@ -747,6 +747,126 @@
       {
         "name": "verify_trace",
         "title": "Hue: verify trace delivery",
+        "toolset": "traces",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_trace_checks",
+        "title": "Hue: list trace checks",
+        "toolset": "traces",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_trace_checks",
+        "title": "Hue: get trace checks",
+        "toolset": "traces",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "save_trace_checks",
+        "title": "Hue: save trace checks",
+        "toolset": "traces",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "set_trace_checks_consent",
+        "title": "Hue: set trace-check consent",
+        "toolset": "traces",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "test_trace_checks",
+        "title": "Hue: test trace checks",
+        "toolset": "traces",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "activate_trace_checks",
+        "title": "Hue: activate trace checks",
+        "toolset": "traces",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "deactivate_trace_checks",
+        "title": "Hue: deactivate trace checks",
+        "toolset": "traces",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "reassess_trace_checks",
+        "title": "Hue: reassess trace checks",
+        "toolset": "traces",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_trace_check_results",
+        "title": "Hue: get trace-check results",
+        "toolset": "traces",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_trace_check_summary",
+        "title": "Hue: trace-check summary",
         "toolset": "traces",
         "access": "read",
         "annotations": {
@@ -1478,8 +1598,11 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "1ba29711a86a1e2f78ebf74d413264ff29e03b956d2741c3806a94bb218011d8",
+    "catalogSha256": "ed0826c46095a660746848df91bd1317c3d2916606d6df32e8c7633ade9c7430",
     "installSnippets": {
+      "oauthServerUrl": "https://mcp.hue.run/mcp",
+      "oauthClaudeCodeCli": "claude mcp add --transport http hue https://mcp.hue.run/mcp",
+      "oauthCodexCli": "codex mcp add hue --url https://mcp.hue.run/mcp\ncodex mcp login hue",
       "claudeCodeProjectJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "claudeCodeCli": "claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp \\\n  --header 'Authorization: Bearer ${HUE_MCP_KEY}'",
       "cursorJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${env:HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
@@ -1490,6 +1613,7 @@
       "copilotCloudJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp?read_only=true\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $COPILOT_MCP_HUE_MCP_KEY\"\n      },\n      \"tools\": [\n        \"get_project_context\",\n        \"search_traces\",\n        \"get_trace\",\n        \"get_span\",\n        \"list_sessions\",\n        \"verify_trace\",\n        \"list_eval_sets\",\n        \"get_eval_set\",\n        \"list_evaluators\",\n        \"get_evaluator\",\n        \"list_runs\",\n        \"get_run\",\n        \"list_cases\",\n        \"get_case\",\n        \"list_environments\",\n        \"get_environment\",\n        \"get_intent_taxonomy\",\n        \"get_intent_summary\",\n        \"list_managed_targets\",\n        \"list_local_agents\",\n        \"list_artifacts\",\n        \"list_api_keys\",\n        \"list_members\",\n        \"search_hue_docs\"\n      ]\n    }\n  }\n}",
       "windsurfJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"serverUrl\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${env:HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "geminiCli": "gemini mcp add --transport http hue https://mcp.hue.run/mcp -H \"Authorization: Bearer $HUE_MCP_KEY\"",
+      "connectPrompt": "Connect me to the Hue MCP server.\n\nIt is a remote MCP server (Streamable HTTP) at https://mcp.hue.run/mcp. Authenticate with a bearer token read from the HUE_MCP_KEY environment variable — reference the variable, do not write the key into a config file.\n\nRegister it under the name \"hue\" using whatever MCP configuration my client uses, then call get_project_context and tell me which Hue project it reached.",
       "verifyPrompt": "Use the Hue MCP: call get_project_context, then show my 5 most recent error traces with links."
     }
   },

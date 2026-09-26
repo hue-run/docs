@@ -4,9 +4,9 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "fc5e1773c4b850abc2fddeb7fe1f8a027549a7fb",
+      "commit": "7f3cce7fbcda160e39bcac6c0b72b0f2aa82d163",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:aa5741f0cee622dba2de63f3c7b06dd829081ebcefb5fa9de97dd88acd3edb6f"
+      "sha256": "sha256:5ba413b8a15153f1b3c91a74a114cbfc52290237766f17382f49008023b212fa"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
@@ -86,7 +86,7 @@
   },
   "mcp": {
     "transport": "Streamable HTTP",
-    "authentication": "Bearer project service key",
+    "authentication": "OAuth 2.1 authorization code with PKCE, discovered from the endpoint's protected-resource metadata and the issuer's authorization-server metadata, or a Bearer project service key",
     "tools": [
       "get_project_context",
       "list_api_keys",
@@ -99,6 +99,16 @@
       "get_span",
       "list_sessions",
       "verify_trace",
+      "list_trace_checks",
+      "get_trace_checks",
+      "save_trace_checks",
+      "set_trace_checks_consent",
+      "test_trace_checks",
+      "activate_trace_checks",
+      "deactivate_trace_checks",
+      "reassess_trace_checks",
+      "get_trace_check_results",
+      "get_trace_check_summary",
       "list_eval_sets",
       "get_eval_set",
       "list_evaluators",
@@ -160,7 +170,7 @@
       "search_hue_docs",
       "load_hue_guide"
     ],
-    "catalogSha256": "1ba29711a86a1e2f78ebf74d413264ff29e03b956d2741c3806a94bb218011d8"
+    "catalogSha256": "ed0826c46095a660746848df91bd1317c3d2916606d6df32e8c7633ade9c7430"
   },
   "pages": [
     "index",

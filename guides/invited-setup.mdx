@@ -22,7 +22,7 @@ sidebarTitle: "Agent setup"
 
 ## 1. Get a Read and write key
 
-Hue grants access through a project key. This setup uses one **Read and write** key: it sends traces, checks stored traces and lets you run evaluations and connect to the [Hue MCP server](/agents/mcp-server).
+Your application authenticates to Hue with a project key. This setup uses one **Read and write** key: it sends traces, checks stored traces and lets you run evaluations. You can also use it for the [Hue MCP server](/agents/mcp-server), or connect the MCP client separately by signing in with Hue.
 
 First find how the application already provides local secrets, without reading any values: an ignored env file it loads (such as `.env.local` or `.env`), or a secret manager that injects variables into commands (such as Doppler, 1Password or Infisical). If that workflow already provides a **Read and write** key as both `HUE_API_KEY` and `HUE_MCP_KEY`, go to step 2. An existing `HUE_API_KEY` may be a **Tracing only** key; ask the user which preset it is. If it is **Read and write** but `HUE_MCP_KEY` is missing, ask the user to add `HUE_MCP_KEY` with the same value, then go to step 2.
 
@@ -74,6 +74,6 @@ Once a real request is verified, offer to connect the coding agent to the [Hue M
 npx --yes --package @hue-run/sdk@0.10.0 hue mcp install --client claude-code
 ```
 
-The command writes a server named `hue` that reads `HUE_MCP_KEY` from the environment; it never writes the key. For Gemini CLI it runs `gemini mcp add` with the literal `$HUE_MCP_KEY` reference, which Gemini resolves at runtime. The user makes `HUE_MCP_KEY` available in the shell that starts the client, from the same workflow, and restarts the client. `hue eval` reads `HUE_API_KEY` the same way, or from `--env-file`; see the [Hue CLI](/sdks/cli).
+The command writes a server named `hue` that reads `HUE_MCP_KEY` from the environment; it never writes the key. The user makes `HUE_MCP_KEY` available in the shell that starts the client, from the same workflow, and restarts the client. Follow the [MCP connection guide](/agents/mcp-server#connect-your-client) for client-specific setup, then call `get_project_context` to verify which project it reached. The [Hue CLI reference](/sdks/cli) covers the install command's options.
 
-For a hosted assistant, first confirm its connector supports Streamable HTTP and a secret-backed `Authorization: Bearer` header. Installing the coding-agent configuration does not configure a separate hosted assistant. Hue does not offer an OAuth authorization flow in this release; see [client support](/agents/mcp-server#connect-your-client).
+If the client cannot send a key, or the user prefers browser sign-in, follow [sign in with Hue](/agents/mcp-server#sign-in-with-hue-instead-of-a-key) instead. That guide covers client support, permissions and verification. Installing the coding-agent configuration does not configure a separate hosted assistant.

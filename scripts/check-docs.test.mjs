@@ -30,6 +30,14 @@ function changeSources(directory, change) {
   writeFileSync(path, `${JSON.stringify(sources, null, 2)}\n`);
 }
 
+function changePage(directory, page, change) {
+  const path = resolve(directory, page);
+  const before = readFileSync(path, "utf8");
+  const after = change(before);
+  assert.notEqual(after, before, `${page} was not changed`);
+  writeFileSync(path, after);
+}
+
 test("the exact later skill can coexist with the released package snapshot", () => {
   const result = checkSnapshot();
   assert.equal(result.status, 0, result.stderr);
@@ -58,4 +66,45 @@ test("a complete skill override must come from the SDK repository", () => {
   }));
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /must identify a full hue-sdk commit/);
+});
+
+test("a double-quoted key reference in an mcp add command fails", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
+    text.replace("--header 'Authorization: Bearer ${HUE_MCP_KEY}'", '--header "Authorization: Bearer ${HUE_MCP_KEY}"'),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /double-quotes a key reference in an mcp add command/);
+  assert.match(result.stderr, /does not match the generated claudeCodeCli snippet/);
+});
+
+test("the MCP guide must keep the sign-in snippets", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
+    text.replace("codex mcp login hue\n", ""),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /does not match the generated oauthCodexCli snippet/);
+});
+
+test("a tool count that disagrees with the contract fails", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
+    text.replace(/lists \d+ tools/, "lists 0 tools"),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /MCP guide names 0 tools/);
+});
+
+test("the retired key-only MCP statement cannot return", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "guides/invited-setup.mdx", (text) =>
+    `${text}\nHue does not offer an OAuth authorization flow in this release.\n`,
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /retired text: does not offer an OAuth authorization flow/);
+});
+
+test("a bare npx hue command in a code block fails", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "sdks/cli.mdx", (text) =>
+    text.replace("npx --yes --package @hue-run/sdk@0.10.0 hue login --gitignore", "npx hue login --gitignore"),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /sdks\/cli\.mdx runs the hue CLI without naming @hue-run\/sdk: npx hue login --gitignore/);
 });
