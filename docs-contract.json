@@ -4,9 +4,9 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "7f3cce7fbcda160e39bcac6c0b72b0f2aa82d163",
+      "commit": "3cb8e8fe2cc8a8d700a2b1ad9b0dff0a2f5b012f",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:5ba413b8a15153f1b3c91a74a114cbfc52290237766f17382f49008023b212fa"
+      "sha256": "sha256:a73b035007af25de32b21e0ec3d2c5dacaf04385e92ca26a0e56b239af10d72e"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
@@ -74,20 +74,21 @@
     }
   },
   "skill": {
-    "version": "0.5.3",
-    "sha256": "sha256:5b9efbe355e3b6df9576cbc8cd433978e982dde4d442a84063a73c2811a527e0",
+    "version": "0.5.4",
+    "sha256": "sha256:af91aff59379c458596cebe075bd6cf1f15ca7fd3dba8a8ddda0757207d79435",
     "sdkSourceSha256": "sha256:a1952f05fddf5000fefedde733361c5b055a9d584a3792c2bd1486e1291c8d83",
     "override": {
       "baseCommit": "1d0e7607de9c7770b10c2f59f7d4bf60b37719a3",
-      "sourceCommit": "50297bec9fa3a08e6819e6e7f22c171a0f6bfd4c",
+      "sourceCommit": "3a17f119389f1712cf79a820e87cf12363c3f2c7",
       "source": "skills/hue/SKILL.md",
-      "sourceSha256": "sha256:75da9faa33d66f9e2bb65c330ff7f47acb35dd66758b3f4d67df94f1ac7e2f4b"
+      "sourceSha256": "sha256:58a628ff1fe48200311d08691a6273bd3f26c50553ce72b79288270d75731b29"
     }
   },
   "mcp": {
     "transport": "Streamable HTTP",
     "authentication": "OAuth 2.1 authorization code with PKCE, discovered from the endpoint's protected-resource metadata and the issuer's authorization-server metadata, or a Bearer project service key",
     "tools": [
+      "list_projects",
       "get_project_context",
       "list_api_keys",
       "add_api_key",
@@ -99,6 +100,9 @@
       "get_span",
       "list_sessions",
       "verify_trace",
+      "get_span_content",
+      "search_spans",
+      "aggregate",
       "list_trace_checks",
       "get_trace_checks",
       "save_trace_checks",
@@ -125,6 +129,12 @@
       "copy_evaluator",
       "archive_eval_set",
       "archive_evaluator",
+      "list_judge_results",
+      "get_judge_alignment",
+      "label_judge_result",
+      "set_judge_promotion",
+      "check_judge_regression",
+      "set_judge_alignment_bar",
       "list_runs",
       "get_run",
       "add_run",
@@ -145,6 +155,11 @@
       "update_case_conversion",
       "publish_case_conversion",
       "archive_case_conversion",
+      "get_case_divergence",
+      "list_suggested_cases",
+      "add_case_conversion_batch",
+      "get_case_conversion_batch",
+      "update_case_conversion_batch",
       "list_environments",
       "get_environment",
       "add_environment",
@@ -170,7 +185,7 @@
       "search_hue_docs",
       "load_hue_guide"
     ],
-    "catalogSha256": "ed0826c46095a660746848df91bd1317c3d2916606d6df32e8c7633ade9c7430"
+    "catalogSha256": "894bcd3b2a863b6c838dd408d478b947c5932491a2f145a1f541fbd95c387440"
   },
   "pages": [
     "index",

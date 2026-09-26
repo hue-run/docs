@@ -118,8 +118,10 @@ test("an undeployed pin proceeds when production cannot be read; an ordinary syn
 });
 
 test("--check reports drift from production and takes no named commit", async () => {
+  // The repository's own pin, so the test holds whichever commit the snapshot names.
+  const pinned = readJson("contracts/sources.json").sources.platform.commit;
   await inCopy(async ({ run, messages }) => {
-    assert.equal(await run(["--check"], { served: async () => commit }), 0);
+    assert.equal(await run(["--check"], { served: async () => pinned }), 0);
     assert.equal(await run(["--check"], { served: async () => later }), 1);
     assert.match(messages.at(-1), /but production serves b{40}/);
     assert.equal(await run(["--check", "--commit", commit], { served: async () => commit }), 2);
