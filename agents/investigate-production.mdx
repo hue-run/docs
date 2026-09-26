@@ -55,7 +55,7 @@ A trace whose agent retried a tool and then succeeded still has `status: "error"
 
 ### Which task types are slow
 
-- **By trace name.** Rows carry `trace_name`, the name your application gives a trace (`hue.trace.name` or `langfuse.trace.name`), and `duration_ms`. Page through `search_traces` over the window and group the rows by `trace_name` to compare durations per task type. For a quick count, `search_traces` with `{"since": "7d", "query": "<name>"}` gives `total_count` for one name, and the same call with `"min_duration_ms": 60000` counts its traces that took a minute or longer; `query` matches the title, the root span name and the trace id, not `trace_name`.
+- **By trace name.** Rows carry `trace_name`, the name your application gives a trace (`hue.trace.name` or `langfuse.trace.name`), and `duration_ms`. Page through `search_traces` over the window and group the rows by `trace_name` to compare durations per task type. `query` does not match `trace_name`: it matches the title, the root span name and the trace id. When the root span is named per task type, `search_traces` with `{"since": "7d", "query": "<root span name>"}` gives a quick `total_count` for it, and the same call with `"min_duration_ms": 60000` counts its traces that took a minute or longer.
 - **By intent**, when the project classifies intents: `get_intent_summary` with `{"range": "7d"}` returns trace counts per bucket. `list_intent_traces` with `{"bucket": "category:<key>", "range": "7d", "limit": 50}` lists a bucket's traces without durations, so the agent reads `trace.duration_ms` from `get_trace` for each and computes percentiles itself.
 - **By request timing**, when the project is set up for it: `get_trace_check_summary` with `{"since": "7d"}` returns `requests`, with counts and p50 and p95 per primary intent and request start source.
 
@@ -84,7 +84,7 @@ Each trace row carries `user_id`, the user id your application recorded (see the
 1. `list_sessions` with `{"query": "<session key or part of it>", "since": "7d"}`. `query` matches session keys and the titles of each session's traces.
 2. `search_traces` with `{"session_id": "<id from list_sessions>", "since": "7d"}`.
 
-A session is not always a user. The result is one user's traces only when the application gives each user a single session; otherwise a user can have several sessions, and a session can be shared. Check each row's `user_id` before attributing traces to a person. An application that derives a sub-agent's user id, for example by appending a call id, gives those traces a different `user_id`; match on the shared prefix. `list_sessions` rows also carry each session's status, trace count and token and span totals over all of its traces.
+A session is not always a user. The result is one user's traces only when the application gives each user a single session; otherwise a user can have several sessions, and a session can be shared. Check each row's `user_id` before attributing traces to a person. An application that derives a sub-agent's user id, for example by appending a call id, gives those traces a different `user_id`. Match the base id together with the separator the application appends, such as `user-1:`, never a bare prefix that would also match `user-12`. `list_sessions` rows also carry each session's status, trace count and token and span totals over all of its traces.
 
 ### Find sub-agent handoffs
 

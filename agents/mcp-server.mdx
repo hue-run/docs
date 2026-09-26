@@ -320,10 +320,10 @@ Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or
 
 A client can list a subset of the tools. Select toolsets with `?toolsets=<names>` on a key-based URL, or with the `X-Hue-MCP-Toolsets: <names>` header for a client that cannot change its URL; together they select their union. Without either, the server lists every tool.
 
-- `observe` lists the production reads: `get_project_context`, `search_traces`, `get_trace`, `get_span`, `list_sessions`, `list_trace_checks`, `get_trace_check_results`, `get_trace_check_summary`, `get_intent_summary`, `list_intent_traces`, `search_hue_docs` and `load_hue_guide`. Use it for Cursor and any client with a tool-count limit, and for an agent that only [investigates production](/agents/investigate-production).
+- `observe` lists the production reads: `list_projects`, `get_project_context`, `search_traces`, `get_trace`, `get_span`, `get_span_content`, `list_sessions`, `list_trace_checks`, `get_trace_check_results`, `get_trace_check_summary`, `get_intent_summary`, `list_intent_traces`, `search_hue_docs` and `load_hue_guide`. Use it for Cursor and any client with a tool-count limit, and for an agent that only [investigates production](/agents/investigate-production).
 - `all` lists everything, and the groups `project`, `traces`, `evals`, `environments`, `intents` and `docs` list one area each. Separate several names with commas.
 
-`get_project_context` is always listed and reports the selection as `toolsets`: the names applied, any it ignored and the names available. An unknown name never fails a request; a selection with only unknown names lists every tool. **Read** access and `?read_only=true` still apply inside a selection.
+`list_projects` and `get_project_context` are always listed, and `get_project_context` reports the selection as `toolsets`: the names applied, any it ignored and the names available. An unknown name never fails a request; a selection with only unknown names lists every tool. **Read** access and `?read_only=true` still apply inside a selection.
 
 With sign-in, never add `toolsets` or `read_only` to the URL: neither is part of the connection's identity, so the client's sign-in can fail. Send the header instead, or select nothing.
 
