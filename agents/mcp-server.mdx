@@ -1,51 +1,59 @@
 ---
 title: "Connect the Hue MCP server"
 sidebarTitle: "MCP"
-description: "Connect Claude Code, Codex, Cursor, VS Code, Claude Desktop, Gemini CLI, OpenCode and other MCP clients to https://mcp.hue.run/mcp with a Read or Read and write project key, or by signing in with Hue, for project-scoped traces, evaluations, cases and settings."
+description: "Connect Claude Code, Codex, Cursor and other MCP clients to your Hue project at https://mcp.hue.run/mcp with a Read or Read and write key, or by signing in with Hue."
 ---
 
-The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install. Connect in one of two ways:
+The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install. Each connection reaches one project: **Read** access searches and inspects its data, such as traces, evaluations and cases, and **Read and write** access also changes project data. Billing and plan changes stay in Settings. `https://docs.hue.run/mcp` is a separate documentation-only server and cannot read your project.
 
-- **With a project key.** Create a **Read** or **Read and write** key and have your client send it as an `Authorization: Bearer` header. This works in any client that can send a header, including Claude Code, Codex, Cursor, VS Code, Gemini CLI and OpenCode.
-- **By signing in with Hue.** Add only the URL. The client opens Hue, and you sign in and approve one project. Use this for clients that cannot send a key, such as hosted assistants, or if you are a project member who cannot create keys.
+## Quick start
 
-**Read** access can search traces, inspect spans, verify delivery, read evaluations, reviewed cases, trace checks, intents, managed and local runs, artifacts, members and keys, and search these docs. **Read and write** access also lists write tools for those same surfaces, all scoped to one project. Billing and plan changes stay in Settings.
+1. An owner or admin creates a **Read** key, or a **Read and write** key if the agent should change project data, in **Settings → Integrations & API keys**. The key is shown once; save it in your secret manager.
+2. Export the key alone, without `Bearer `, as `HUE_MCP_KEY` in the shell that starts your agent, for example `export HUE_MCP_KEY="$(…)"` with your secret manager's read command inside `$(…)`. Start the agent from that shell: an app started from the Dock or a launcher doesn't see the variable.
+3. Add the server with your client's command:
 
-The project-data server is a dynamic Node.js route in Hue's main web application, not a separate data service. `https://app.hue.run/api/mcp` remains a supported compatibility alias. The separate Mintlify-hosted endpoint at `https://docs.hue.run/mcp` serves public documentation only; it cannot read a Hue project. The `search_hue_docs` tool delegates documentation searches to that endpoint without changing the project-data server's authentication boundary.
+   ```sh Claude Code
+   claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp \
+     --header 'Authorization: Bearer ${HUE_MCP_KEY}'
+   ```
 
-## Create an agent key
+   ```sh Codex
+   codex mcp add hue --url https://mcp.hue.run/mcp --bearer-token-env-var HUE_MCP_KEY
+   ```
 
-Only owners and admins create keys. An owner or admin opens **Settings → Integrations & API keys**, chooses the project and creates a **Read** key, or a **Read and write** key if the agent should change project data. The dialog shows the key once, together with where it goes: the `HUE_MCP_KEY` variable and the MCP URL. Save it in your secret manager. Other members [sign in with Hue](#sign-in-with-hue-instead-of-a-key) instead.
+   For Cursor, VS Code, Claude Desktop, Windsurf, Gemini CLI and OpenCode, use your client's tab under [connect your client](#connect-your-client). Or paste the [setup prompt](#let-your-coding-agent-set-it-up) into your coding agent.
+4. Restart the client from that shell, approve **hue** if asked, and ask it to call `get_project_context`. It names the project your key belongs to.
 
-Keep this key separate from the application's `HUE_API_KEY`, which uses **Tracing only**. A **Read** key cannot send telemetry or change project data; it can still read project data, including captured content when explicitly requested. Do not auto-approve write tools. The key should never be wired into application code or committed. See [project keys](/guides/project-keys).
+No key, or a client that cannot send one, such as a hosted assistant? [Sign in with Hue](#sign-in-with-hue-instead-of-a-key): add only the URL, then approve one project in your browser.
 
-### Make the key available
+<Visibility for="agents">
+  **If you are a coding agent:** reference `HUE_MCP_KEY` and never ask the user to paste the key. You usually can't call the new server in the session that added it, so prove the key with the [curl check](#verify-the-connection), then ask the user to restart the client from that shell and approve **hue**. Don't retry a refused key: ten failed authentications for one key within a minute refuse even the correct key for 60 seconds. Match Hue's message to [troubleshooting](#troubleshooting) instead.
+</Visibility>
 
-The key-based setups below, except VS Code and Claude Desktop, read the key from `HUE_MCP_KEY` when the client starts:
+<AccordionGroup>
+  <Accordion title="Create and store the key">
+    Only owners and admins create keys. In **Settings → Integrations & API keys**, choose the project and create a **Read** key, or a **Read and write** key if the agent should change project data. The dialog shows the key once, together with where it goes: the `HUE_MCP_KEY` variable and the MCP URL. Other members [sign in with Hue](#sign-in-with-hue-instead-of-a-key) instead.
 
-- Export `HUE_MCP_KEY` in the shell that starts the client, for example `export HUE_MCP_KEY="$(…)"` with your secret manager's read command inside `$(…)`, then start the client from that shell. Without `export` the client does not see the variable. A client that is already running does not see a new value until you restart it.
-- Desktop apps started from the Dock, the Start menu or a launcher do not see variables exported in a terminal. Start the app from that terminal, or use the client's own secret prompt where it has one, as VS Code does.
-- Set the variable to the key alone, without a `Bearer ` prefix, surrounding quote characters or a trailing newline. The client configuration adds `Bearer `.
+    Keep this key separate from the application's `HUE_API_KEY`, which uses **Tracing only**. A **Read** key cannot send telemetry or change project data; it can still read project data, including captured content when explicitly requested. Never wire the key into application code or commit it. See [project keys](/guides/project-keys).
+  </Accordion>
+  <Accordion title="Make HUE_MCP_KEY visible to your client">
+    Every key-based setup below except VS Code and Claude Desktop reads the key from `HUE_MCP_KEY` when the client starts.
+
+    - Without `export` the client does not see the variable. A client that is already running does not see a new value until you restart it.
+    - Desktop apps started from the Dock, the Start menu or a launcher do not see variables exported in a terminal. Start the app from that terminal, or use the client's own secret prompt where it has one, as VS Code does.
+    - Set the variable to the key alone, without a `Bearer ` prefix, surrounding quote characters or a trailing newline. The client configuration adds `Bearer `.
+  </Accordion>
+</AccordionGroup>
 
 ## Connect your client
 
-Paste this into your coding agent, started from a shell where `HUE_MCP_KEY` is exported. For VS Code and Claude Desktop, follow their tabs below instead: they keep the key in the client, not in a variable.
-
-```text Prompt wrap
-Connect me to the Hue MCP server.
-
-It is a remote MCP server (Streamable HTTP) at https://mcp.hue.run/mcp. Authenticate with a bearer token read from the HUE_MCP_KEY environment variable — reference the variable, do not write the key into a config file.
-
-Register it under the name "hue" using whatever MCP configuration my client uses, then call get_project_context and tell me which Hue project it reached.
-```
-
-Most clients load a new server only when they start, and Claude Code and Cursor also ask you to approve it, so the agent usually can't call `get_project_context` in the session that added `hue`. Restart the client from the same shell, approve **hue** if asked, and ask again. A `curl` call from the agent proves the key, not the client; the check at the end of each tab tests the client itself. If the agent asks you to paste the key, point it at `HUE_MCP_KEY` instead. If your client cannot send a header, [sign in with Hue](#sign-in-with-hue-instead-of-a-key).
-
-Prefer to set it up yourself? The snippets below reference the key rather than contain it, except Claude Desktop's, which cannot read your shell's variables. Never paste a literal key into a configuration file that other people or tools can read. Each tab ends with a check that shows whether the client reached Hue.
+The snippets below reference `HUE_MCP_KEY` rather than contain the key, except Claude Desktop's, which cannot read your shell's variables. Never paste a literal key into a configuration file that other people or tools can read. The [`hue mcp install`](/sdks/cli#connect-your-coding-agent) command writes key-based configuration that reads `HUE_MCP_KEY` for Claude Code, Cursor, Codex, VS Code and Gemini CLI, and prints the snippet for Windsurf. Each tab ends with a check that shows whether the client reached Hue.
 
 <Tabs>
   <Tab title="Claude Code">
-    Add a project-scoped `.mcp.json` next to your application code. Claude Code expands `${HUE_MCP_KEY}` from the environment it starts in and asks for approval before using a project-scoped server.
+    The [quick start](#quick-start) command adds `hue` for all your projects. Keep the single quotes, and keep `--header` after the URL.
+
+    To share the server with a repository instead, add a project-scoped `.mcp.json` next to your application code. It holds only the `${HUE_MCP_KEY}` reference. Claude Code expands it from the environment it starts in and asks for approval before using a project-scoped server.
 
     ```json .mcp.json
     {
@@ -61,25 +69,16 @@ Prefer to set it up yourself? The snippets below reference the key rather than c
     }
     ```
 
-    Or add it for all your projects from the command line:
+    **Verify:** run `claude mcp get hue` and look for `Status: ✔ Connected`; the command exits successfully even when the connection fails. The `Headers` line must read `Authorization: Bearer ${HUE_MCP_KEY}`. Inside Claude Code, tools appear as `mcp__hue__<tool>`.
 
-    ```sh
-    claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp \
-      --header 'Authorization: Bearer ${HUE_MCP_KEY}'
-    ```
+    <Accordion title="If the Claude Code check fails">
+      With double quotes around the header, your shell writes the key itself, or just `Bearer` when the variable is unset, into the settings file. If the `Headers` line shows only `Bearer` or a key, run `claude mcp remove hue -s <scope>` with the scope it reports, add the server again with single quotes, and rotate a key that was stored or printed. Placed before the server name, `--header` swallows the name and URL, and Claude Code reports `error: missing required argument 'name'`. `claude mcp list` warns `Missing environment variables: HUE_MCP_KEY` when the variable is unset.
 
-    Keep the single quotes: with double quotes your shell writes the key itself, or just `Bearer` when the variable is unset, into the settings file. Keep `--header` after the URL; placed before the server name, it swallows the name and URL, and Claude Code reports `error: missing required argument 'name'`.
-
-    **Verify:** run `claude mcp get hue` and look for `Status: ✔ Connected`; the command exits successfully even when the connection fails. The `Headers` line must read `Authorization: Bearer ${HUE_MCP_KEY}`. If it shows only `Bearer` or a key, run `claude mcp remove hue -s <scope>` with the scope it reports, add the server again with single quotes, and rotate a key that was stored or printed. `claude mcp list` also warns `Missing environment variables: HUE_MCP_KEY` when the variable is unset. Inside Claude Code, tools appear as `mcp__hue__<tool>`.
+      Claude Code keeps one `hue` entry per scope, and a local entry overrides project and user entries. To switch between a key and [sign-in](#sign-in-with-hue-instead-of-a-key), run `claude mcp remove hue -s <scope>` with the scope `claude mcp get hue` reports, then add the other form. After you switch from sign-in to a key, new sessions can skip `hue` for about 15 minutes; run `/mcp` in a new session to confirm its tools are listed.
+    </Accordion>
   </Tab>
   <Tab title="Codex">
-    Codex reads the key from the environment variable each time it connects. This command adds the server for every project:
-
-    ```sh
-    codex mcp add hue --url https://mcp.hue.run/mcp --bearer-token-env-var HUE_MCP_KEY
-    ```
-
-    The equivalent entry in `~/.codex/config.toml`, or in `.codex/config.toml` of a project Codex trusts:
+    The [quick start](#quick-start) command adds the server for every project. Codex reads the key from the environment variable each time it connects. The equivalent entry in `~/.codex/config.toml`, or in `.codex/config.toml` of a project Codex trusts:
 
     ```toml config.toml
     [mcp_servers.hue]
@@ -87,7 +86,11 @@ Prefer to set it up yourself? The snippets below reference the key rather than c
     bearer_token_env_var = "HUE_MCP_KEY"
     ```
 
-    **Verify:** start `codex` and run `/mcp`; `hue` is listed with its tools. `codex mcp list` and `codex mcp get hue` only print the configuration and do not contact Hue. If Codex reports `Environment variable HUE_MCP_KEY for MCP server 'hue' is not set` or `… is empty`, export the key in the shell that starts Codex and restart it. For every key Hue refuses, Codex says only `The hue MCP server is not logged in`: run the [curl check](#verify-the-connection) to see Hue's reason, and don't run `codex mcp login hue`, which starts sign-in instead of fixing the key.
+    **Verify:** start `codex` and run `/mcp`; `hue` is listed with its tools. `codex mcp list` and `codex mcp get hue` only print the configuration and do not contact Hue.
+
+    <Accordion title="If the Codex check fails">
+      If Codex reports `Environment variable HUE_MCP_KEY for MCP server 'hue' is not set` or `… is empty`, export the key in the shell that starts Codex and restart it. For every key Hue refuses, Codex says only `The hue MCP server is not logged in`: run the [curl check](#verify-the-connection) to see Hue's reason, and don't run `codex mcp login hue`, which starts sign-in instead of fixing the key.
+    </Accordion>
   </Tab>
   <Tab title="Cursor">
     Add the server to `.cursor/mcp.json` in the repository, or to `~/.cursor/mcp.json` for all projects:
@@ -105,9 +108,13 @@ Prefer to set it up yourself? The snippets below reference the key rather than c
     }
     ```
 
-    Cursor loads a new server only after you approve it: turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue` with the Cursor CLI. The approval covers the expanded header, so Cursor asks again whenever `HUE_MCP_KEY` changes or becomes unset; check that the variable holds the key you intend before you approve. If `HUE_MCP_KEY` is unset, Cursor sends the unexpanded reference without a warning, and Hue refuses it.
+    Cursor loads a new server only after you approve it: turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue` with the Cursor CLI. Check that `HUE_MCP_KEY` holds the key you intend before you approve.
 
-    **Verify:** `cursor-agent mcp list` shows `hue: ready`, and `cursor-agent mcp list-tools hue` lists 81 tools for a **Read and write** key or 41 tools for a **Read** key. For a key Hue refuses with `401`, Cursor shows only `requires_authentication` and suggests `agent mcp login hue`. Don't run it; run the [curl check](#verify-the-connection) to see Hue's reason.
+    **Verify:** `cursor-agent mcp list` shows `hue: ready`, and `cursor-agent mcp list-tools hue` lists 87 tools for a **Read and write** key or 43 tools for a **Read** key.
+
+    <Accordion title="If the Cursor check fails">
+      The approval covers the expanded header, so Cursor asks again whenever `HUE_MCP_KEY` changes or becomes unset. If `HUE_MCP_KEY` is unset, Cursor sends the unexpanded reference without a warning, and Hue refuses it. For a key Hue refuses with `401`, Cursor shows only `requires_authentication` and suggests `agent mcp login hue`. Don't run it; run the [curl check](#verify-the-connection) to see Hue's reason.
+    </Accordion>
   </Tab>
   <Tab title="VS Code">
     Add the server to `.vscode/mcp.json`. VS Code prompts for the key the first time the server starts and stores it securely, so the key never goes into the file and `HUE_MCP_KEY` is not needed:
@@ -134,9 +141,13 @@ Prefer to set it up yourself? The snippets below reference the key rather than c
     }
     ```
 
-    Start it with the **Start** action above `hue` in the file, or run **MCP: List Servers**, select **hue** and choose **Start Server**, then paste the key at the prompt. VS Code starts workspace servers only in a trusted workspace. VS Code documents no command to replace a stored key; to enter a new one, rename the input `id` in both places, for example to `hue-mcp-key-2`, and start the server again.
+    Start it with the **Start** action above `hue` in the file, or run **MCP: List Servers**, select **hue** and choose **Start Server**, then paste the key at the prompt. VS Code starts workspace servers only in a trusted workspace.
 
     **Verify:** run **MCP: List Servers** from the Command Palette and check that **hue** is running. If it is not, select it and choose **Show Output** to see Hue's message.
+
+    <Accordion title="Replace the stored key">
+      VS Code documents no command to replace a stored key. To enter a new one, rename the input `id` in both places, for example to `hue-mcp-key-2`, and start the server again.
+    </Accordion>
   </Tab>
   <Tab title="Claude Desktop">
     Claude Desktop starts local servers from `claude_desktop_config.json` (**Settings → Developer → Edit Config**), in `~/Library/Application Support/Claude/` on macOS or `%APPDATA%\Claude\` on Windows. Use `mcp-remote`, which needs Node.js, to reach Hue with a key:
@@ -155,9 +166,18 @@ Prefer to set it up yourself? The snippets below reference the key rather than c
     }
     ```
 
-    Unlike `HUE_MCP_KEY`, `AUTH_HEADER` holds `Bearer ` followed by the key. Write `Authorization:${AUTH_HEADER}` with no space after the colon: some hosts split arguments on spaces, which breaks `Authorization: Bearer …`. Claude Desktop does not read your shell's variables, so the key is stored on disk; keep the file private. To keep it out of this file, replace `"--header", "Authorization:${AUTH_HEADER}"` and the `env` block with `"--header-file", "<path>"`, where the file holds the line `Authorization: Bearer <key>` and only you can read it. To avoid storing a key, use the URL-only form under [sign in with Hue](#sign-in-with-hue-instead-of-a-key).
+    Unlike `HUE_MCP_KEY`, `AUTH_HEADER` holds `Bearer ` followed by the key. Write `Authorization:${AUTH_HEADER}` with no space after the colon: some hosts split arguments on spaces, which breaks `Authorization: Bearer …`. Claude Desktop does not read your shell's variables, so the key is stored on disk; keep the file private. To avoid storing a key, use the URL-only form under [sign in with Hue](#sign-in-with-hue-instead-of-a-key).
 
-    **Verify:** quit and reopen Claude Desktop, then ask it to call `get_project_context`. `mcp-remote` writes to `mcp-server-hue.log` in `~/Library/Logs/Claude/` on macOS or `%APPDATA%\Claude\logs\` on Windows, which shows Hue's message for a `403`. If the log shows `Dynamic Client Registration rejected (HTTP 401) … Invalid initial access token`, or a Hue sign-in page opens, Hue could not use `AUTH_HEADER`: the key is wrong, truncated, revoked or still the placeholder, `Bearer ` is missing, or it is a `${…}` reference, which Claude Desktop never expands. Don't finish that sign-in; fix `AUTH_HEADER` and restart Claude Desktop.
+    **Verify:** quit and reopen Claude Desktop, then ask it to call `get_project_context`.
+
+    <AccordionGroup>
+      <Accordion title="Keep the key out of this file">
+        Replace `"--header", "Authorization:${AUTH_HEADER}"` and the `env` block with `"--header-file", "<path>"`, where the file holds the line `Authorization: Bearer <key>` and only you can read it.
+      </Accordion>
+      <Accordion title="If the Claude Desktop check fails">
+        `mcp-remote` writes to `mcp-server-hue.log` in `~/Library/Logs/Claude/` on macOS or `%APPDATA%\Claude\logs\` on Windows, which shows Hue's message for a `403`. If the log shows `Dynamic Client Registration rejected (HTTP 401) … Invalid initial access token`, or a Hue sign-in page opens, Hue could not use `AUTH_HEADER`: the key is wrong, truncated, revoked or still the placeholder, `Bearer ` is missing, or it is a `${…}` reference, which Claude Desktop never expands. Don't finish that sign-in; fix `AUTH_HEADER` and restart Claude Desktop.
+      </Accordion>
+    </AccordionGroup>
   </Tab>
   <Tab title="Windsurf">
     Windsurf's MCP documentation now lives under Devin Desktop, which reads `~/.config/devin/mcp_config.json` (`%APPDATA%\devin\mcp_config.json` on Windows). Earlier Windsurf releases read `~/.codeium/windsurf/mcp_config.json`.
@@ -175,7 +195,7 @@ Prefer to set it up yourself? The snippets below reference the key rather than c
     }
     ```
 
-    The legacy Cascade agent has a 100-tool limit across all servers; a **Read** key uses 41 tools and a **Read and write** key uses 81 tools.
+    The legacy Cascade agent has a 100-tool limit across all servers; a **Read** key uses 43 tools and a **Read and write** key uses 87 tools.
 
     **Verify:** refresh the MCP servers in its settings, then ask the agent to call `get_project_context`.
   </Tab>
@@ -204,7 +224,11 @@ Prefer to set it up yourself? The snippets below reference the key rather than c
 
     Gemini CLI expands `${HUE_MCP_KEY}` from the environment that starts `gemini`; it does not use a key in the project's `.gemini/.env`. It starts MCP servers, including user-level ones, only in a trusted folder: run `/permissions` inside `gemini` and choose **Trust folder**, or set `GEMINI_CLI_TRUST_WORKSPACE=true` for a single run.
 
-    **Verify:** run `gemini mcp list` and look for `✓ hue: https://mcp.hue.run/mcp (http) - Connected`. It shows **Disabled** in an untrusted folder and **Disconnected** when the connection fails. For Hue's reason, run the [curl check](#verify-the-connection), or start `gemini --debug` and press F12 to open the debug console. For a refused key Gemini suggests `/mcp auth hue`; don't run it, fix the key instead.
+    **Verify:** run `gemini mcp list` and look for `✓ hue: https://mcp.hue.run/mcp (http) - Connected`.
+
+    <Accordion title="If the Gemini CLI check fails">
+      `gemini mcp list` shows **Disabled** in an untrusted folder and **Disconnected** when the connection fails. For Hue's reason, run the [curl check](#verify-the-connection), or start `gemini --debug` and press F12 to open the debug console. For a refused key Gemini suggests `/mcp auth hue`; don't run it, fix the key instead.
+    </Accordion>
   </Tab>
   <Tab title="OpenCode">
     Add the server to `opencode.json` in the project. OpenCode references variables as `{env:HUE_MCP_KEY}`, not `${HUE_MCP_KEY}`:
@@ -225,69 +249,97 @@ Prefer to set it up yourself? The snippets below reference the key rather than c
     }
     ```
 
-    OpenCode substitutes the value into the configuration text before parsing it, so a trailing newline or carriage return in the key makes the configuration invalid JSON. `opencode debug config` prints the configuration with the key substituted; don't run it or share its output while you debug Hue.
+    **Verify:** run `opencode mcp list` and look for `✓ hue connected`.
 
-    **Verify:** run `opencode mcp list` and look for `✓ hue connected`. If it shows anything else, run `opencode mcp debug hue` and read its `HTTP response` line: `401` means no usable key reached Hue, and `403` means the key cannot read project data. Its `Auth status` line refers to sign-in and says `not authenticated` even for a working key.
+    <Accordion title="If the OpenCode check fails">
+      Run `opencode mcp debug hue` and read its `HTTP response` line: `401` means no usable key reached Hue, and `403` means the key cannot read project data. Its `Auth status` line refers to sign-in and says `not authenticated` even for a working key.
+
+      OpenCode substitutes the value into the configuration text before parsing it, so a trailing newline or carriage return in the key makes the configuration invalid JSON. `opencode debug config` prints the configuration with the key substituted; don't run it or share its output while you debug Hue.
+    </Accordion>
   </Tab>
 </Tabs>
 
-Other clients need Streamable HTTP and a way to send `Authorization: Bearer <key>` on every request from their secret storage or an environment reference. Check the client's current configuration format before installing. A client that only runs local (stdio) servers can reach Hue through `mcp-remote`, as in the Claude Desktop tab. The server is stateless and accepts clients that start with `initialize` (MCP revisions up to 2025-11-25) as well as clients on the stateless 2026-07-28 revision, so clients need no extra flags. Use the canonical `https://mcp.hue.run/mcp` address for new configurations.
+Other clients need Streamable HTTP and a way to send `Authorization: Bearer <key>` on every request from their secret storage or an environment reference. Check the client's current configuration format before installing. A client that only runs local (stdio) servers can reach Hue through `mcp-remote`, as in the Claude Desktop tab. Use the canonical `https://mcp.hue.run/mcp` address for new configurations.
+
+### Let your coding agent set it up
+
+Paste this into your coding agent, started from a shell where `HUE_MCP_KEY` is exported. For VS Code and Claude Desktop, follow their tabs instead: they keep the key in the client, not in a variable.
+
+```text Prompt wrap
+Connect me to the Hue MCP server.
+
+It is a remote MCP server (Streamable HTTP) at https://mcp.hue.run/mcp. Authenticate with a bearer token read from the HUE_MCP_KEY environment variable — reference the variable, do not write the key into a config file.
+
+Register it under the name "hue" using whatever MCP configuration my client uses, then call get_project_context and tell me which Hue project it reached.
+```
+
+Most clients load a new server only when they start, and Claude Code and Cursor also ask you to approve it, so the agent usually can't call `get_project_context` in the session that added `hue`. Restart the client from the same shell, approve **hue** if asked, and ask again. If the agent asks you to paste the key, point it at `HUE_MCP_KEY` instead.
 
 ## Sign in with Hue instead of a key
 
 Clients that support MCP authorization connect with the URL alone. On the first connection Hue answers that sign-in is required, and the client opens Hue in your browser. Sign in, choose one project, choose **Read** or **Read and write**, and approve. Any verified member of the project can connect this way; you do not need a key or an owner or admin role.
 
-Leave out the `Authorization` header when you want to sign in. Claude Code never offers sign-in while a header is configured, and a client that opens sign-in because its key header failed carries that header into sign-in, which then fails. If a sign-in page opens although you configured a key, fix the key or remove the header.
+<Warning>
+  Leave out the `Authorization` header when you want to sign in. Claude Code never offers sign-in while a header is configured, and a client that opens sign-in because its key header failed carries that header into sign-in, which then fails. If a sign-in page opens although you configured a key, fix the key or remove the header.
+</Warning>
 
-**Claude Code.** Add the server, then run `/mcp` in Claude Code, select `hue` and choose **Authenticate**. This adds `hue` for the current project; add `--scope user` for all projects. Until you authenticate, `claude mcp get hue` shows `! Needs authentication`, which is expected.
+<Tabs>
+  <Tab title="Claude Code">
+    Add the server, then run `/mcp` in Claude Code, select `hue` and choose **Authenticate**. This adds `hue` for the current project; add `--scope user` for all projects. Until you authenticate, `claude mcp get hue` shows `! Needs authentication`, which is expected.
 
-```sh
-claude mcp add --transport http hue https://mcp.hue.run/mcp
-```
+    ```sh
+    claude mcp add --transport http hue https://mcp.hue.run/mcp
+    ```
 
-Claude Code keeps one `hue` entry per scope, and a local entry overrides project and user entries. To switch between a key and sign-in, run `claude mcp remove hue -s <scope>` with the scope `claude mcp get hue` reports, then add the other form. After you switch from sign-in to a key, new sessions can skip `hue` for about 15 minutes; run `/mcp` in a new session to confirm its tools are listed.
+    To replace a key entry, first run `claude mcp remove hue -s <scope>` with the scope `claude mcp get hue` reports. The Claude Code tab under [connect your client](#connect-your-client) explains how scopes override each other.
+  </Tab>
+  <Tab title="Codex">
+    Add the server. `codex mcp add` opens Hue straight away, so run it in a terminal where you can use a browser; `codex mcp login hue` signs in again later:
 
-**Codex.** Add the server. `codex mcp add` opens Hue straight away, so run it in a terminal where you can use a browser; `codex mcp login hue` signs in again later:
+    ```sh
+    codex mcp add hue --url https://mcp.hue.run/mcp
+    codex mcp login hue
+    ```
+  </Tab>
+  <Tab title="Cursor">
+    Add only the URL and approve the server as in the Cursor tab under [connect your client](#connect-your-client). Cursor then shows **Needs login** for `hue` (`requires_authentication` in the CLI); select it, or run `cursor-agent mcp login hue`.
 
-```sh
-codex mcp add hue --url https://mcp.hue.run/mcp
-codex mcp login hue
-```
-
-**Cursor.** Add only the URL and approve the server as in the Cursor tab. Cursor then shows **Needs login** for `hue` (`requires_authentication` in the CLI); select it, or run `cursor-agent mcp login hue`.
-
-```json .cursor/mcp.json
-{
-  "mcpServers": {
-    "hue": {
-      "url": "https://mcp.hue.run/mcp"
+    ```json .cursor/mcp.json
+    {
+      "mcpServers": {
+        "hue": {
+          "url": "https://mcp.hue.run/mcp"
+        }
+      }
     }
-  }
-}
-```
+    ```
+  </Tab>
+  <Tab title="Claude Desktop">
+    In the configuration file, give `mcp-remote` only the URL. It opens Hue in your browser the first time Claude Desktop starts it and reuses the approval after that. To change the project or access, disconnect the app in **Settings → Connected apps**, delete `mcp-remote`'s saved sign-in in `~/.mcp-auth`, and restart Claude Desktop:
 
-**Claude Desktop configuration file.** Give `mcp-remote` only the URL. It opens Hue in your browser the first time Claude Desktop starts it and reuses the approval after that. To change the project or access, disconnect the app in **Settings → Connected apps**, delete `mcp-remote`'s saved sign-in in `~/.mcp-auth`, and restart Claude Desktop:
-
-```json claude_desktop_config.json
-{
-  "mcpServers": {
-    "hue": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "https://mcp.hue.run/mcp"]
+    ```json claude_desktop_config.json
+    {
+      "mcpServers": {
+        "hue": {
+          "command": "npx",
+          "args": ["-y", "mcp-remote", "https://mcp.hue.run/mcp"]
+        }
+      }
     }
-  }
-}
-```
+    ```
+  </Tab>
+  <Tab title="Hosted assistants">
+    claude.ai, Claude Desktop's **Settings → Connectors** and ChatGPT developer mode accept only a URL and cannot send your own key. Add `https://mcp.hue.run/mcp` as a custom connector and sign in when it prompts you. Hue has not yet verified these hosted clients end to end.
+  </Tab>
+</Tabs>
 
-**Hosted assistants.** claude.ai, Claude Desktop's **Settings → Connectors** and ChatGPT developer mode accept only a URL and cannot send your own key. Add `https://mcp.hue.run/mcp` as a custom connector and sign in when it prompts you. Hue has not yet verified these hosted clients end to end.
-
-How a sign-in connection works:
-
-- **Read** is selected by default. Choose **Read and write** if the client should write project data; the client then lists every tool except `add_api_key`. For a read-only connection, choose **Read** and leave `?read_only=true` off the URL.
-- The client receives access tokens that last 10 minutes and refreshes them automatically. Your approval lasts 30 days from when you connect; refreshing never extends it, so sign in again after that.
-- The connection acts for you. Writes are attributed to you, and owner- or admin-only tools check your current role: revoking keys, changing project settings or trace checks, archiving eval sets and evaluators, registering managed targets and publishing the intent taxonomy. A connected app can never create project keys with `add_api_key`.
-- Sign-in covers the MCP server only. The SDKs and REST API still need a project key.
-- **Settings → Connected apps** lists your connections and disconnects them; owners and admins see and disconnect everyone's in the organization. Resetting your password or signing out everywhere disconnects every app you approved, and removal from the organization or an archived project ends the connection too.
+<Accordion title="Access, expiry and disconnecting">
+  - **Read** is selected by default. Choose **Read and write** if the client should write project data; the client then lists every tool except `add_api_key`. For a read-only connection, choose **Read** and leave `?read_only=true` off the URL.
+  - The client receives access tokens that last 10 minutes and refreshes them automatically. Your approval lasts 30 days from when you connect; refreshing never extends it, so sign in again after that.
+  - The connection acts for you. Writes are attributed to you, and owner- or admin-only tools check your current role: revoking keys, changing project settings or trace checks, archiving eval sets and evaluators, registering managed targets and publishing the intent taxonomy. A connected app can never create project keys with `add_api_key`.
+  - Sign-in covers the MCP server only. The SDKs and REST API still need a project key.
+  - **Settings → Connected apps** lists your connections and disconnects them; owners and admins see and disconnect everyone's in the organization. Resetting your password or signing out everywhere disconnects every app you approved, and removal from the organization or an archived project ends the connection too.
+</Accordion>
 
 ## Verify the connection
 
@@ -297,9 +349,9 @@ Ask the agent:
 Use the Hue MCP: call get_project_context, then show my 5 most recent error traces with links.
 ```
 
-`get_project_context` returns the project the connection reaches and what the credential can do. `can_write` is `true` when write tools are available. `read_only` reports only the `?read_only=true` URL flag, so a **Read** key shows `read_only: false` together with `can_write: false`, and `write_preset` names the access that writing needs, not the access you have. If it reports a different project than you expected, the key was created in another project, or you approved another project at sign-in.
+`get_project_context` returns the project the connection reaches and what the credential can do. `can_write` is `true` when write tools are available; `read_only` reports only the `?read_only=true` URL flag, so a **Read** key shows `read_only: false`, and `write_preset` names the access that writing needs, not the access you have. If it reports a different project than you expected, the key was created in another project, or you approved another project at sign-in.
 
-To check a key without an MCP client, send one tool call from a shell where `HUE_MCP_KEY` is exported. Use this check whenever a client shows only a short status, and as the non-interactive check for a coding agent; it proves the key, not the client's configuration:
+To check a key without an MCP client, send one tool call from a shell where `HUE_MCP_KEY` is exported. This is the check to use when a client shows only a short status, and the non-interactive check for a coding agent. It proves the key, not the client's configuration:
 
 ```sh
 curl -sS -w '\nHTTP %{http_code}\n' -X POST https://mcp.hue.run/mcp \
@@ -311,88 +363,9 @@ curl -sS -w '\nHTTP %{http_code}\n' -X POST https://mcp.hue.run/mcp \
 
 `HTTP 200` with an `event: message` response that names your project means the key works. `401` means the key is missing, wrong, revoked or expired, and `403` means it is not a **Read** or **Read and write** key; the response body explains the refusal. The server needs both `Accept` types and answers `406` without them. It is stateless, so no session or `initialize` call is needed first.
 
-## What you can do
-
-**Investigate a failure.** "Show the error traces from the last 24 hours", "open the slowest span of that trace", "what did the model see before it failed?" (recorded content requires `include_content: true` and the application must have captured it). Tools: `search_traces`, `get_trace`, `get_span`, `list_sessions`. Each trace reports a `state`: `running` while a span is still open, `stalled` when 15 minutes pass without new data and no end arrives, or `ended`. Only the TypeScript SDK 0.7.0 and Python SDK 0.4.0 or later report open spans, and only Hue and AI spans still open when their placeholder is exported, usually about 1.5 s after they start; other spans, including every span from other exporters, appear once they end.
-
-**Confirm delivery.** "Did trace 0af7651916cd43dd8448eb211c80319c arrive with spans a and b, with model and usage recorded?" Tools: `verify_trace`.
-
-**Trace checks.** Read the project's production trace checks with `list_trace_checks` and `get_trace_checks`, their results with `get_trace_check_results` (source excerpts require `include_content: true`), and coverage and request timing with `get_trace_check_summary`. Results are advisory, not evaluator scores. With **Read and write**, save a new draft version with `save_trace_checks`, set the separate consent to send recorded content to the trace-check model with `set_trace_checks_consent`, test a saved version on up to ten traces with `test_trace_checks`, turn automatic checks on or off with `activate_trace_checks` and `deactivate_trace_checks`, and queue recent traces for the active version with `reassess_trace_checks`. Through sign-in, only an owner or admin can make these changes.
-
-**Read evaluations.** "List my eval sets", "show the cases in the latest version of the regression set", "summarize the last run and list the failing cases", "compare it against the baseline run". Tools: `list_eval_sets`, `get_eval_set`, `list_evaluators`, `get_evaluator`, `list_runs`, `get_run`, `list_run_items`, `get_run_item`, `get_run_execution`, `list_scoring_runs`, `get_scoring_run`, `list_environments`, `get_environment`.
-
-**Author evaluations.** Requires **Read and write** without `?read_only=true`. Create an eval set (`add_eval_set`), add cases (`add_eval_set_cases`), edit a draft (`update_eval_set`, `update_eval_set_case`, `delete_eval_set_case`, `add_eval_set_draft`), freeze it (`freeze_eval_set_version`), then pin evaluators (`add_evaluator`, `publish_evaluator`, `copy_evaluator`) and create a run (`add_run`). Record scoring results with `add_scoring_run` and `add_scoring_results`. Hide retired identities with `archive_eval_set`, `archive_evaluator` or `archive_environment`. Case execution can stay with the SDK, a managed run, a local agent, or `start_run_case` / `complete_run_case` / `finish_run`. Ask before any write; never auto-approve `add_*`, `update_*`, `delete_*`, `publish_*`, `freeze_*`, `archive_*` or `copy_*`.
-
-**Author environments.** `add_environment` and `publish_environment_version` create a simulated world a case can pin.
-
-**Reviewed cases.** `list_cases` lists cases reviewed from traces, drafts and published, with links. `get_case` returns one case with its eval set, saved version, pinned outcome evaluator, environment and a ready run block for `launch_local_run` or `hue eval`; the reviewed task text is returned only with `include_content: true`.
-
-**Create a case from a trace.** Requires **Read and write** without `?read_only=true`. In Hue, open the trace and choose **Create case** in the trace inspector, or choose **Create case** from **Suggested cases**. A coding agent runs the same review over MCP. `add_case_conversion` pins the trace into a draft case, and repeating the call with the same idempotency key returns the same draft. `get_case_conversion` reports readiness and findings, and returns the saved task, starting world and criteria only with `include_content: true`. `update_case_conversion` edits the draft, and `publish_case_conversion` publishes a ready draft into a new or existing eval set. `archive_case_conversion` abandons a draft; a published case can't be archived, but its eval set can. Before you publish, review the task and the starting world, and set success criteria independently of the recorded answer. A trace that is still running can't become a case. The REST endpoint `https://app.hue.run/api/v1/case-conversions` runs the same workflow. `list_cases` and `get_case` then read the case, whether it is a draft or published.
-
-**Intents.** Read the taxonomy and buckets with `get_intent_taxonomy`, `get_intent_summary` and `list_intent_traces`. `save_intent_taxonomy` republishes categories and requires an owner or admin.
-
-**Managed and local runs.** List and inspect with `list_managed_targets`, `preflight_managed_run`, `get_managed_run`, `list_local_agents` and `get_local_run`. `add_managed_target` stores an encrypted credential and requires an owner or admin. Launch or cancel with `launch_managed_run`, `cancel_managed_run` and `launch_local_run`.
-
-**Artifacts and hosted judges.** `list_artifacts` and `get_artifact` return metadata only; bytes stay on HTTP. `get_judge_budget` reports hosted-judge usage. `add_judge_jobs` enqueues scoring jobs.
-
-**Keys, members and settings.** `list_api_keys` and `list_members` are reads. `add_api_key`, `revoke_api_key` and `update_project` require an owner or admin, and a connected app cannot call `add_api_key`. Wherever a tool requires an owner or admin, Hue checks the current role of the key's creator or of the member who signed in. Minted tokens appear once. Billing and plan changes are not on this server.
-
-**Look things up.** "How do I flush spans in a Next.js streaming route?" Tools: `search_hue_docs`, `load_hue_guide` (`data-model`, `investigate`, `author`).
-
-Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or a Hue trace link. Time windows accept ISO-8601 or relative values such as `15m`, `24h` or `7d` (up to 90 days). Results are paginated with opaque cursors and bounded by `max_chars`; truncated results say so and suggest a narrower request. Draft writes take `expected_revision` from `get_eval_set`.
-
-## Retired tool names
-
-Hue served the earlier tool names below as aliases of the current tools for one production release, then retired them. A call to a retired name now fails as an unknown tool. Update prompts, allowlists and approval rules to the current names:
-
-| Retired name | Current name |
-| --- | --- |
-| `add_dataset` | `add_eval_set` |
-| `add_dataset_cases` | `add_eval_set_cases` |
-| `add_dataset_draft` | `add_eval_set_draft` |
-| `add_scorer` | `add_evaluator` |
-| `add_experiment` | `add_run` |
-| `add_evaluation_results` | `add_scoring_results` |
-| `add_evaluation_run` | `add_scoring_run` |
-| `archive_dataset` | `archive_eval_set` |
-| `archive_scorer` | `archive_evaluator` |
-| `complete_experiment_case` | `complete_run_case` |
-| `copy_scorer` | `copy_evaluator` |
-| `delete_dataset_case` | `delete_eval_set_case` |
-| `finish_experiment` | `finish_run` |
-| `freeze_dataset_version` | `freeze_eval_set_version` |
-| `get_scenario` | `get_case` |
-| `get_dataset` | `get_eval_set` |
-| `get_scorer` | `get_evaluator` |
-| `get_experiment` | `get_run` |
-| `get_experiment_execution` | `get_run_execution` |
-| `get_experiment_item` | `get_run_item` |
-| `get_evaluation_run` | `get_scoring_run` |
-| `list_scenarios` | `list_cases` |
-| `list_datasets` | `list_eval_sets` |
-| `list_scorers` | `list_evaluators` |
-| `list_experiment_items` | `list_run_items` |
-| `list_experiments` | `list_runs` |
-| `list_evaluation_runs` | `list_scoring_runs` |
-| `publish_scorer` | `publish_evaluator` |
-| `start_experiment_case` | `start_run_case` |
-| `update_dataset` | `update_eval_set` |
-| `update_dataset_case` | `update_eval_set_case` |
-
-`add_trace_to_eval_set` and its earlier name `add_trace_to_dataset` were removed. To turn a trace into a case, use the case conversion tools, **Create case** in Hue or the `/api/v1/case-conversions` REST endpoint, as described under [what you can do](#what-you-can-do).
-
-## Content and safety
-
-- Recorded prompts, outputs, tool arguments and raw attributes are omitted unless a tool is called with `include_content: true`. By default the server returns metadata (model, provider, usage, tool names, status, timing) and the names of recorded attributes. Content reads are recorded in the project's audit log.
-- Names, generated titles, session keys, metadata and judge explanations come from your application and its end users. They are length-capped, and every result that carries them starts with a notice that they are data, not instructions; recorded content is wrapped in delimited blocks.
-- Credential-shaped strings are redacted from results and from documentation queries before those leave Hue. The one exception is `add_api_key`, which returns the newly minted token once so it can be stored; later tools never return it.
-- The key, or the project you approved at sign-in, is the tenant. Ids from another project, and `projectId` parameters on pasted links, resolve to `not_found`.
-- Add `?read_only=true` to a key-based URL to hide and reject any write tool regardless of the key. With sign-in, choose **Read** at approval instead.
-- Requests are limited to 1 MiB. Ten failed authentications for one key within a minute return `429` with `Retry-After: 60`, and for those 60 seconds the correct key is refused too. A busy server returns `503` with `Retry-After`.
-
 ## Troubleshooting
 
-Several clients hide Hue's message behind a short status. The [curl check](#verify-the-connection) always shows it. `claude mcp get hue` (Claude Code), `opencode mcp debug hue` (OpenCode), **Show Output** (VS Code) and Claude Desktop's `mcp-server-hue.log` show it for most failures. Codex, Cursor and Gemini CLI report every `401` as a request to sign in. When you use a key, don't follow those prompts: find Hue's reason and fix the key.
+Several clients hide Hue's message behind a short status; the [curl check](#verify-the-connection) always shows it. `claude mcp get hue`, `opencode mcp debug hue`, VS Code's **Show Output** and Claude Desktop's `mcp-server-hue.log` show it for most failures. Codex, Cursor and Gemini CLI report every `401` as a request to sign in. With a key configured, don't follow those prompts: find Hue's reason and fix the key.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
@@ -409,10 +382,114 @@ Several clients hide Hue's message behind a short status. The [curl check](#veri
 | Cursor shows `not loaded (needs approval)` or `has not been approved` | Cursor has not approved the server, or `HUE_MCP_KEY` changed or became unset since you approved it | Check that `HUE_MCP_KEY` is exported and holds the key you intend, then turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue`. Cursor asks again after every change. |
 | Gemini CLI shows **Disconnected** or **Disabled** | The key is not in the environment that started `gemini`, the folder is not trusted, or Hue refused the key | Export `HUE_MCP_KEY` before starting `gemini`, trust the folder with `/permissions`, and run the curl check for Hue's message. |
 | A client you connected by signing in shows **Needs authentication** or `The hue MCP server is not logged in` | The approval ended: 30 days passed, someone disconnected it in **Settings → Connected apps**, you reset your password or signed out everywhere, or you left the organization or the project was archived | Sign in again: `/mcp` → **Authenticate** in Claude Code, `codex mcp login hue`, or `cursor-agent mcp login hue`. |
-| A tool call fails as an unknown tool | Write tools are hidden for **Read** access and for a URL with `?read_only=true`; [retired tool names](#retired-tool-names) are no longer served | Use a **Read and write** key without `?read_only=true`, approve **Read and write** at sign-in, or call the current tool name. |
+| A tool call fails as an unknown tool | Write tools are hidden for **Read** access and for a URL with `?read_only=true`; [retired tool names](#retired-tool-names) are no longer served; a tool described in a development branch is not available until its platform release is deployed | Use a **Read and write** key without `?read_only=true`, approve **Read and write** at sign-in, or call the current tool name. Use the tools your connection's `tools/list` returns; an unknown tool is not evidence that the client should broaden its permissions. |
 
-The server accepts `POST` only. A `GET` with no `Authorization` header, or with a value that is not a Hue key or token, gets `401` with the sign-in challenge. A `GET` that carries any Hue key or token gets `405` with `Allow: POST`; the key is not checked. A request carrying `Mcp-Session-Id` gets `404`, because the server keeps no sessions. MCP clients handle these answers themselves. See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent) for tracing problems that are not specific to MCP.
+See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent) for tracing problems that are not specific to MCP.
 
-## Release boundaries
+<Accordion title="Endpoints and protocol details">
+  The project-data server is a dynamic Node.js route in Hue's main web application, not a separate data service. `https://app.hue.run/api/mcp` remains a supported compatibility alias. The `search_hue_docs` tool delegates documentation searches to the Mintlify-hosted documentation endpoint without changing the project-data server's authentication boundary.
 
-Use the tools returned by your connection's `tools/list`. A tool described in a development branch is not available until its platform release is deployed; an unknown tool is not evidence that the client should broaden its permissions. Case conversion, review and publication are supported through the tools above. Billing and plan changes remain in Settings.
+  The server is stateless and accepts clients that start with `initialize` (MCP revisions up to 2025-11-25) as well as clients on the stateless 2026-07-28 revision, so clients need no extra flags. It accepts `POST` only. A `GET` with no `Authorization` header, or with a value that is not a Hue key or token, gets `401` with the sign-in challenge. A `GET` that carries any Hue key or token gets `405` with `Allow: POST`; the key is not checked. A request carrying `Mcp-Session-Id` gets `404`, because the server keeps no sessions. MCP clients handle these answers themselves.
+</Accordion>
+
+## What you can do
+
+Every tool is scoped to the one project the connection reaches. Write tools need **Read and write** without `?read_only=true`. Ask before any write, and do not auto-approve write tools.
+
+<AccordionGroup>
+  <Accordion title="Investigate a failure">
+    "Show the error traces from the last 24 hours", "open the slowest span of that trace", "what did the model see before it failed?" (recorded content requires `include_content: true` and the application must have captured it). Tools: `search_traces`, `get_trace`, `get_span`, `list_sessions`. Each trace reports a `state`: `running` while a span is still open, `stalled` when 15 minutes pass without new data and no end arrives, or `ended`. Only the TypeScript SDK 0.7.0 and Python SDK 0.4.0 or later report open spans, and only Hue and AI spans still open when their placeholder is exported, usually about 1.5 s after they start; other spans, including every span from other exporters, appear once they end.
+  </Accordion>
+  <Accordion title="Confirm delivery">
+    "Did trace 0af7651916cd43dd8448eb211c80319c arrive with spans a and b, with model and usage recorded?" Tools: `verify_trace`.
+  </Accordion>
+  <Accordion title="Trace checks">
+    Read the project's production trace checks with `list_trace_checks` and `get_trace_checks`, their results with `get_trace_check_results` (source excerpts require `include_content: true`), and coverage and request timing with `get_trace_check_summary`. Results are advisory, not evaluator scores. With **Read and write**, save a new draft version with `save_trace_checks`, set the separate consent to send recorded content to the trace-check model with `set_trace_checks_consent`, test a saved version on up to ten traces with `test_trace_checks`, turn automatic checks on or off with `activate_trace_checks` and `deactivate_trace_checks`, and queue recent traces for the active version with `reassess_trace_checks`. Through sign-in, only an owner or admin can make these changes.
+  </Accordion>
+  <Accordion title="Read evaluations">
+    "List my eval sets", "show the cases in the latest version of the regression set", "summarize the last run and list the failing cases", "compare it against the baseline run". Tools: `list_eval_sets`, `get_eval_set`, `list_evaluators`, `get_evaluator`, `list_runs`, `get_run`, `list_run_items`, `get_run_item`, `get_run_execution`, `list_scoring_runs`, `get_scoring_run`, `list_environments`, `get_environment`.
+  </Accordion>
+  <Accordion title="Author evaluations">
+    Create an eval set (`add_eval_set`), add cases (`add_eval_set_cases`), edit a draft (`update_eval_set`, `update_eval_set_case`, `delete_eval_set_case`, `add_eval_set_draft`), freeze it (`freeze_eval_set_version`), then pin evaluators (`add_evaluator`, `publish_evaluator`, `copy_evaluator`) and create a run (`add_run`). Record scoring results with `add_scoring_run` and `add_scoring_results`. Hide retired identities with `archive_eval_set`, `archive_evaluator` or `archive_environment`. Case execution can stay with the SDK, a managed run, a local agent, or `start_run_case` / `complete_run_case` / `finish_run`. Never auto-approve `add_*`, `update_*`, `delete_*`, `publish_*`, `freeze_*`, `archive_*` or `copy_*`.
+  </Accordion>
+  <Accordion title="Label and promote judges">
+    Read judge results with their agree and disagree labels with `list_judge_results`, and a judge version's alignment, the project's alignment bar, promotion state and a comparison with another version with `get_judge_alignment`. With **Read and write**, label a result `agree` or `disagree` with `label_judge_result`, promote or demote a judge version with `set_judge_promotion`, rescore a new version on its judge's labeled executions and compare it with an earlier version with `check_judge_regression`, and change the project's alignment bar with `set_judge_alignment_bar`, which requires an owner or admin.
+  </Accordion>
+  <Accordion title="Author environments">
+    `add_environment` and `publish_environment_version` create a simulated world a case can pin.
+  </Accordion>
+  <Accordion title="Reviewed cases">
+    `list_cases` lists cases reviewed from traces, drafts and published, with links. `get_case` returns one case with its eval set, saved version, pinned outcome evaluator, environment and a ready run block for `launch_local_run` or `hue eval`; the reviewed task text is returned only with `include_content: true`.
+  </Accordion>
+  <Accordion title="Create a case from a trace">
+    Requires **Read and write** without `?read_only=true`. In Hue, open the trace and choose **Create case** in the trace inspector, or choose **Create case** from **Suggested cases**. A coding agent runs the same review over MCP. `add_case_conversion` pins the trace into a draft case, and repeating the call with the same idempotency key returns the same draft. `get_case_conversion` reports readiness and findings, and returns the saved task, starting world and criteria only with `include_content: true`. `update_case_conversion` edits the draft, and `publish_case_conversion` publishes a ready draft into a new or existing eval set. `archive_case_conversion` abandons a draft; a published case can't be archived, but its eval set can. Before you publish, review the task and the starting world, and set success criteria independently of the recorded answer. A trace that is still running can't become a case. The REST endpoint `https://app.hue.run/api/v1/case-conversions` runs the same workflow. `list_cases` and `get_case` then read the case, whether it is a draft or published.
+  </Accordion>
+  <Accordion title="Intents">
+    Read the taxonomy and buckets with `get_intent_taxonomy`, `get_intent_summary` and `list_intent_traces`. `save_intent_taxonomy` republishes categories and requires an owner or admin.
+  </Accordion>
+  <Accordion title="Managed and local runs">
+    List and inspect with `list_managed_targets`, `preflight_managed_run`, `get_managed_run`, `list_local_agents` and `get_local_run`. `add_managed_target` stores an encrypted credential and requires an owner or admin. Launch or cancel with `launch_managed_run`, `cancel_managed_run` and `launch_local_run`.
+  </Accordion>
+  <Accordion title="Artifacts and hosted judges">
+    `list_artifacts` and `get_artifact` return metadata only; bytes stay on HTTP. `get_judge_budget` reports hosted-judge usage. `add_judge_jobs` enqueues scoring jobs.
+  </Accordion>
+  <Accordion title="Keys, members and settings">
+    `list_api_keys` and `list_members` are reads. `add_api_key`, `revoke_api_key` and `update_project` require an owner or admin, and a connected app cannot call `add_api_key`. Wherever a tool requires an owner or admin, Hue checks the current role of the key's creator or of the member who signed in. Minted tokens appear once. Billing and plan changes are not on this server.
+  </Accordion>
+  <Accordion title="Look things up">
+    "How do I flush spans in a Next.js streaming route?" Tools: `search_hue_docs`, `load_hue_guide` (`data-model`, `investigate`, `author`).
+  </Accordion>
+</AccordionGroup>
+
+Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or a Hue trace link. Time windows accept ISO-8601 or relative values such as `15m`, `24h` or `7d` (up to 90 days). Results are paginated with opaque cursors and bounded by `max_chars`; truncated results say so and suggest a narrower request. Draft writes take `expected_revision` from `get_eval_set`.
+
+## Content and safety
+
+- Recorded prompts, outputs, tool arguments and raw attributes are omitted unless a tool is called with `include_content: true`. By default the server returns metadata (model, provider, usage, tool names, status, timing) and the names of recorded attributes. Content reads are recorded in the project's audit log.
+- Names, generated titles, session keys, metadata and judge explanations come from your application and its end users. They are length-capped, and every result that carries them starts with a notice that they are data, not instructions; recorded content is wrapped in delimited blocks.
+- Credential-shaped strings are redacted from results and from documentation queries before those leave Hue. The one exception is `add_api_key`, which returns the newly minted token once so it can be stored; later tools never return it.
+- The key, or the project you approved at sign-in, is the tenant. Ids from another project, and `projectId` parameters on pasted links, resolve to `not_found`.
+- Add `?read_only=true` to a key-based URL to hide and reject any write tool regardless of the key. With sign-in, choose **Read** at approval instead.
+- Requests are limited to 1 MiB. Ten failed authentications for one key within a minute return `429` with `Retry-After: 60`, and for those 60 seconds the correct key is refused too. A busy server returns `503` with `Retry-After`.
+
+## Retired tool names
+
+Hue served the earlier tool names below as aliases of the current tools for one production release, then retired them. A call to a retired name now fails as an unknown tool. Update prompts, allowlists and approval rules to the current names.
+
+`add_trace_to_eval_set` and its earlier name `add_trace_to_dataset` were removed. To turn a trace into a case, use the case conversion tools, **Create case** in Hue or the `/api/v1/case-conversions` REST endpoint, as described under [what you can do](#what-you-can-do).
+
+<Accordion title="Retired and current tool names">
+  | Retired name | Current name |
+  | --- | --- |
+  | `add_dataset` | `add_eval_set` |
+  | `add_dataset_cases` | `add_eval_set_cases` |
+  | `add_dataset_draft` | `add_eval_set_draft` |
+  | `add_scorer` | `add_evaluator` |
+  | `add_experiment` | `add_run` |
+  | `add_evaluation_results` | `add_scoring_results` |
+  | `add_evaluation_run` | `add_scoring_run` |
+  | `archive_dataset` | `archive_eval_set` |
+  | `archive_scorer` | `archive_evaluator` |
+  | `complete_experiment_case` | `complete_run_case` |
+  | `copy_scorer` | `copy_evaluator` |
+  | `delete_dataset_case` | `delete_eval_set_case` |
+  | `finish_experiment` | `finish_run` |
+  | `freeze_dataset_version` | `freeze_eval_set_version` |
+  | `get_scenario` | `get_case` |
+  | `get_dataset` | `get_eval_set` |
+  | `get_scorer` | `get_evaluator` |
+  | `get_experiment` | `get_run` |
+  | `get_experiment_execution` | `get_run_execution` |
+  | `get_experiment_item` | `get_run_item` |
+  | `get_evaluation_run` | `get_scoring_run` |
+  | `list_scenarios` | `list_cases` |
+  | `list_datasets` | `list_eval_sets` |
+  | `list_scorers` | `list_evaluators` |
+  | `list_experiment_items` | `list_run_items` |
+  | `list_experiments` | `list_runs` |
+  | `list_evaluation_runs` | `list_scoring_runs` |
+  | `publish_scorer` | `publish_evaluator` |
+  | `start_experiment_case` | `start_run_case` |
+  | `update_dataset` | `update_eval_set` |
+  | `update_dataset_case` | `update_eval_set_case` |
+</Accordion>

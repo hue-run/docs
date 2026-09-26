@@ -1069,6 +1069,78 @@
         }
       },
       {
+        "name": "list_judge_results",
+        "title": "Hue: list judge results",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_judge_alignment",
+        "title": "Hue: get judge alignment",
+        "toolset": "evals",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "label_judge_result",
+        "title": "Hue: label judge result",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "set_judge_promotion",
+        "title": "Hue: promote or demote judge",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "check_judge_regression",
+        "title": "Hue: check judge regression",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "set_judge_alignment_bar",
+        "title": "Hue: set judge alignment bar",
+        "toolset": "evals",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
         "name": "list_runs",
         "title": "Hue: list runs",
         "toolset": "evals",
@@ -1598,7 +1670,7 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "ed0826c46095a660746848df91bd1317c3d2916606d6df32e8c7633ade9c7430",
+    "catalogSha256": "d645b4051b1cace763ddf6644d079db5672f0c386b308e2d19ae76aa1733fb1d",
     "installSnippets": {
       "oauthServerUrl": "https://mcp.hue.run/mcp",
       "oauthClaudeCodeCli": "claude mcp add --transport http hue https://mcp.hue.run/mcp",
