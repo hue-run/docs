@@ -48,9 +48,9 @@ To revoke evaluation and agent access separately, run `--keys evaluations` and `
 npx --yes --package @hue-run/sdk@0.10.0 hue mcp install --client claude-code
 ```
 
-`hue mcp install` writes key-based configuration: a server named `hue` at `https://mcp.hue.run/mcp` that reads the key from the `HUE_MCP_KEY` environment variable. It never writes the key itself and has no sign-in mode; to [sign in with Hue](/agents/mcp-server#sign-in-with-hue-instead-of-a-key) instead, add the URL to your client yourself. Supported clients are `claude-code`, `cursor`, `codex`, `vscode`, `windsurf` and `gemini`. For `windsurf` it only prints the snippet; merge it into the file named in the Windsurf tab of [connect your client](/agents/mcp-server#connect-your-client). Add `--dry-run` to see the change first, or `--print` for the snippet only.
+`hue mcp install` writes key-based configuration: a server named `hue` at `https://mcp.hue.run/mcp` that reads the key from the `HUE_MCP_KEY` environment variable. It never writes the key itself and has no sign-in mode; to [sign in with Hue](/agents/mcp-server#sign-in-with-hue-instead-of-a-key) instead, add the URL to your client yourself. Supported clients are `claude-code`, `cursor`, `codex`, `vscode`, `windsurf` and `gemini`. For `windsurf` it only prints the snippet; merge it into the configuration opened by Cascade's **… (Actions) → MCPs → Open MCP config file**. See the [Cascade MCP guide](https://docs.devin.ai/desktop/cascade/mcp) for that client's configuration. Add `--dry-run` to see the change first, or `--print` for the snippet only.
 
-Export `HUE_MCP_KEY` in the shell that starts your client, then ask the agent to call `get_project_context` to confirm which project it reached. The [MCP guide](/agents/mcp-server) covers every client and what the server can do.
+Export `HUE_MCP_KEY` in the shell that starts your client, then ask the agent to call `get_project_context` to confirm which project it reached. The [MCP guide](/agents/mcp-server) covers connection settings, verification and what the server can do.
 
 ## Run an evaluation
 

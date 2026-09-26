@@ -1,7 +1,7 @@
 ---
 title: "Connect the Hue MCP server"
 sidebarTitle: "Connect MCP"
-description: "Connect Conductor, Claude Code, Codex, Cursor and other MCP clients to your Hue project at https://mcp.hue.run/mcp by signing in with Hue or using a project key."
+description: "Connect an MCP client to your Hue project with browser sign-in or a project key, with setup instructions for Claude Code, Codex, Cursor and Conductor."
 ---
 
 The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install. Each connection reaches one project: **Read** access searches and inspects its data, such as traces, evaluations and cases, and **Read and write** access also changes project data. Billing and plan changes stay in Settings. `https://docs.hue.run/mcp` is a separate documentation-only server and cannot read your project.
@@ -16,26 +16,26 @@ Already have a project key, or using a client without sign-in support? [Prepare 
 
 ## Connect your client
 
-Select the client you will use to call Hue. Conductor loads the configuration for its selected agent; other clients keep their own connections.
+Start with **Any MCP client** for the connection settings, or choose your client for exact commands.
 
 <Tabs>
-  <Tab title="Conductor">
-    Conductor uses the MCP configuration of your selected agent. In a **local Conductor workspace**, run the command for that agent in its terminal:
+  <Tab title="Any MCP client">
+    In your client's MCP settings, add a **remote server** with these values. The client must support **Streamable HTTP** and **OAuth** for browser sign-in.
 
-    <CodeGroup>
-    ```sh Claude Code
-    claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp
-    ```
-    ```sh Codex
-    codex mcp add hue --url https://mcp.hue.run/mcp
-    ```
-    </CodeGroup>
+    | Setting | Value |
+    | --- | --- |
+    | Name | `hue` |
+    | Server URL | `https://mcp.hue.run/mcp` |
+    | Transport | Streamable HTTP |
+    | Authentication | OAuth / sign in |
 
-    Open **MCP status** from the plug icon or `/mcp-status`, refresh, then use **hue**'s authentication action. Sign in to Hue, choose your project and **Read**, and approve. Leave out API keys and custom headers for this connection. If an older `hue` entry uses a key, replace it using the **Claude Code** or **Codex** tab.
+    Save the server and choose its connect or authenticate action. Hue opens in your browser: sign in, select your project and approve **Read**. Leave custom headers and API-key fields empty; the client handles OAuth discovery and tokens. Return to the client and [verify the connection](#verify-the-connection).
 
-    Start a new agent session if its tool list has not updated, then [verify the connection](#verify-the-connection). These instructions cover local workspaces; a cloud workspace has a separate configuration and browser callback environment. See [Conductor's MCP setup guide](https://www.conductor.build/docs/guides/configure-mcp-servers#check-status-in-conductor).
+    Setting names vary by app. Use the tabs for exact Claude Code, Codex, Cursor and Conductor instructions. Hosted connectors can use the same URL and sign-in flow when their plan and workspace settings allow custom MCP servers; Hue has not yet verified claude.ai, Claude Desktop Connectors or ChatGPT end to end.
 
-    Hue's production Conductor browser flow is still awaiting end-to-end acceptance; a connected status alone is not a successful trace read.
+    <Accordion title="Use a project key instead">
+      If your client supports bearer authentication or custom headers, [create a Read or Read and write key](#connect-with-a-project-key) and configure `Authorization: Bearer <project key>` using the client's secret storage or environment-variable reference. Select key or bearer authentication instead of OAuth. Never put the key in the server URL or shared configuration. Environment-reference syntax depends on the client.
+    </Accordion>
   </Tab>
   <Tab title="Claude Code">
     Add the server, then run `/mcp` in Claude Code, select `hue` and choose **Authenticate**. This adds `hue` for the current project; add `--scope user` for all projects. Until you authenticate, `claude mcp get hue` shows `! Needs authentication`, which is expected.
@@ -154,180 +154,23 @@ Select the client you will use to call Hue. Conductor loads the configuration fo
       </Accordion>
     </Accordion>
   </Tab>
-  <Tab title="VS Code">
-    These instructions use a project key. First [prepare the key](#connect-with-a-project-key).
+  <Tab title="Conductor">
+    Conductor uses the MCP configuration of your selected agent. In a **local Conductor workspace**, run the command for that agent in its terminal:
 
-    Add the server to `.vscode/mcp.json`. VS Code prompts for the key the first time the server starts and stores it securely, so the key never goes into the file and `HUE_MCP_KEY` is not needed:
-
-    ```json .vscode/mcp.json
-    {
-      "servers": {
-        "hue": {
-          "type": "http",
-          "url": "https://mcp.hue.run/mcp",
-          "headers": {
-            "Authorization": "Bearer ${input:hue-mcp-key}"
-          }
-        }
-      },
-      "inputs": [
-        {
-          "type": "promptString",
-          "id": "hue-mcp-key",
-          "description": "Hue Read or Read and write API key",
-          "password": true
-        }
-      ]
-    }
+    <CodeGroup>
+    ```sh Claude Code
+    claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp
     ```
-
-    Start it with the **Start** action above `hue` in the file, or run **MCP: List Servers**, select **hue** and choose **Start Server**, then paste the key at the prompt. VS Code starts workspace servers only in a trusted workspace.
-
-    **Verify:** run **MCP: List Servers** from the Command Palette and check that **hue** is running. If it is not, select it and choose **Show Output** to see Hue's message.
-
-    <Accordion title="Replace the stored key">
-      VS Code documents no command to replace a stored key. To enter a new one, rename the input `id` in both places, for example to `hue-mcp-key-2`, and start the server again.
-    </Accordion>
-  </Tab>
-  <Tab title="Claude Desktop">
-    Open **Settings → Developer → Edit Config** to edit `claude_desktop_config.json`. This local-server option uses `mcp-remote` and requires Node.js; for the hosted **Connectors** option, use the **Hosted assistants** tab.
-
-    Give `mcp-remote` only the URL. Quit and reopen Claude Desktop; it opens Hue in your browser the first time it connects and reuses the approval after that:
-
-    ```json claude_desktop_config.json
-    {
-      "mcpServers": {
-        "hue": {
-          "command": "npx",
-          "args": ["-y", "mcp-remote", "https://mcp.hue.run/mcp"]
-        }
-      }
-    }
+    ```sh Codex
+    codex mcp add hue --url https://mcp.hue.run/mcp
     ```
+    </CodeGroup>
 
-    To change the project or access, disconnect this app in Hue's **Settings → Connected apps** and reconnect it.
+    Open **MCP status** from the plug icon or `/mcp-status`, refresh, then use **hue**'s authentication action. Sign in to Hue, choose your project and **Read**, and approve. Leave out API keys and custom headers for this connection. If an older `hue` entry uses a key, replace it using the **Claude Code** or **Codex** tab.
 
-    <Accordion title="Use a project key instead">
-      First [prepare the key](#connect-with-a-project-key), then configure this client.
+    Start a new agent session if its tool list has not updated, then [verify the connection](#verify-the-connection). These instructions cover local workspaces; a cloud workspace has a separate configuration and browser callback environment. See [Conductor's MCP setup guide](https://www.conductor.build/docs/guides/configure-mcp-servers#check-status-in-conductor).
 
-      Claude Desktop starts local servers from `claude_desktop_config.json` (**Settings → Developer → Edit Config**), in `~/Library/Application Support/Claude/` on macOS or `%APPDATA%\Claude\` on Windows. Use `mcp-remote`, which needs Node.js, to reach Hue with a key:
-
-      ```json claude_desktop_config.json
-      {
-        "mcpServers": {
-          "hue": {
-            "command": "npx",
-            "args": ["-y", "mcp-remote", "https://mcp.hue.run/mcp", "--header", "Authorization:${AUTH_HEADER}"],
-            "env": {
-              "AUTH_HEADER": "Bearer <your Hue key>"
-            }
-          }
-        }
-      }
-      ```
-
-      Unlike `HUE_MCP_KEY`, `AUTH_HEADER` holds `Bearer ` followed by the key. Write `Authorization:${AUTH_HEADER}` with no space after the colon: some hosts split arguments on spaces, which breaks `Authorization: Bearer …`. Claude Desktop does not read your shell's variables, so the key is stored on disk; keep the file private. To avoid storing a key, use the URL-only form under [sign in with Hue](#sign-in-with-hue-instead-of-a-key).
-
-      **Verify:** quit and reopen Claude Desktop, then ask it to call `get_project_context`.
-
-      <AccordionGroup>
-        <Accordion title="Keep the key out of this file">
-          Replace `"--header", "Authorization:${AUTH_HEADER}"` and the `env` block with `"--header-file", "<path>"`, where the file holds the line `Authorization: Bearer <key>` and only you can read it.
-        </Accordion>
-        <Accordion title="If the Claude Desktop check fails">
-          `mcp-remote` writes to `mcp-server-hue.log` in `~/Library/Logs/Claude/` on macOS or `%APPDATA%\Claude\logs\` on Windows, which shows Hue's message for a `403`. If the log shows `Dynamic Client Registration rejected (HTTP 401) … Invalid initial access token`, or a Hue sign-in page opens, Hue could not use `AUTH_HEADER`: the key is wrong, truncated, revoked or still the placeholder, `Bearer ` is missing, or it is a `${…}` reference, which Claude Desktop never expands. Don't finish that sign-in; fix `AUTH_HEADER` and restart Claude Desktop.
-        </Accordion>
-      </AccordionGroup>
-    </Accordion>
-  </Tab>
-  <Tab title="Windsurf">
-    These instructions use a project key. First [prepare the key](#connect-with-a-project-key).
-
-    These instructions configure the Cascade agent. In Cascade's **… (Actions) → MCPs**, choose **Open MCP config file** and add the entry below. This opens the configuration used by your installed version; see the [Cascade MCP guide](https://docs.devin.ai/desktop/cascade/mcp). If you use Devin Local, follow its separate [MCP configuration guide](https://docs.devin.ai/cli/extensibility/mcp/configuration).
-
-    ```json mcp_config.json
-    {
-      "mcpServers": {
-        "hue": {
-          "serverUrl": "https://mcp.hue.run/mcp",
-          "headers": {
-            "Authorization": "Bearer ${env:HUE_MCP_KEY}"
-          }
-        }
-      }
-    }
-    ```
-
-    The legacy Cascade agent has a 100-tool limit across all servers; a **Read** key uses 43 tools and a **Read and write** key uses 87 tools.
-
-    **Verify:** refresh the MCP servers in its settings, then ask the agent to call `get_project_context`.
-  </Tab>
-  <Tab title="Gemini CLI">
-    These instructions use a project key. First [prepare the key](#connect-with-a-project-key).
-
-    Add the server for your user with single quotes, so the settings file stores the reference and not the key:
-
-    ```sh
-    gemini mcp add --scope user --transport http hue https://mcp.hue.run/mcp \
-      --header 'Authorization: Bearer ${HUE_MCP_KEY}'
-    ```
-
-    Or add it to `~/.gemini/settings.json`, or to `.gemini/settings.json` in the project:
-
-    ```json settings.json
-    {
-      "mcpServers": {
-        "hue": {
-          "httpUrl": "https://mcp.hue.run/mcp",
-          "headers": {
-            "Authorization": "Bearer ${HUE_MCP_KEY}"
-          }
-        }
-      }
-    }
-    ```
-
-    Gemini CLI expands `${HUE_MCP_KEY}` from the environment that starts `gemini`; it does not use a key in the project's `.gemini/.env`. It starts MCP servers, including user-level ones, only in a trusted folder: run `/permissions` inside `gemini` and choose **Trust folder**, or set `GEMINI_CLI_TRUST_WORKSPACE=true` for a single run.
-
-    **Verify:** run `gemini mcp list` and look for `✓ hue: https://mcp.hue.run/mcp (http) - Connected`.
-
-    <Accordion title="If the Gemini CLI check fails">
-      `gemini mcp list` shows **Disabled** in an untrusted folder and **Disconnected** when the connection fails. For Hue's reason, run the [curl check](#verify-the-connection), or start `gemini --debug` and press F12 to open the debug console. For a refused key Gemini suggests `/mcp auth hue`; don't run it, fix the key instead.
-    </Accordion>
-  </Tab>
-  <Tab title="OpenCode">
-    These instructions use a project key. First [prepare the key](#connect-with-a-project-key).
-
-    Add the server to `opencode.json` in the project. OpenCode references variables as `{env:HUE_MCP_KEY}`, not `${HUE_MCP_KEY}`:
-
-    ```json opencode.json
-    {
-      "$schema": "https://opencode.ai/config.json",
-      "mcp": {
-        "hue": {
-          "type": "remote",
-          "url": "https://mcp.hue.run/mcp",
-          "enabled": true,
-          "headers": {
-            "Authorization": "Bearer {env:HUE_MCP_KEY}"
-          }
-        }
-      }
-    }
-    ```
-
-    **Verify:** run `opencode mcp list` and look for `✓ hue connected`.
-
-    <Accordion title="If the OpenCode check fails">
-      Run `opencode mcp debug hue` and read its `HTTP response` line: `401` means no usable key reached Hue, and `403` means the key cannot read project data. Its `Auth status` line refers to sign-in and says `not authenticated` even for a working key.
-
-      OpenCode substitutes the value into the configuration text before parsing it, so a trailing newline or carriage return in the key makes the configuration invalid JSON. `opencode debug config` prints the configuration with the key substituted; don't run it or share its output while you debug Hue.
-    </Accordion>
-  </Tab>
-  <Tab title="Hosted assistants">
-    Add `https://mcp.hue.run/mcp` as a remote custom connector in claude.ai, Claude Desktop's **Settings → Connectors**, or ChatGPT developer mode. Choose OAuth when the client offers an authentication choice, sign in to Hue, and approve one project. Availability depends on the client's plan and workspace settings.
-
-    Hue has not yet verified these hosted clients end to end. Complete [verify the connection](#verify-the-connection) from that assistant before relying on it. A working connection in a coding agent does not configure or verify a hosted connector.
+    Hue's production Conductor browser flow is still awaiting end-to-end acceptance; a connected status alone is not a successful trace read.
   </Tab>
 </Tabs>
 
@@ -350,7 +193,7 @@ Leave out the `Authorization` header and any bearer-token environment-variable s
 ## Connect with a project key
 
 1. An owner or admin creates a **Read** key, or a **Read and write** key if the agent should change project data, in **Settings → Integrations & API keys**. Save the key in your secret manager; it is shown once. Keep it separate from the application's **Tracing only** key.
-2. For clients that read `HUE_MCP_KEY`, export the key alone, without `Bearer `, from your secret manager into the shell that starts the client. VS Code prompts for the key instead; Claude Desktop's key option stores it in private local configuration.
+2. For clients that read `HUE_MCP_KEY`, export the key alone, without `Bearer `, from your secret manager into the shell that starts the client. If your client offers a secure credential prompt, use that instead.
 3. Follow your [client's tab](#connect-your-client), restart it from that shell and approve **hue** if asked. Desktop apps started from the Dock or a launcher do not inherit a terminal's variables.
 
 Never put the key in application code, shared configuration or a prompt. See [project keys](/guides/project-keys) for access and rotation.
@@ -361,7 +204,7 @@ Never put the key in application code, shared configuration or a prompt. See [pr
 
 ### Let your coding agent set it up
 
-Paste this into your coding agent, started from a shell where `HUE_MCP_KEY` is exported. For VS Code and Claude Desktop, follow their tabs instead: they keep the key in the client, not in a variable.
+For a client that supports environment-variable references, paste this into your coding agent, started from a shell where `HUE_MCP_KEY` is exported. If your client uses a secure credential prompt, configure the key there instead.
 
 ```text Prompt wrap
 Connect me to the Hue MCP server.
@@ -402,25 +245,24 @@ The shell's `printf` builtin sends the header through standard input, keeping th
 
 ## Troubleshooting
 
-For key-based connections, several clients hide Hue's message behind a short status; the [curl check](#verify-the-connection) shows the server response. For sign-in connections, use the client's authentication action and the sign-in rows below. `claude mcp get hue`, `opencode mcp debug hue`, VS Code's **Show Output** and Claude Desktop's `mcp-server-hue.log` show it for most failures. Codex, Cursor and Gemini CLI report every `401` as a request to sign in. With a key configured, don't follow those prompts: find Hue's reason and fix the key.
+For key-based connections, the [curl check](#verify-the-connection) shows Hue's response when the client displays only a short status. Some clients treat any `401` as a request to sign in; fix or remove a failing key header before starting OAuth. For sign-in connections, use the client's authentication action and the sign-in rows below.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | Your organization or project is missing from the consent page | The signed-in account is unverified, has not accepted its organization invitation, is not a member, or the project is archived | Check the account shown on the page, verify your email and accept your invitation in Hue, then reconnect. Ask an organization owner or admin to check your membership and the project. Staff or administrative visibility alone is not membership. |
 | The client reports missing OAuth metadata | The URL is wrong, a saved entry still targets an old endpoint, or discovery failed | Use `https://mcp.hue.run/mcp` without a custom authorization header, refresh the client's configuration and retry. If it persists, report the client/version and error text without tokens. |
 | Consent succeeds but no Hue tools appear | The running agent session has not loaded the new connection | Refresh MCP status and start a new session, then run the verification above. In Conductor, check the configuration for the selected agent. |
-| A Hue sign-in page opens, or the client shows **Needs authentication**, `Authentication required`, `requires_authentication` (Cursor), `The hue MCP server is not logged in` (Codex) or `OAuth not authenticated` (Gemini CLI), although you configured a key | Hue refused the key. Usually `HUE_MCP_KEY` is unset or empty where the client started, the header lacks `Bearer ` or repeats it, the key is in another header such as `x-api-key`, or the key is wrong or revoked. Also check that the saved configuration still holds the `${HUE_MCP_KEY}` reference rather than `Bearer` or the key (a CLI `--header` in double quotes), that no other `hue` entry without the header overrides it (Claude Code), and that Codex was added with `--bearer-token-env-var` | Run the curl check and match its message to the rows below. Export `HUE_MCP_KEY` in the shell that starts the client, restart the client, and send exactly `Authorization: Bearer <key>`. Don't finish a sign-in that opened because of a failing key: it fails too. |
-| `Malformed initial access token Authorization header` (Cursor, OpenCode) or `Dynamic Client Registration rejected (HTTP 401) … Invalid initial access token` (Claude Desktop's `mcp-server-hue.log`) | The client tried to sign in and sent your failing key header along: the variable is unset or empty or already holds `Bearer `, or the key is wrong, a placeholder or an unexpanded `${…}` reference | Fix the key as in the row above, then restart the client. In Claude Desktop, `AUTH_HEADER` holds `Bearer ` and the key itself. Or remove the header and sign in. |
+| A Hue sign-in page opens, or the client shows **Needs authentication**, `Authentication required`, `requires_authentication` (Cursor), `The hue MCP server is not logged in` (Codex), although you configured a key | Hue refused the key. Usually `HUE_MCP_KEY` is unset or empty where the client started, the header lacks `Bearer ` or repeats it, the key is in another header such as `x-api-key`, or the key is wrong or revoked. Also check that the saved configuration still holds the `${HUE_MCP_KEY}` reference rather than `Bearer` or the key (a CLI `--header` in double quotes), that no other `hue` entry without the header overrides it (Claude Code), and that Codex was added with `--bearer-token-env-var` | Run the curl check and match its message to the rows below. Export `HUE_MCP_KEY` in the shell that starts the client, restart the client, and send exactly `Authorization: Bearer <key>`. Don't finish a sign-in that opened because of a failing key: it fails too. |
+| `Malformed initial access token Authorization header` or `Dynamic Client Registration rejected (HTTP 401) … Invalid initial access token` | The client tried to sign in and sent your failing key header along: the variable is unset or empty or already holds `Bearer `, or the key is wrong, a placeholder or an unexpanded `${…}` reference | Fix the key as in the row above, then restart the client. Or remove the header and sign in. |
 | Codex reports `Environment variable HUE_MCP_KEY for MCP server 'hue' is not set` or `… is empty` | The variable is missing, empty or set without `export` in the shell that started Codex | Export the key in that shell and restart Codex. |
-| `401` `The bearer token is not a Hue credential` | The client sent something other than a key: the reference itself, such as `${HUE_MCP_KEY}`, because the variable was unset or the syntax is not the client's, or a value with extra characters such as surrounding quotes | Set the variable to the key alone before starting the client, and use the client's syntax: `${HUE_MCP_KEY}` for Claude Code and Gemini CLI, `${env:HUE_MCP_KEY}` for Cursor and Windsurf, `{env:HUE_MCP_KEY}` for OpenCode. Codex needs `bearer_token_env_var` and does not expand `${…}` in `http_headers`. Claude Desktop expands no shell variables, so `AUTH_HEADER` holds the key. |
+| `401` `The bearer token is not a Hue credential` | The client sent something other than a key: the reference itself, such as `${HUE_MCP_KEY}`, because the variable was unset or the syntax is not the client's, or a value with extra characters such as surrounding quotes | Set the variable to the key alone before starting the client, and use the client's syntax: `${HUE_MCP_KEY}` for Claude Code and `${env:HUE_MCP_KEY}` for Cursor. For other clients, follow their environment-variable or secret-storage syntax. Codex needs `bearer_token_env_var` and does not expand `${…}` in `http_headers`. |
 | `401` `A valid project service key is required` | The key is wrong, truncated, revoked or expired | Copy the key again from your secret manager, or create a new one in **Settings → Integrations & API keys**. |
-| `403` `This key cannot read project data` | The key is **Tracing only** or a legacy **Tracing and evaluations** or **Source capture (legacy)** key | Create a **Read** or **Read and write** key and set it as `HUE_MCP_KEY`, or, for Claude Desktop, put it in `AUTH_HEADER` after `Bearer `. Or [sign in with Hue](#sign-in-with-hue-instead-of-a-key). OpenCode shows this as **needs authentication**. |
+| `403` `This key cannot read project data` | The key is **Tracing only** or a legacy **Tracing and evaluations** or **Source capture (legacy)** key | Create a **Read** or **Read and write** key and configure it in your client. Or [sign in with Hue](#sign-in-with-hue-instead-of-a-key). |
 | `Unexpected content type: text/html`, HTTP `404` or `MCP endpoint not found` | Wrong URL: the host root, `/api` without `/mcp`, or `/mcp` on `app.hue.run` | Use `https://mcp.hue.run/mcp` exactly. A trailing slash is fine. |
 | `429` `Too many failed authentications for this key`, or `Too many requests. Please try again later.` while a client tries to sign in | Ten failed attempts with this key within a minute, often from another client with an old or truncated copy, or repeated sign-in attempts from a client whose key header keeps failing | Fix or stop that client, then wait a minute. Until then the correct key is refused too. |
 | `503` with `Retry-After: 1` | The server is momentarily busy | Retry after a second. |
-| Codex reports `invalid HTTP header`, or OpenCode says its configuration is not valid JSON | The stored key ends with a newline | Store the key without a trailing newline. OpenCode's error prints the key, so clear it from your terminal. |
+| The client reports `invalid HTTP header` | The stored key ends with a newline | Store the key without a trailing newline. |
 | Cursor shows `not loaded (needs approval)` or `has not been approved` | Cursor has not approved the server, or `HUE_MCP_KEY` changed or became unset since you approved it | Check that `HUE_MCP_KEY` is exported and holds the key you intend, then turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue`. Cursor asks again after every change. |
-| Gemini CLI shows **Disconnected** or **Disabled** | The key is not in the environment that started `gemini`, the folder is not trusted, or Hue refused the key | Export `HUE_MCP_KEY` before starting `gemini`, trust the folder with `/permissions`, and run the curl check for Hue's message. |
 | A client you connected by signing in shows **Needs authentication** or `The hue MCP server is not logged in` | The approval ended: 30 days passed, someone disconnected it in **Settings → Connected apps**, you reset your password or signed out everywhere, or you left the organization or the project was archived | Sign in again: `/mcp` → **Authenticate** in Claude Code, `codex mcp login hue`, or `cursor-agent mcp login hue`. |
 | A tool call fails as an unknown tool | Write tools are hidden for **Read** access and for a URL with `?read_only=true`; [retired tool names](#retired-tool-names) are no longer served; a tool described in a development branch is not available until its platform release is deployed | Use a **Read and write** key without `?read_only=true`, approve **Read and write** at sign-in, or call the current tool name. Use the tools your connection's `tools/list` returns; an unknown tool is not evidence that the client should broaden its permissions. |
 

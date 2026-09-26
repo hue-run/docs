@@ -169,17 +169,14 @@ for (const { name } of platform.mcp.tools) {
 }
 const compact = (value) => value.replace(/\s+/g, " ").trim();
 const compactMcpGuide = compact(publicText["agents/mcp-server.mdx"]);
+// Match the snippets for the clients documented in this guide. The producer snapshot also
+// includes other clients; its complete contents and source digest remain checked below.
 for (const key of [
   "claudeCodeProjectJson",
   "claudeCodeCli",
   "codexCli",
   "codexToml",
   "cursorJson",
-  "vscodeJson",
-  "windsurfJson",
-  "geminiCli",
-  "geminiJson",
-  "opencodeJson",
   "oauthClaudeCodeCli",
   "oauthCodexCli",
   "connectPrompt",
