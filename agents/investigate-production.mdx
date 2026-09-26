@@ -22,6 +22,7 @@ Give your coding agent prompts like these once the server is connected:
 
 ## Before you start
 
+- **Select the project first.** A project key reaches one project. A sign-in connection that covers an organization lists its projects with `list_projects`; confirm with the user which one to read, then pass its id as `project_id` on every tool call in every recipe below. The tools' input schemas include `project_id` only on such a connection.
 - **Hue returns data; the agent draws conclusions.** Counts, rankings and explanations in the agent's answer are its own. Ask it to state the window, the filters and how many traces it opened, and to link the traces it cites.
 - **Pages are samples, counts are not.** `total_count` counts every trace that matches the filters, up to 10,000. A page holds at most 50 traces. When an answer needs span detail from many traces, the agent opens a bounded sample with `get_trace` and should say so.
 - **Empty is not proof.** An empty result can mean a window that is too narrow, a filter that is too tight, or a feature the project has not set up. Widen the window or drop a filter before concluding that nothing happened.
@@ -33,7 +34,7 @@ Each recipe is a short sequence of tool calls with their key arguments. Replace 
 
 ### What needs attention, errored or failed, and why
 
-1. With an organization connection, `list_projects` lists its projects; confirm with the user which one to read. `get_project_context` then confirms the project, passing its `project_id` when the tools take one.
+1. `get_project_context` confirms which project you are reading, with the `project_id` you [selected](#before-you-start) when the tools take one.
 2. `search_traces` with `{"since": "24h", "limit": 1}` gives the volume in `total_count`. `total_count_capped: true` means 10,000 or more.
 3. `search_traces` with `{"since": "24h", "attention": "needs_attention"}` lists what Hue flagged: a built-in [trace finding](#attention-states-and-findings), or a positive result from an active [trace check](#trace-checks). The same call with `"attention": "uncertain"` lists what Hue could not settle.
 4. `search_traces` with `{"since": "24h", "status": "error"}` lists traces with at least one errored span.
