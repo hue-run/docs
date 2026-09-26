@@ -98,12 +98,55 @@ test("the MCP guide must keep the sign-in snippets", () => {
   assert.match(result.stderr, /does not match the generated oauthCodexCli snippet/);
 });
 
+test("the MCP guide must keep the Codex sign-in TOML", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
+    text.replace('http_headers = { "X-Hue-MCP-Toolsets" = "all" }', 'url = "https://mcp.hue.run/mcp?toolsets=all"'),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /does not match the generated oauthCodexToml snippet/);
+});
+
 test("a tool count that disagrees with the contract fails", () => {
   const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
-    text.replace(/lists \d+ tools/, "lists 0 tools"),
+    text.replace(/\b\d+ tools\b/, "0 tools"),
   ));
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /MCP guide names 0 tools/);
+});
+
+test("a tool count stated for write access must be that listing's count", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
+    text.replace(/\b\d+ tools with write access\b/, "19 tools with write access"),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /MCP guide names 19 tools for the default listing with write access; the contract has \d+/);
+});
+
+test("the default tool counts stay attached to their access context", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
+    text.replace("20 tools with write access", "19 tools with write access"),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /must report the default listing as/);
+});
+
+test("the MCP guide must name every catalog tool", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
+    text.replaceAll("execute_hue_write_tool", "the write executor"),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /MCP guide is missing catalog tool execute_hue_write_tool/);
+});
+
+test("the MCP guide must keep each tool in its generated group", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
+    text.replace(
+      "| `eval_sets` | `list_eval_sets`, `get_eval_set`, `list_evaluators`",
+      "| `eval_sets` | `get_run`, `get_eval_set`, `list_evaluators`",
+    ),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /does not list the generated eval_sets toolset/);
 });
 
 test("the retired key-only MCP statement cannot return", () => {

@@ -169,8 +169,24 @@ if (!Array.isArray(platform.mcp.tools) || platform.mcp.tools.length === 0) {
 for (const { name } of platform.mcp.tools) {
   if (!publicText["agents/mcp-server.mdx"].includes(name)) fail(`MCP guide is missing tool ${name}`);
 }
+// The catalog tools are listed beside every selection but `all`; the guide names each one.
+const catalogTools = platform.mcp.toolsets?.catalogTools ?? [];
+const toolsets = platform.mcp.toolsets ?? {};
+for (const { name } of catalogTools) {
+  if (!publicText["agents/mcp-server.mdx"].includes(name)) fail(`MCP guide is missing catalog tool ${name}`);
+}
 const compact = (value) => value.replace(/\s+/g, " ").trim();
 const compactMcpGuide = compact(publicText["agents/mcp-server.mdx"]);
+for (const group of toolsets.groups ?? []) {
+  const names = platform.mcp.tools.filter(({ toolset }) => toolset === group).map(({ name }) => `\`${name}\``);
+  const row = `| \`${group}\` | ${names.join(", ")}. |`;
+  if (!compactMcpGuide.includes(compact(row))) fail(`MCP guide does not list the generated ${group} toolset`);
+}
+for (const profile of ["author", "evaluate"]) {
+  const names = (toolsets.profiles?.[profile] ?? []).map((name) => `\`${name}\``);
+  const row = `| \`${profile}\` | ${names.join(", ")}. |`;
+  if (!compactMcpGuide.includes(compact(row))) fail(`MCP guide does not list the generated ${profile} profile`);
+}
 // Match the snippets for the clients documented in this guide. The producer snapshot also
 // includes other clients; its complete contents and source digest remain checked below.
 for (const key of [
@@ -181,6 +197,7 @@ for (const key of [
   "cursorJson",
   "oauthClaudeCodeCli",
   "oauthCodexCli",
+  "oauthCodexToml",
   "connectPrompt",
   "verifyPrompt",
 ]) {
@@ -190,12 +207,36 @@ for (const key of [
     fail(`MCP guide does not match the generated ${key} snippet`);
   }
 }
-// Tool counts quoted as verification output must match the contract: every tool, or the read tools a
-// Read key or connection sees.
+// Tool counts quoted in the guide must match the contract: every tool, the read tools a Read key or
+// connection sees, or the default listing (the default toolsets and the catalog tools) with write
+// access or with Read access, which has no write executor.
 const readToolCount = platform.mcp.tools.filter(({ access }) => access === "read").length;
+const defaultListed = platform.mcp.tools.filter(({ name, toolset }) =>
+  (toolsets.default ?? []).some((selected) => (toolsets.profiles?.[selected] ?? []).includes(name) || selected === toolset),
+);
+const defaultCount = defaultListed.length + catalogTools.length;
+const defaultReadCount =
+  defaultListed.filter(({ access }) => access === "read").length + catalogTools.filter(({ access }) => access === "read").length;
+// A count stated for an access level must be that level's count; any other count must be one of them.
+const describedCounts = [
+  [/\b(\d+) tools with write access\b/g, defaultCount, "the default listing with write access"],
+  [/\b(\d+) tools with \*\*Read\*\* access\b/g, defaultReadCount, "the default listing with Read access"],
+];
+for (const [pattern, expected, description] of describedCounts) {
+  for (const [, count] of publicText["agents/mcp-server.mdx"].matchAll(pattern)) {
+    if (Number(count) !== expected) fail(`MCP guide names ${count} tools for ${description}; the contract has ${expected}`);
+  }
+}
+const defaultCountSentence = `That is ${defaultCount} tools with write access, or ${defaultReadCount} tools with **Read** access.`;
+if (!publicText["agents/mcp-server.mdx"].includes(defaultCountSentence)) {
+  fail(`MCP guide must report the default listing as: ${defaultCountSentence}`);
+}
+const toolCounts = [platform.mcp.tools.length, readToolCount, defaultCount, defaultReadCount];
 for (const [, count] of publicText["agents/mcp-server.mdx"].matchAll(/\b(\d+) tools\b/g)) {
-  if (![platform.mcp.tools.length, readToolCount].includes(Number(count))) {
-    fail(`MCP guide names ${count} tools; the contract has ${platform.mcp.tools.length} tools, ${readToolCount} of them read tools`);
+  if (!toolCounts.includes(Number(count))) {
+    fail(
+      `MCP guide names ${count} tools; the contract has ${platform.mcp.tools.length} tools, ${readToolCount} of them read tools, and a default listing of ${defaultCount} (${defaultReadCount} with Read access)`,
+    );
   }
 }
 for (const [variant, status] of Object.entries({
