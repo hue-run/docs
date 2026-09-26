@@ -37,7 +37,7 @@ Each recipe is a short sequence of tool calls with their key arguments. Replace 
 2. `search_traces` with `{"since": "24h", "limit": 1}` gives the volume in `total_count`. `total_count_capped: true` means 10,000 or more.
 3. `search_traces` with `{"since": "24h", "attention": "needs_attention"}` lists what Hue flagged: a built-in [trace finding](#attention-states-and-findings), or a positive result from an active [trace check](#trace-checks). The same call with `"attention": "uncertain"` lists what Hue could not settle.
 4. `search_traces` with `{"since": "24h", "status": "error"}` lists traces with at least one errored span.
-5. `get_trace` on each candidate returns its span tree. Look for spans with `"status": "error"`, and note their `kind`, `name` and `duration_ms`. Open a bounded number, for example the 20 newest, and follow `next_cursor` only if the user asks for more.
+5. `get_trace` on each candidate returns its span tree, 200 spans per page by default. Look for spans with `"status": "error"`, and note their `kind`, `name` and `duration_ms`. A trace with more spans returns `next_span_cursor`; pass it back as `span_cursor` until it is `null`, or raise `max_spans` up to 500, so errors in later spans are not missed. Open a bounded number of traces, for example the 20 newest, and follow `next_cursor` only if the user asks for more.
 6. `get_span` on a failing span returns `status.message`, the normalized `tool` and `model`, usage and the names of recorded attributes. Add `"include_content": true` to read the tool's arguments and result, or the model's messages.
 7. The agent groups what it found, for example by tool, span name or error message, and reports counts with the window, the filters, the number of traces opened and links.
 
@@ -46,8 +46,8 @@ Each recipe is a short sequence of tool calls with their key arguments. Replace 
 ### Which tools fail most
 
 1. `search_traces` with `{"since": "24h", "status": "error", "limit": 50}`. Follow `next_cursor` until the sample is large enough.
-2. `get_trace` on each trace. Keep the spans with `"kind": "tool"`, and count those with `"status": "error"` by `name`. `get_span` returns the normalized `tool.name` when a span name differs from the tool name.
-3. For a failure rate rather than a count, also count the successful tool spans in the same traces. To compare with all traffic, sample traces from `search_traces` without `status` too.
+2. `get_trace` on each trace, following `next_span_cursor` until it is `null` so every span is counted. Keep the spans with `"kind": "tool"`, and count those with `"status": "error"` by `name`. `get_span` returns the normalized `tool.name` when a span name differs from the tool name.
+3. That ranks tools by failures in error traces. For a failure rate, draw a separate sample from `search_traces` without `status` over the same window, and count each tool's failed and successful spans in that sample. Successes taken only from error traces would overstate the rate.
 
 A trace whose agent retried a tool and then succeeded still has `status: "error"`, and only an unrecovered error sets `unrecovered_tool_error`. Distinguish the two when reporting.
 
@@ -75,14 +75,14 @@ Hue does not store a release on the trace, and `search_traces` has no release fi
 
 If several releases serve traffic at once, the windows mix them; say so. A release your application records as a span attribute appears among `get_span`'s `attributeKeys`, and its value only with `include_content: true`. Projects set up for trace checks can pass `release` to `get_trace_check_summary`.
 
-### One user's recent traces
+### One session's or user's recent traces
 
-Hue has no user filter. The session is the handle:
+Hue has no user filter; it filters by session:
 
 1. `list_sessions` with `{"query": "<session key or part of it>", "since": "7d"}`. `query` matches session keys and the titles of each session's traces.
 2. `search_traces` with `{"session_id": "<id from list_sessions>", "since": "7d"}`.
 
-When your application sets a user id, `get_span` returns it as `genAi.userId` on the spans that carry it. See the [field glossary](#field-glossary) for the attributes Hue reads.
+A session is not always a user. The result is one user's traces only when the application gives each user a single session; otherwise a user can have several sessions, and a session can be shared. When the application records a user id, `get_span` returns it as `genAi.userId` on the spans that carry it; check it before attributing traces to a person. See the [field glossary](#field-glossary) for the attributes Hue reads.
 
 ### Find sub-agent handoffs
 
