@@ -77,3 +77,5 @@ npx --yes --package @hue-run/sdk@0.10.0 hue mcp install --client claude-code
 The command writes a server named `hue` that reads `HUE_MCP_KEY` from the environment; it never writes the key. The user makes `HUE_MCP_KEY` available in the shell that starts the client, from the same workflow, and restarts the client. Follow the [MCP connection guide](/agents/mcp-server#connect-your-client) for client-specific setup, then call `get_project_context` to verify which project it reached. The [Hue CLI reference](/sdks/cli) covers the install command's options.
 
 If the client cannot send a key, or the user prefers browser sign-in, follow [sign in with Hue](/agents/mcp-server#sign-in-with-hue-instead-of-a-key) instead. That guide covers client support, permissions and verification. Installing the coding-agent configuration does not configure a separate hosted assistant.
+
+Once the connection works, tell the user what they can ask next, for example "What needs attention in the last 24 hours, and why?" or "Which tools failed most often yesterday?". [Investigate production](/agents/investigate-production) has the tool sequences for those questions.
