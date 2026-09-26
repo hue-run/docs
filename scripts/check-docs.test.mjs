@@ -87,10 +87,10 @@ test("the MCP guide must keep the sign-in snippets", () => {
 
 test("a tool count that disagrees with the contract fails", () => {
   const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
-    text.replace("lists 87 tools", "lists 71 tools"),
+    text.replace(/lists \d+ tools/, "lists 0 tools"),
   ));
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /MCP guide names 71 tools/);
+  assert.match(result.stderr, /MCP guide names 0 tools/);
 });
 
 test("the retired key-only MCP statement cannot return", () => {

@@ -147,7 +147,7 @@ Start with **Any MCP client** for the connection settings, or choose your client
 
       Cursor loads a new server only after you approve it: turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue` with the Cursor CLI. Check that `HUE_MCP_KEY` holds the key you intend before you approve.
 
-      **Verify:** `cursor-agent mcp list` shows `hue: ready`, and `cursor-agent mcp list-tools hue` lists 87 tools for a **Read and write** key or 43 tools for a **Read** key.
+      **Verify:** `cursor-agent mcp list` shows `hue: ready`, and `cursor-agent mcp list-tools hue` lists 81 tools for a **Read and write** key or 41 tools for a **Read** key.
 
       <Accordion title="If the Cursor check fails">
         The approval covers the expanded header, so Cursor asks again whenever `HUE_MCP_KEY` changes or becomes unset. If `HUE_MCP_KEY` is unset, Cursor sends the unexpanded reference without a warning, and Hue refuses it. For a key Hue refuses with `401`, Cursor shows only `requires_authentication` and suggests `agent mcp login hue`. Don't run it; run the [curl check](#verify-the-connection) to see Hue's reason.
@@ -185,7 +185,7 @@ Leave out the `Authorization` header and any bearer-token environment-variable s
 <Accordion title="Access, expiry and disconnecting">
   - **Read** is selected by default. Choose **Read and write** if the client should write project data; write tools become available within your current organization role; `add_api_key` is never available. For a read-only connection, choose **Read** and leave `?read_only=true` off the URL.
   - The client receives access tokens that last 10 minutes and refreshes them automatically. Your approval lasts 30 days from when you connect; refreshing never extends it, so sign in again after that.
-  - The connection acts for you. Writes are attributed to you, and owner- or admin-only tools check your current role: revoking keys, changing project settings or trace checks, archiving eval sets and evaluators, changing the judge alignment bar, registering managed targets and publishing the intent taxonomy. A connected app can never create project keys with `add_api_key`.
+  - The connection acts for you. Writes are attributed to you, and owner- or admin-only tools check your current role: revoking keys, changing project settings or trace checks, archiving eval sets and evaluators, registering managed targets and publishing the intent taxonomy. A connected app can never create project keys with `add_api_key`.
   - Sign-in covers the MCP server only. The SDKs and REST API still need a project key.
   - **Settings → Connected apps** lists your connections and disconnects them; owners and admins see and disconnect everyone's in the organization. Resetting your password or signing out everywhere disconnects every app you approved, and removal from the organization or an archived project ends the connection too.
 </Accordion>
@@ -271,7 +271,7 @@ See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent) 
 <Accordion title="Endpoints and protocol details">
   The project-data server is a dynamic Node.js route in Hue's main web application, not a separate data service. `https://app.hue.run/api/mcp` remains a supported compatibility alias. The `search_hue_docs` tool delegates documentation searches to the Mintlify-hosted documentation endpoint without changing the project-data server's authentication boundary.
 
-  The server is stateless and accepts clients that start with `initialize` (MCP revisions up to 2025-11-25) as well as clients on the stateless 2026-07-28 revision, so clients need no extra flags. It accepts `POST` only. A `GET` with no `Authorization` header, or with a value that is not a Hue key or token, gets `401` with the sign-in challenge. A `GET` that carries any Hue key or token gets `405` with `Allow: POST`; the key is not checked. A request carrying `Mcp-Session-Id` gets `404`, because the server keeps no sessions. MCP clients handle these answers themselves.
+  The server is stateless and accepts clients that start with `initialize` (MCP revisions up to 2025-11-25) as well as clients on the stateless 2026-07-28 revision, so clients need no extra flags. It accepts `POST` only. A `GET` with no `Authorization` header gets `401` with the sign-in challenge. A `GET` with an `Authorization` header gets `405` with `Allow: POST`; the header value is not checked. Use the POST key check above to diagnose a failing key. A request carrying `Mcp-Session-Id` gets `404`, because the server keeps no sessions. MCP clients handle these answers themselves.
 </Accordion>
 
 ## What you can do
@@ -293,9 +293,6 @@ Every tool is scoped to the one project the connection reaches. Write tools need
   </Accordion>
   <Accordion title="Author evaluations">
     Create an eval set (`add_eval_set`), add cases (`add_eval_set_cases`), edit a draft (`update_eval_set`, `update_eval_set_case`, `delete_eval_set_case`, `add_eval_set_draft`), freeze it (`freeze_eval_set_version`), then pin evaluators (`add_evaluator`, `publish_evaluator`, `copy_evaluator`) and create a run (`add_run`). Record scoring results with `add_scoring_run` and `add_scoring_results`. Hide retired identities with `archive_eval_set`, `archive_evaluator` or `archive_environment`. Case execution can stay with the SDK, a managed run, a local agent, or `start_run_case` / `complete_run_case` / `finish_run`. Never auto-approve `add_*`, `update_*`, `delete_*`, `publish_*`, `freeze_*`, `archive_*` or `copy_*`.
-  </Accordion>
-  <Accordion title="Label and promote judges">
-    Read scored judge results with their agree and disagree counts and your own label with `list_judge_results`, and a judge version's alignment, the project's alignment bar, promotion state and a comparison with another version with `get_judge_alignment`. With **Read and write**, label a result `agree` or `disagree` with `label_judge_result`, promote or demote a judge version with `set_judge_promotion`, rescore a new version on its judge's labeled executions and compare it with an earlier version with `check_judge_regression`, and change the project's alignment bar with `set_judge_alignment_bar`, which requires an owner or admin.
   </Accordion>
   <Accordion title="Author environments">
     `add_environment` and `publish_environment_version` create a simulated world a case can pin.

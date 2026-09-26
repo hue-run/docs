@@ -1069,78 +1069,6 @@
         }
       },
       {
-        "name": "list_judge_results",
-        "title": "Hue: list judge results",
-        "toolset": "evals",
-        "access": "read",
-        "annotations": {
-          "readOnlyHint": true,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        }
-      },
-      {
-        "name": "get_judge_alignment",
-        "title": "Hue: get judge alignment",
-        "toolset": "evals",
-        "access": "read",
-        "annotations": {
-          "readOnlyHint": true,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        }
-      },
-      {
-        "name": "label_judge_result",
-        "title": "Hue: label judge result",
-        "toolset": "evals",
-        "access": "write",
-        "annotations": {
-          "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": false,
-          "openWorldHint": false
-        }
-      },
-      {
-        "name": "set_judge_promotion",
-        "title": "Hue: promote or demote judge",
-        "toolset": "evals",
-        "access": "write",
-        "annotations": {
-          "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": false,
-          "openWorldHint": false
-        }
-      },
-      {
-        "name": "check_judge_regression",
-        "title": "Hue: check judge regression",
-        "toolset": "evals",
-        "access": "write",
-        "annotations": {
-          "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": false,
-          "openWorldHint": false
-        }
-      },
-      {
-        "name": "set_judge_alignment_bar",
-        "title": "Hue: set judge alignment bar",
-        "toolset": "evals",
-        "access": "write",
-        "annotations": {
-          "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": false,
-          "openWorldHint": false
-        }
-      },
-      {
         "name": "list_runs",
         "title": "Hue: list runs",
         "toolset": "evals",
@@ -1670,7 +1598,7 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "d645b4051b1cace763ddf6644d079db5672f0c386b308e2d19ae76aa1733fb1d",
+    "catalogSha256": "ed0826c46095a660746848df91bd1317c3d2916606d6df32e8c7633ade9c7430",
     "installSnippets": {
       "oauthServerUrl": "https://mcp.hue.run/mcp",
       "oauthClaudeCodeCli": "claude mcp add --transport http hue https://mcp.hue.run/mcp",
@@ -1684,9 +1612,7 @@
       "vscodeJson": "{\n  \"servers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${input:hue-mcp-key}\"\n      }\n    }\n  },\n  \"inputs\": [\n    {\n      \"type\": \"promptString\",\n      \"id\": \"hue-mcp-key\",\n      \"description\": \"Hue Read or Read and write API key\",\n      \"password\": true\n    }\n  ]\n}",
       "copilotCloudJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp?read_only=true\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $COPILOT_MCP_HUE_MCP_KEY\"\n      },\n      \"tools\": [\n        \"get_project_context\",\n        \"search_traces\",\n        \"get_trace\",\n        \"get_span\",\n        \"list_sessions\",\n        \"verify_trace\",\n        \"list_eval_sets\",\n        \"get_eval_set\",\n        \"list_evaluators\",\n        \"get_evaluator\",\n        \"list_runs\",\n        \"get_run\",\n        \"list_cases\",\n        \"get_case\",\n        \"list_environments\",\n        \"get_environment\",\n        \"get_intent_taxonomy\",\n        \"get_intent_summary\",\n        \"list_managed_targets\",\n        \"list_local_agents\",\n        \"list_artifacts\",\n        \"list_api_keys\",\n        \"list_members\",\n        \"search_hue_docs\"\n      ]\n    }\n  }\n}",
       "windsurfJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"serverUrl\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${env:HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
-      "geminiCli": "gemini mcp add --scope user --transport http hue https://mcp.hue.run/mcp \\\n  --header 'Authorization: Bearer ${HUE_MCP_KEY}'",
-      "geminiJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"httpUrl\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
-      "opencodeJson": "{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"mcp\": {\n    \"hue\": {\n      \"type\": \"remote\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"enabled\": true,\n      \"headers\": {\n        \"Authorization\": \"Bearer {env:HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
+      "geminiCli": "gemini mcp add --transport http hue https://mcp.hue.run/mcp -H \"Authorization: Bearer $HUE_MCP_KEY\"",
       "connectPrompt": "Connect me to the Hue MCP server.\n\nIt is a remote MCP server (Streamable HTTP) at https://mcp.hue.run/mcp. Authenticate with a bearer token read from the HUE_MCP_KEY environment variable — reference the variable, do not write the key into a config file.\n\nRegister it under the name \"hue\" using whatever MCP configuration my client uses, then call get_project_context and tell me which Hue project it reached.",
       "verifyPrompt": "Use the Hue MCP: call get_project_context, then show my 5 most recent error traces with links."
     }
