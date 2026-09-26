@@ -36,7 +36,7 @@ Otherwise, tell the user, in this wording or close to it:
 
 > Hue needs a **Read and write** API key from your Hue account. You create and store it yourself, so please don't paste it into this chat.
 >
-> 1. Sign in at https://app.hue.run, open **Settings → Integrations & API keys** (https://app.hue.run/settings/integrations) and create a **Read and write** key. Members ask an owner or admin for one.
+> 1. Sign in at https://app.hue.run, select the project that should receive this application's traces, open **Settings → Integrations & API keys** (https://app.hue.run/settings/integrations) and create a **Read and write** key. Members ask an owner or admin for one.
 > 2. Store it as `HUE_API_KEY` and `HUE_MCP_KEY` in your secret manager, or run this in your own terminal from the repository root and paste the key at its hidden prompt: `npx --yes --package @hue-run/sdk@0.10.0 hue login --gitignore`
 > 3. Tell me when it's stored. You don't need to run the next steps it prints; I'll do those.
 >
@@ -50,15 +50,15 @@ No Node.js? The user skips the command and adds `HUE_API_KEY=` and `HUE_MCP_KEY=
 
 ## 2. Check the key
 
-If the user ran `hue login` and it printed `Stored the key`, it has already checked the key: go to step 3. Otherwise run this check without echoing the key. It sends the key only to app.hue.run:
+If the user ran `hue login` and it printed `Stored the key`, it has already checked the key. It also printed the key's project (`Evaluations access accepted for project "<name>"`): ask the user to confirm that is the project they intended, then go to step 3. Otherwise run this check without echoing the key. It sends the key only to app.hue.run and prints the key's project, not the key:
 
 ```sh
-curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $HUE_API_KEY" https://app.hue.run/api/v1/projects/current
+curl -s -w "\n%{http_code}\n" -H "Authorization: Bearer $HUE_API_KEY" https://app.hue.run/api/v1/projects/current
 ```
 
 Load `HUE_API_KEY` the same way the application loads its environment, and wrap the command in `sh -c '…'` so the variable is expanded only after it is loaded. For example, use the secret manager's runner (`doppler run -- sh -c '…'`), `npx dotenv-cli -e <env-file> -- sh -c '…'` in a Node project or `uv run --env-file <env-file> -- sh -c '…'` in a uv project, where `<env-file>` is the file the key is in, such as `.env.local` or `.env.hue`.
 
-This check sends no telemetry. `200` means the key works; continue. `401` means the key is missing, mistyped or revoked: ask the user to check it, or create a new one and store it again, then check again. If the user can't sign in to Hue, they don't have an account yet: share the "Don't have a Hue account yet?" line from the step 1 message.
+This check sends no telemetry. `200` means the key works: tell the user the project `name` in the response and continue once they confirm it is the intended project. If it isn't, they create a key in the right project and store it again. `401` means the key is missing, mistyped or revoked: ask the user to check it, or create a new one and store it again, then check again. If the user can't sign in to Hue, they don't have an account yet: share the "Don't have a Hue account yet?" line from the step 1 message.
 
 ## 3. Add tracing
 
@@ -80,7 +80,7 @@ This is the last step because most clients load a new MCP server only when they 
 npx --yes --package @hue-run/sdk@0.10.0 hue mcp install --client <client>
 ```
 
-The command writes a server named `hue` that references `HUE_MCP_KEY`; it never writes the key. `.mcp.json` (Claude Code) and `.cursor/mcp.json` (Cursor) are safe to commit, and each teammate then needs their own key. For Codex, the command runs `codex mcp add`, which writes `~/.codex/config.toml`; if your sandbox blocks that, ask the user to approve it. VS Code prompts for the key when the server starts, and for Windsurf the command prints a snippet to merge into the file it names. Without Node.js, use the key instructions for the user's client in [Connect your client](/agents/mcp-server#connect-your-client).
+The command writes a server named `hue` that references `HUE_MCP_KEY`; it never writes the key. `.mcp.json` (Claude Code) and `.cursor/mcp.json` (Cursor) are safe to commit, and each teammate then needs their own key. For Codex, the command runs `codex mcp add`, which writes `~/.codex/config.toml`; if your sandbox blocks that, ask the user to approve it. VS Code prompts for the key when the server starts, and for Windsurf the command prints a snippet to merge into the file it names. Without Node.js, use the key instructions for the user's client in [Connect your client](/agents/mcp-server#connect-your-client); for a client without its own tab there, such as VS Code, Windsurf or Gemini CLI, use the **Any MCP client** tab's project-key settings.
 
 If the user prefers browser sign-in, or the client can't send a key, follow [sign in with Hue](/agents/mcp-server#sign-in-with-hue-instead-of-a-key) instead; the client then holds no key.
 
