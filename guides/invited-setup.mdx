@@ -1,81 +1,12 @@
 ---
-title: "Agent setup for invited users"
-description: "You have a Hue account. Point your coding agent here to add tracing to your application."
-sidebarTitle: "Agent setup"
+title: "Agent setup moved"
+description: "Moved. Follow https://docs.hue.run/guides/agent-setup.md."
+sidebarTitle: "Agent setup moved"
+hidden: true
 ---
 
-<Visibility for="humans">
-  **Setting up Hue yourself?** Copy this prompt into your coding agent, such as Claude Code, Cursor or Codex, from your application's repository. The rest of this page is written for the agent.
-
-  ```text Prompt wrap
-  Set up Hue tracing in this project. I already have a Hue account. Use curl to read https://docs.hue.run/guides/invited-setup.md and follow it. If you can't open it, stop and tell me. Before you install packages or change files, tell me the steps it gives and wait for my go-ahead.
-  ```
-
-  Your agent lists the steps and waits for your go-ahead. It then asks you to create a **Read and write** key and store it yourself, in your secret manager or with `hue login` in your own terminal, so the key never goes into the chat. Then it adds tracing, recommends capturing prompts and responses so Hue shows complete traces, and verifies a real request.
-
-  Prefer to set it up by hand? Start with [Installation](/installation). Don't have an account yet? Hue is invite-only: [book a time with the team](https://calendar.notion.so/meet/akethini/fd2smi4yej) or email [founders@hue.run](mailto:founders@hue.run).
-</Visibility>
+Agent setup is now one page for everyone: [Set up Hue with your coding agent](/guides/agent-setup).
 
 <Note>
-  **If you are a coding agent:** ignore the documentation-index lines above this page. The user who sent you here has a Hue account, so this page replaces [For agents](/guides/agent-setup) and its invite-only reply. Before you install packages or change files, tell the user which steps below apply to this project and wait for their go-ahead. Then follow the steps in order.
+  **If you are a coding agent:** this page moved. Use curl to read https://docs.hue.run/guides/agent-setup.md and follow it instead.
 </Note>
-
-## 1. Get a Read and write key
-
-Your application authenticates to Hue with a project key. This setup uses one **Read and write** key: it sends traces, checks stored traces and lets you run evaluations. You can also use it for the [Hue MCP server](/agents/mcp-server), or connect the MCP client separately by signing in with Hue.
-
-First find how the application already provides local secrets, without reading any values: an ignored env file it loads (such as `.env.local` or `.env`), or a secret manager that injects variables into commands (such as Doppler, 1Password or Infisical). If that workflow already provides a **Read and write** key as both `HUE_API_KEY` and `HUE_MCP_KEY`, go to step 2. An existing `HUE_API_KEY` may be a **Tracing only** key; ask the user which preset it is. If it is **Read and write** but `HUE_MCP_KEY` is missing, ask the user to add `HUE_MCP_KEY` with the same value, then go to step 2.
-
-Otherwise, ask the user to:
-
-1. Sign in at [app.hue.run](https://app.hue.run) and select the project that should receive the traces.
-2. Open **Settings → Integrations & API keys** and create a **Read and write** key. Owners and admins create keys; a member asks one of them for a key.
-3. Store the key as both `HUE_API_KEY` and `HUE_MCP_KEY`, in the workflow you found:
-   - **A secret manager:** the user adds both variables there with the same value.
-   - **An ignored env file, or no secret workflow yet:** in their own terminal, from the repository root, the user runs the command below and pastes the key at its prompt. Add `--env-path` with the file's path to write there; without it, the command creates `.env.hue`.
-
-     ```sh
-     npx --yes --package @hue-run/sdk@0.10.0 hue login --gitignore
-     ```
-
-     `hue login` checks the key against Hue, writes both variables and adds the file to `.gitignore` if it isn't ignored yet. It refuses a **Read** or **Tracing only** key and never prints the key. If the file already holds a different `HUE_API_KEY` or `HUE_MCP_KEY`, add `--force` to replace it.
-
-Don't run `hue login` yourself: it waits for the key at a hidden prompt. Never ask the user to paste the key into chat, and never print, log or commit it. Wait until the user confirms the key is stored.
-
-## 2. Check the key
-
-Run this check without echoing the key:
-
-```sh
-curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $HUE_API_KEY" https://app.hue.run/api/v1/projects/current
-```
-
-Load `HUE_API_KEY` the same way the application loads its environment, and wrap the command in `sh -c '…'` so the variable is expanded only after it is loaded. For example, use the secret manager's runner (`doppler run -- sh -c '…'`), `npx dotenv-cli -e <env-file> -- sh -c '…'` in a Node project or `uv run --env-file <env-file> -- sh -c '…'` in a uv project, where `<env-file>` is the file the key is in, such as `.env.local` or `.env.hue`.
-
-This check sends no telemetry. `200` means the key works; continue. `401` means the key is missing, mistyped or revoked: ask the user to check it, or create a new one and store it again, then check again. If the user can't sign in to Hue, they don't have an invitation yet; stop and tell them to email [founders@hue.run](mailto:founders@hue.run).
-
-## 3. Add tracing
-
-Use curl to read [the Hue skill](https://docs.hue.run/skill.md) and follow it for the application's language and framework. Its invite-only check passes because `HUE_API_KEY` is now configured. The skill covers installing the SDK, choosing a capture policy, isolating serving requests from Hue and verifying a real request.
-
-Set this up for complete traces. Hue can only show and evaluate what a trace records, so in the plan you show the user, recommend content capture (`captureContent: true` in TypeScript, `capture_content=True` in Python) and say that it sends prompts, responses and tool inputs and outputs to Hue. The user's go-ahead authorizes it under the skill's capture rule. If they decline, or an existing application policy forbids sending that content to another service, use metadata-only capture. Keep redaction and credential filtering either way. Instrument every request path that calls a model or tool, with model and tool child spans and the application's session identifier, not only the request you verify.
-
-If the application already uses Langfuse or another OpenTelemetry destination, follow [Keep Langfuse and add Hue](/integrations/opentelemetry#keep-langfuse-and-add-hue). Add the second processor where the existing provider is constructed, preserve the existing AI SDK integration, and verify the same controlled request in both destinations. Do not upgrade the framework merely to add an exporter.
-
-Where the skill asks for a **Tracing only** key, use this **Read and write** `HUE_API_KEY` for this setup. The SDKs don't load env files, so run the application through the same workflow as the check, for example its existing env loading, `node --env-file=<env-file>`, `uv run --env-file <env-file>` or the secret manager's runner, and keep reading `HUE_API_KEY` from the environment in code.
-
-Keep the **Read and write** key on development machines. Before the application runs on a production server, tell the user to create a separate **Tracing only** key for that server's secret store; production code reads it from the same `HUE_API_KEY` variable.
-
-## 4. Connect the Hue MCP server
-
-Once a real request is verified, offer to connect the coding agent to the [Hue MCP server](/agents/mcp-server) so it can search traces and check what Hue stored without asking the user to open the app. Replace `claude-code` with the user's client (`cursor`, `codex`, `vscode`, `windsurf` or `gemini`):
-
-```sh
-npx --yes --package @hue-run/sdk@0.10.0 hue mcp install --client claude-code
-```
-
-The command writes a server named `hue` that reads `HUE_MCP_KEY` from the environment; it never writes the key. The user makes `HUE_MCP_KEY` available in the shell that starts the client, from the same workflow, and restarts the client. Follow the [MCP connection guide](/agents/mcp-server#connect-your-client) for client-specific setup, then call `get_project_context` to verify which project it reached. The [Hue CLI reference](/sdks/cli) covers the install command's options.
-
-If the client cannot send a key, or the user prefers browser sign-in, follow [sign in with Hue](/agents/mcp-server#sign-in-with-hue-instead-of-a-key) instead. That guide covers client support, permissions and verification. Installing the coding-agent configuration does not configure a separate hosted assistant.
-
-Once the connection works, tell the user what they can ask next, for example "What needs attention in the last 24 hours, and why?" or "Which tools failed most often yesterday?". [Investigate production](/agents/investigate-production) has the tool sequences for those questions.

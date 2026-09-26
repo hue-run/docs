@@ -108,3 +108,35 @@ test("a bare npx hue command in a code block fails", () => {
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /sdks\/cli\.mdx runs the hue CLI without naming @hue-run\/sdk: npx hue login --gitignore/);
 });
+
+test("the retired access-gate copy cannot return", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "guides/agent-setup.mdx", (text) =>
+    `${text}\nWe're currently seeing heightened demand so we've turned Hue to invite-only.\n`,
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /guides\/agent-setup\.mdx contains retired access-gate text: heightened demand/);
+});
+
+test("only the moved stub may link the invited-setup page", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "quickstart.mdx", (text) =>
+    text.replace("(/guides/agent-setup)", "(/guides/invited-setup)"),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /quickstart\.mdx links the moved invited-setup page/);
+});
+
+test("the agent setup page keeps the account contact line", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "guides/agent-setup.mdx", (text) =>
+    text.replaceAll("founders@hue.run", "team@example.test"),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /guides\/agent-setup\.mdx must contain founders@hue\.run/);
+});
+
+test("the agent setup page cannot be hidden again", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "guides/agent-setup.mdx", (text) =>
+    text.replace('sidebarTitle: "Agent setup"\n', 'sidebarTitle: "Agent setup"\nhidden: true\n'),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /guides\/agent-setup\.mdx must stay visible in navigation/);
+});
