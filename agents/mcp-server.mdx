@@ -1,15 +1,15 @@
 ---
 title: "Connect the Hue MCP server"
 sidebarTitle: "Connect MCP"
-description: "Connect an MCP client to your Hue project with browser sign-in or a project key, with setup instructions for Claude Code, Codex, Cursor and Conductor."
+description: "Connect an MCP client to Hue with browser sign-in or a project key, with setup instructions for Claude Code, Codex, Cursor and Conductor."
 ---
 
-The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install. Each connection reaches one project: **Read** access searches and inspects its data, such as traces, evaluations and cases, and **Read and write** access also changes project data. Billing and plan changes stay in Settings. `https://docs.hue.run/mcp` is a separate documentation-only server and cannot read your project.
+The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install. Browser sign-in grants **Read and write** access to all current and future active projects in one organization. A project key stays limited to one project, with **Read** or **Read and write** access. Billing and plan changes stay in Settings. `https://docs.hue.run/mcp` is a separate documentation-only server and cannot read your project.
 
 ## Quick start
 
 1. Choose your client below and add `https://mcp.hue.run/mcp`. For **sign-in with Hue**, leave out API keys and custom headers.
-2. When the client opens Hue, sign in with your verified account, select one project and approve **Read**. You must belong to that project's organization. Choose **Read and write** only if the agent should change project data.
+2. When the client opens Hue, sign in with your verified account, check the organization and choose **Allow**. You must be an actual member of that organization. The approval grants **Read and write** across its active projects; choose the organization if Hue offers more than one.
 3. Refresh the client's MCP status or start a new session, then [verify the connection](#verify-the-connection) by reading a trace through the agent.
 
 Already have a project key, or using a client without sign-in support? [Prepare the key](#connect-with-a-project-key), then use your client's key instructions below. A **Tracing only** key cannot connect to this MCP server.
@@ -29,7 +29,7 @@ Start with **Any MCP client** for the connection settings, or choose your client
     | Transport | Streamable HTTP |
     | Authentication | OAuth / sign in |
 
-    Save the server and choose its connect or authenticate action. Hue opens in your browser: sign in, select your project and approve **Read**. Leave custom headers and API-key fields empty; the client handles OAuth discovery and tokens. Return to the client and [verify the connection](#verify-the-connection).
+    Save the server and choose its connect or authenticate action. Hue opens in your browser: sign in, check the organization and choose **Allow** for **Read and write** across its active projects. Leave custom headers and API-key fields empty; the client handles OAuth discovery and tokens. Return to the client and [verify the connection](#verify-the-connection).
 
     Setting names vary by app. Use the tabs for exact Claude Code, Codex, Cursor and Conductor instructions. Hosted connectors can use the same URL and sign-in flow when their plan and workspace settings allow custom MCP servers; Hue has not yet verified claude.ai, Claude Desktop Connectors or ChatGPT end to end.
 
@@ -139,7 +139,7 @@ Start with **Any MCP client** for the connection settings, or choose your client
 
       Cursor loads a new server only after you approve it: turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue` with the Cursor CLI. Check that `HUE_MCP_KEY` holds the key you intend before you approve.
 
-      **Verify:** `cursor-agent mcp list` shows `hue: ready`, and `cursor-agent mcp list-tools hue` lists 81 tools for a **Read and write** key or 41 tools for a **Read** key.
+      **Verify:** `cursor-agent mcp list` shows `hue: ready`, and `cursor-agent mcp list-tools hue` lists 93 tools for a **Read and write** key or 47 tools for a **Read** key.
 
       <Accordion title="If the Cursor check fails">
         The approval covers the expanded header, so Cursor asks again whenever `HUE_MCP_KEY` changes or becomes unset. If `HUE_MCP_KEY` is unset, Cursor sends the unexpanded reference without a warning, and Hue refuses it. For a key Hue refuses with `401`, Cursor shows only `requires_authentication` and suggests `agent mcp login hue`. Don't run it; run the [curl check](#verify-the-connection) to see Hue's reason.
@@ -158,7 +158,7 @@ Start with **Any MCP client** for the connection settings, or choose your client
     ```
     </CodeGroup>
 
-    Open **MCP status** from the plug icon or `/mcp-status`, refresh, then use **hue**'s authentication action. Sign in to Hue, choose your project and **Read**, and approve. Leave out API keys and custom headers for this connection. If an older `hue` entry uses a key, replace it using the **Claude Code** or **Codex** tab.
+    Open **MCP status** from the plug icon or `/mcp-status`, refresh, then use **hue**'s authentication action. Sign in to Hue, check the organization and choose **Allow** for **Read and write** across its active projects. Leave out API keys and custom headers for this connection. If an older `hue` entry uses a key, replace it using the **Claude Code** or **Codex** tab.
 
     Start a new agent session if its tool list has not updated, then [verify the connection](#verify-the-connection). These instructions cover local workspaces; a cloud workspace has a separate configuration and browser callback environment. See [Conductor's MCP setup guide](https://www.conductor.build/docs/guides/configure-mcp-servers#check-status-in-conductor).
 
@@ -168,18 +168,20 @@ Start with **Any MCP client** for the connection settings, or choose your client
 
 ## Sign in with Hue instead of a key
 
-Sign-in uses OAuth and requires no project key. Your account must be verified and an actual member of the project's organization; any member can approve a connection, without an owner or admin role. If you were invited, accept the invitation in Hue first, then connect again. Only active projects appear. Administrative visibility without membership does not grant access to a connected app.
+Sign-in uses OAuth and requires no project key. Your account must be verified and an actual member of the organization; any member can approve a connection, without an owner or admin role. If you were invited, accept the invitation in Hue first, then connect again. An organization can be connected before it has any projects. Administrative visibility without membership does not grant access to a connected app.
 
-Each approval covers one project and one access level. Check the signed-in account and project on the consent page before approving. Choose **Read** for inspection. To change projects, disconnect and reconnect the app.
+Each new approval grants **Read and write** access to all current and future active projects in that organization. Check the app, signed-in account and organization on the consent page, then choose **Allow** or **Deny**. The organization picker appears only when you have more than one eligible membership. To switch projects within the approved organization, use `list_projects` and pass the chosen `project_id` on subsequent tool calls; no new sign-in is needed.
+
+Existing sign-in connections keep their original project and access level, including **Read**. Refreshing does not broaden them. To grant organization-wide access, disconnect the earlier connection in **Settings → Connected apps** and authenticate again. Project keys always remain limited to their original project.
 
 Leave out the `Authorization` header and any bearer-token environment-variable setting when signing in. An old key entry can suppress sign-in or carry a failing header into authorization. Replace it using the instructions in your [client's tab](#connect-your-client).
 
 <Accordion title="Access, expiry and disconnecting">
-  - **Read** is selected by default. Choose **Read and write** if the client should write project data; write tools become available within your current organization role; `add_api_key` is never available. For a read-only connection, choose **Read** and leave `?read_only=true` off the URL.
+  - New sign-in connections always use **Read and write**, within your current organization role; `add_api_key` is never available. For credentials limited to reading one project, use a **Read** project key. Leave `?read_only=true` off the sign-in URL.
   - The client receives access tokens that last 10 minutes and refreshes them automatically. Your approval lasts 30 days from when you connect; refreshing never extends it, so sign in again after that.
   - The connection acts for you. Writes are attributed to you, and owner- or admin-only tools check your current role: revoking keys, changing project settings or trace checks, archiving eval sets and evaluators, registering managed targets and publishing the intent taxonomy. A connected app can never create project keys with `add_api_key`.
   - Sign-in covers the MCP server only. The SDKs and REST API still need a project key.
-  - **Settings → Connected apps** lists your connections and disconnects them; owners and admins see and disconnect everyone's in the organization. Resetting your password or signing out everywhere disconnects every app you approved, and removal from the organization or an archived project ends the connection too.
+  - **Settings → Connected apps** shows **All projects** for an organization connection and the project name for an earlier project connection. You can disconnect your connections; owners and admins can see and disconnect everyone's in the organization. Resetting your password, signing out everywhere or leaving the organization ends your approvals. Archiving a project removes it from an organization connection's available projects; it ends an earlier connection scoped to that project.
 </Accordion>
 
 ## Connect with a project key
@@ -213,14 +215,16 @@ Most clients load a new server only when they start, and Claude Code and Cursor 
 Ask the agent in the client you just connected:
 
 ```text
-Use the Hue MCP: call get_project_context, then show my 5 most recent error traces with links.
+Use the Hue MCP: call list_projects and confirm which project to inspect. Then call get_project_context and show its 5 most recent error traces with links. For an organization connection, pass the project's id as project_id on each call after list_projects.
 ```
 
 Then ask it to call `get_trace` for one of the returned trace IDs. If there are no error traces, ask `search_traces` for recent traces without an error filter. An empty result is not an authentication failure; use a project with a known test trace to verify the full read path.
 
 A successful check names the intended project and returns that project's trace through the MCP tool calls. A saved configuration or a **Connected** status alone does not establish that those calls work.
 
-`get_project_context` returns the project the connection reaches and what the credential can do. `can_write` is `true` when write tools are available; `read_only` reports only the `?read_only=true` URL flag, so a **Read** key shows `read_only: false` together with `can_write: false`, and `write_preset` names the access that writing needs, not the access you have. If it reports a different project than you expected, the key was created in another project, or you approved another project at sign-in.
+`list_projects` returns the active projects this connection can reach, in pages of up to 100. Follow `next_cursor` until it is `null` to see them all. An organization connection must pass a returned UUID as `project_id` on every other tool call, including `get_project_context`, `search_traces` and `get_trace`. A project key or earlier project connection returns only its project and keeps its existing tool arguments without `project_id`.
+
+`get_project_context` returns the selected project and what the credential can do. `can_write` is `true` when write tools are available; `read_only` reports only the `?read_only=true` URL flag, so a **Read** key shows `read_only: false` together with `can_write: false`, and `write_preset` names the access that writing needs, not the access you have. If it reports a different project than you expected, check the selected `project_id`, the project where the key was created, or the original project of an earlier sign-in connection.
 
 To check a key without an MCP client, send one tool call from a shell where `HUE_MCP_KEY` is exported. This is the check to use when a client shows only a short status, and the non-interactive check for a coding agent. It proves the key, not the client's configuration:
 
@@ -241,7 +245,10 @@ For key-based connections, the [curl check](#verify-the-connection) shows Hue's 
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Your organization or project is missing from the consent page | The signed-in account is unverified, has not accepted its organization invitation, is not a member, or the project is archived | Check the account shown on the page, verify your email and accept your invitation in Hue, then reconnect. Ask an organization owner or admin to check your membership and the project. Staff or administrative visibility alone is not membership. |
+| Your organization is missing from the consent page | The signed-in account is unverified, has not accepted its invitation, or is not an actual member | Check the account shown on the page, verify your email and accept your invitation in Hue, then reconnect. Ask an organization owner or admin to check your membership. Staff or administrative visibility alone is not membership. Projects are selected through tools after approval. |
+| A project is missing from `list_projects` | It is archived, belongs to another organization, or this is a project key or earlier project-scoped connection | Confirm the approved organization and that the project is active. Earlier sign-in connections keep their original project until you disconnect and authenticate again. A project key cannot switch projects. |
+| A tool asks for `project_id` | An organization connection has not selected a project for this call | Call `list_projects`, choose the intended project's UUID and pass it as `project_id` on every other tool call. Use the tool schema returned by `tools/list`; project keys and earlier project connections keep their existing arguments. |
+| New sign-in fails with `invalid_scope` | The client explicitly requests only `mcp:read` | New approvals require both `mcp:read` and `mcp:write`. Let the client use the scopes advertised by Hue, or use a **Read** project key for a credential limited to reads. Existing **Read** connections can still refresh. |
 | The client reports missing OAuth metadata | The URL is wrong, a saved entry still targets an old endpoint, or discovery failed | Use `https://mcp.hue.run/mcp` without a custom authorization header, refresh the client's configuration and retry. If it persists, report the client/version and error text without tokens. |
 | Consent succeeds but no Hue tools appear | The running agent session has not loaded the new connection | Refresh MCP status and start a new session, then run the verification above. In Conductor, check the configuration for the selected agent. |
 | A Hue sign-in page opens, or the client shows **Needs authentication**, `Authentication required`, `requires_authentication` (Cursor), `The hue MCP server is not logged in` (Codex), although you configured a key | Hue refused the key. Usually `HUE_MCP_KEY` is unset or empty where the client started, the header lacks `Bearer ` or repeats it, the key is in another header such as `x-api-key`, or the key is wrong or revoked. Also check that the saved configuration still holds the `${HUE_MCP_KEY}` reference rather than `Bearer` or the key (a CLI `--header` in double quotes), that no other `hue` entry without the header overrides it (Claude Code), and that Codex was added with `--bearer-token-env-var` | Run the curl check and match its message to the rows below. Export `HUE_MCP_KEY` in the shell that starts the client, restart the client, and send exactly `Authorization: Bearer <key>`. Don't finish a sign-in that opened because of a failing key: it fails too. |
@@ -255,20 +262,20 @@ For key-based connections, the [curl check](#verify-the-connection) shows Hue's 
 | `503` with `Retry-After: 1` | The server is momentarily busy | Retry after a second. |
 | The client reports `invalid HTTP header` | The stored key ends with a newline | Store the key without a trailing newline. |
 | Cursor shows `not loaded (needs approval)` or `has not been approved` | Cursor has not approved the server, or `HUE_MCP_KEY` changed or became unset since you approved it | Check that `HUE_MCP_KEY` is exported and holds the key you intend, then turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue`. Cursor asks again after every change. |
-| A client you connected by signing in shows **Needs authentication** or `The hue MCP server is not logged in` | The approval ended: 30 days passed, someone disconnected it in **Settings → Connected apps**, you reset your password or signed out everywhere, or you left the organization or the project was archived | Use your client’s authentication action to sign in again: `/mcp` → **Authenticate** in Claude Code or `codex mcp login hue` in Codex. For Cursor, use the project-key instructions in its tab until native sign-in is supported. |
-| A tool call fails as an unknown tool | Write tools are hidden for **Read** access and for a URL with `?read_only=true`; [retired tool names](#retired-tool-names) are no longer served; a tool described in a development branch is not available until its platform release is deployed | Use a **Read and write** key without `?read_only=true`, approve **Read and write** at sign-in, or call the current tool name. Use the tools your connection's `tools/list` returns; an unknown tool is not evidence that the client should broaden its permissions. |
+| A client you connected by signing in shows **Needs authentication** or `The hue MCP server is not logged in` | The approval ended: 30 days passed, someone disconnected it in **Settings → Connected apps**, you reset your password or signed out everywhere, or you left the organization. An earlier project-scoped approval also ends if its project is archived | Use your client’s authentication action to sign in again: `/mcp` → **Authenticate** in Claude Code or `codex mcp login hue` in Codex. For Cursor, use the project-key instructions in its tab until native sign-in is supported. |
+| A tool call fails as an unknown tool | Write tools are hidden for **Read** access and for a URL with `?read_only=true`; [retired tool names](#retired-tool-names) are no longer served; a tool described in a development branch is not available until its platform release is deployed | Use a **Read and write** key without `?read_only=true`, reconnect an earlier **Read** sign-in connection if organization-wide writes are intended, or call the current tool name. Use the tools your connection's `tools/list` returns; an unknown tool is not evidence that the client should broaden its permissions. |
 
 See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent) for tracing problems that are not specific to MCP.
 
 <Accordion title="Endpoints and protocol details">
   The project-data server is a dynamic Node.js route in Hue's main web application, not a separate data service. `https://app.hue.run/api/mcp` remains a compatibility alias for project keys. Use the canonical URL for browser sign-in: the alias can fail when a client omits the OAuth resource parameter. The `search_hue_docs` tool delegates documentation searches to the Mintlify-hosted documentation endpoint without changing the project-data server's authentication boundary.
 
-  The server is stateless and accepts clients that start with `initialize` (MCP revisions up to 2025-11-25) as well as clients on the stateless 2026-07-28 revision, so clients need no extra flags. It accepts `POST` only. A `GET` with no `Authorization` header gets `401` with the sign-in challenge. A `GET` with an `Authorization` header gets `405` with `Allow: POST`; the header value is not checked. Use the POST key check above to diagnose a failing key. A request carrying `Mcp-Session-Id` gets `404`, because the server keeps no sessions. MCP clients handle these answers themselves.
+  The server is stateless and accepts clients that start with `initialize` (MCP revisions up to 2025-11-25) as well as clients on the stateless 2026-07-28 revision, so clients need no extra flags. It accepts `POST` only. A `GET` with no `Authorization` header gets `401` with the sign-in challenge. A `GET` with a well-formed Hue bearer credential gets `405` with `Allow: POST` without checking whether that credential is valid. A malformed credential still gets `401`. Use the POST key check above to diagnose a failing key. A request carrying `Mcp-Session-Id` gets `404`, because the server keeps no sessions. MCP clients handle these answers themselves.
 </Accordion>
 
 ## What you can do
 
-Every tool is scoped to the one project the connection reaches. Write tools need **Read and write** without `?read_only=true`. Ask before any write, and do not auto-approve write tools.
+Use `list_projects` to discover the available projects. Every other tool works on one selected project within the connection’s access. Write tools need **Read and write** without `?read_only=true`. Ask before any write, and do not auto-approve write tools.
 
 <AccordionGroup>
   <Accordion title="Investigate a failure">
@@ -293,7 +300,7 @@ Every tool is scoped to the one project the connection reaches. Write tools need
     `list_cases` lists cases reviewed from traces, drafts and published, with links. `get_case` returns one case with its eval set, saved version, pinned outcome evaluator, environment and a ready run block for `launch_local_run` or `hue eval`; the reviewed task text is returned only with `include_content: true`.
   </Accordion>
   <Accordion title="Create a case from a trace">
-    Requires **Read and write** without `?read_only=true`. In Hue, open the trace and choose **Create case** in the trace inspector, or choose **Create case** from **Suggested cases**. A coding agent runs the same review over MCP. `add_case_conversion` pins the trace into a draft case, and repeating the call with the same idempotency key returns the same draft. `get_case_conversion` reports readiness and findings, and returns the saved task, starting world and criteria only with `include_content: true`. `update_case_conversion` edits the draft, and `publish_case_conversion` publishes a ready draft into a new or existing eval set. `archive_case_conversion` abandons a draft; a published case can't be archived, but its eval set can. Before you publish, review the task and the starting world, and set success criteria independently of the recorded answer. A trace that is still running can't become a case. The REST endpoint `https://app.hue.run/api/v1/case-conversions` runs the same workflow. `list_cases` and `get_case` then read the case, whether it is a draft or published.
+    Requires **Read and write** without `?read_only=true`. In Hue, open the trace and choose **Create case** in the trace inspector, or choose **Create case** from **Suggested cases**. A coding agent runs the same review over MCP. `add_case_conversion` pins the trace into a draft case, and repeating the call with the same idempotency key returns the same draft. `get_case_conversion` reports readiness and findings, and returns the saved task, starting world and criteria only with `include_content: true`. `update_case_conversion` edits the draft, and `publish_case_conversion` publishes a ready draft into a new or existing eval set. `archive_case_conversion` abandons a draft; a published case can't be archived, but its eval set can. Before you publish, review the task and the starting world, and set success criteria independently of the recorded answer. A trace that is still running can't become a case. For a group of traces, `list_suggested_cases` finds suggested groups, `add_case_conversion_batch` starts a batch, `get_case_conversion_batch` reads its progress and `update_case_conversion_batch` retries failed items, cancels a batch or resumes a stalled one. `get_case_divergence` compares a case execution with its source trace. The REST endpoint `https://app.hue.run/api/v1/case-conversions` runs the same workflow. `list_cases` and `get_case` then read the case, whether it is a draft or published.
   </Accordion>
   <Accordion title="Intents">
     Read the taxonomy and buckets with `get_intent_taxonomy`, `get_intent_summary` and `list_intent_traces`. `save_intent_taxonomy` republishes categories and requires an owner or admin.
@@ -302,7 +309,7 @@ Every tool is scoped to the one project the connection reaches. Write tools need
     List and inspect with `list_managed_targets`, `preflight_managed_run`, `get_managed_run`, `list_local_agents` and `get_local_run`. `add_managed_target` stores an encrypted credential and requires an owner or admin. Launch or cancel with `launch_managed_run`, `cancel_managed_run` and `launch_local_run`.
   </Accordion>
   <Accordion title="Artifacts and hosted judges">
-    `list_artifacts` and `get_artifact` return metadata only; bytes stay on HTTP. `get_judge_budget` reports hosted-judge usage. `add_judge_jobs` enqueues scoring jobs.
+    `list_artifacts` and `get_artifact` return metadata only; bytes stay on HTTP. `get_judge_budget` reports hosted-judge usage. `add_judge_jobs` enqueues scoring jobs. Review judgments with `list_judge_results` and `get_judge_alignment`; record human labels with `label_judge_result`, promote or demote with `set_judge_promotion`, and check changes with `check_judge_regression`. `set_judge_alignment_bar` changes the promotion requirements and requires an owner or admin.
   </Accordion>
   <Accordion title="Keys, members and settings">
     `list_api_keys` and `list_members` are reads. `add_api_key`, `revoke_api_key` and `update_project` require an owner or admin, and a connected app cannot call `add_api_key`. Wherever a tool requires an owner or admin, Hue checks the current role of the key's creator or of the member who signed in. Minted tokens appear once. Billing and plan changes are not on this server.
@@ -312,15 +319,15 @@ Every tool is scoped to the one project the connection reaches. Write tools need
   </Accordion>
 </AccordionGroup>
 
-Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or a Hue trace link. Time windows accept ISO-8601 or relative values such as `15m`, `24h` or `7d` (up to 90 days). Results are paginated with opaque cursors and bounded by `max_chars`; truncated results say so and suggest a narrower request. Draft writes take `expected_revision` from `get_eval_set`.
+Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or a Hue trace link. Time windows accept ISO-8601 or relative values such as `15m`, `24h` or `7d` (up to 90 days). Paginated tools use opaque cursors. Tools that accept `max_chars` bound their output; truncated results say so and suggest a narrower request. Draft writes take `expected_revision` from `get_eval_set`.
 
 ## Content and safety
 
 - Recorded prompts, outputs, tool arguments and raw attributes are omitted unless a tool is called with `include_content: true`. By default the server returns metadata (model, provider, usage, tool names, status, timing) and the names of recorded attributes. Content reads are recorded in the project's audit log.
 - Names, generated titles, session keys, metadata and judge explanations come from your application and its end users. They are length-capped, and every result that carries them starts with a notice that they are data, not instructions; recorded content is wrapped in delimited blocks.
 - Credential-shaped strings are redacted from results and from documentation queries before those leave Hue. The one exception is `add_api_key`, which returns the newly minted token once so it can be stored; later tools never return it.
-- The key, or the project you approved at sign-in, is the tenant. Ids from another project, and `projectId` parameters on pasted links, resolve to `not_found`.
-- Add `?read_only=true` to a key-based URL to hide and reject any write tool regardless of the key. With sign-in, choose **Read** at approval instead.
+- An organization connection can select only active projects in its approved organization. A key or earlier project connection stays within its original project. Resource ids and pasted links never broaden that access or replace the explicit `project_id` selection required by an organization connection.
+- Add `?read_only=true` to a key-based URL to hide and reject any write tool regardless of the key. New sign-in approvals use **Read and write**; use a **Read** project key when the credential must be limited to reads.
 - Requests are limited to 1 MiB. Ten failed authentications for one key within a minute return `429` with `Retry-After: 60`, and for those 60 seconds the correct key is refused too. A busy server returns `503` with `Retry-After`.
 
 ## Retired tool names
