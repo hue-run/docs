@@ -243,7 +243,7 @@ Select the client you will use to call Hue. Conductor loads the configuration fo
   <Tab title="Windsurf">
     These instructions use a project key. First [prepare the key](#connect-with-a-project-key).
 
-    Windsurf's MCP documentation now lives under Devin Desktop, which reads `~/.config/devin/mcp_config.json` (`%APPDATA%\devin\mcp_config.json` on Windows). Earlier Windsurf releases read `~/.codeium/windsurf/mcp_config.json`.
+    These instructions configure the Cascade agent. In Cascade's **… (Actions) → MCPs**, choose **Open MCP config file** and add the entry below. This opens the configuration used by your installed version; see the [Cascade MCP guide](https://docs.devin.ai/desktop/cascade/mcp). If you use Devin Local, follow its separate [MCP configuration guide](https://docs.devin.ai/cli/extensibility/mcp/configuration).
 
     ```json mcp_config.json
     {
@@ -390,14 +390,15 @@ A successful check names the intended project and returns that project's trace t
 To check a key without an MCP client, send one tool call from a shell where `HUE_MCP_KEY` is exported. This is the check to use when a client shows only a short status, and the non-interactive check for a coding agent. It proves the key, not the client's configuration:
 
 ```sh
+printf 'Authorization: Bearer %s\n' "$HUE_MCP_KEY" | \
 curl -sS -w '\nHTTP %{http_code}\n' -X POST https://mcp.hue.run/mcp \
-  -H "Authorization: Bearer $HUE_MCP_KEY" \
+  -H @- \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_project_context","arguments":{}}}'
 ```
 
-`HTTP 200` with an `event: message` response that names your project means the key works. `401` means the key is missing, wrong, revoked or expired, and `403` means it is not a **Read** or **Read and write** key; the response body explains the refusal. The server needs both `Accept` types and answers `406` without them. It is stateless, so no session or `initialize` call is needed first.
+The shell's `printf` builtin sends the header through standard input, keeping the expanded key out of curl's process arguments. `HTTP 200` with an `event: message` response that names your project means the key works. `401` means the key is missing, wrong, revoked or expired, and `403` means it is not a **Read** or **Read and write** key; the response body explains the refusal. The server needs both `Accept` types and answers `406` without them. It is stateless, so no session or `initialize` call is needed first.
 
 ## Troubleshooting
 
