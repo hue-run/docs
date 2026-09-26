@@ -9,7 +9,7 @@ The Hue project-data MCP server is a hosted [Model Context Protocol](https://mod
 ## Quick start
 
 1. Choose your client below and add `https://mcp.hue.run/mcp`. For **sign-in with Hue**, leave out API keys and custom headers.
-2. When the client opens Hue, sign in with your verified account, check the organization and choose **Allow**. You must be an actual member of that organization. The approval grants **Read and write** across its active projects; choose the organization if Hue offers more than one.
+2. When the client opens Hue, sign in with your verified account, check the organization and choose **Allow**. You must be an actual member of that organization. The approval grants **Read and write** across its active projects. Hue uses your active organization or your only eligible membership.
 3. Refresh the client's MCP status or start a new session, then [verify the connection](#verify-the-connection) by reading a trace through the agent.
 
 Already have a project key, or using a client without sign-in support? [Prepare the key](#connect-with-a-project-key), then use your client's key instructions below. A **Tracing only** key cannot connect to this MCP server.
@@ -170,7 +170,7 @@ Start with **Any MCP client** for the connection settings, or choose your client
 
 Sign-in uses OAuth and requires no project key. Your account must be verified and an actual member of the organization; any member can approve a connection, without an owner or admin role. If you were invited, accept the invitation in Hue first, then connect again. An organization can be connected before it has any projects. Administrative visibility without membership does not grant access to a connected app.
 
-Each new approval grants **Read and write** access to all current and future active projects in that organization. Check the app, signed-in account and organization on the consent page, then choose **Allow** or **Deny**. The organization picker appears only when you have more than one eligible membership. To switch projects within the approved organization, use `list_projects` and pass the chosen `project_id` on subsequent tool calls; no new sign-in is needed.
+Each new approval grants **Read and write** access to all current and future active projects in that organization. Check the app, signed-in account and organization on the consent page, then choose **Allow** or **Deny**. Hue uses your active organization if you are a member, or your only eligible membership. To use another organization, open Hue, switch organizations and refresh the consent page. If you have several memberships and no eligible active organization, do this before you can allow access. To switch projects within the approved organization, use `list_projects` and pass the chosen `project_id` on subsequent tool calls; no new sign-in is needed.
 
 Existing sign-in connections keep their original project and access level, including **Read**. Refreshing does not broaden them. To grant organization-wide access, disconnect the earlier connection in **Settings → Connected apps** and authenticate again. Project keys always remain limited to their original project.
 
@@ -245,7 +245,8 @@ For key-based connections, the [curl check](#verify-the-connection) shows Hue's 
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Your organization is missing from the consent page | The signed-in account is unverified, has not accepted its invitation, or is not an actual member | Check the account shown on the page, verify your email and accept your invitation in Hue, then reconnect. Ask an organization owner or admin to check your membership. Staff or administrative visibility alone is not membership. Projects are selected through tools after approval. |
+| Consent shows the wrong organization or asks you to open Hue | Hue uses your active organization or your only eligible membership; several memberships without an eligible active organization require you to choose in Hue | Open Hue, switch to the intended organization, then refresh the consent page. There is no organization picker on the consent page. |
+| Your organization is unavailable | The signed-in account is unverified, has not accepted its invitation, or is not an actual member | Check the account shown on the page, verify your email and accept your invitation in Hue, then reconnect. Ask an organization owner or admin to check your membership. Staff or administrative visibility alone is not membership. Projects are selected through tools after approval. |
 | A project is missing from `list_projects` | It is archived, belongs to another organization, or this is a project key or earlier project-scoped connection | Confirm the approved organization and that the project is active. Earlier sign-in connections keep their original project until you disconnect and authenticate again. A project key cannot switch projects. |
 | A tool asks for `project_id` | An organization connection has not selected a project for this call | Call `list_projects`, choose the intended project's UUID and pass it as `project_id` on every other tool call. Use the tool schema returned by `tools/list`; project keys and earlier project connections keep their existing arguments. |
 | New sign-in fails with `invalid_scope` | The client explicitly requests only `mcp:read` | New approvals require both `mcp:read` and `mcp:write`. Let the client use the scopes advertised by Hue, or use a **Read** project key for a credential limited to reads. Existing **Read** connections can still refresh. |
