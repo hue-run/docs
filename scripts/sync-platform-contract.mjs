@@ -94,7 +94,14 @@ export async function run(argv, { served = fetchProductionCommit, contractAt = p
   const sourcesPath = resolve(root, "contracts/sources.json");
   const sources = readJson("contracts/sources.json");
   const pinned = sources.sources.platform.commit;
-  const production = await served();
+  let production;
+  try {
+    production = await served();
+  } catch (cause) {
+    // An explicit pre-deployment pin needs only the named commit's contract.
+    if (!values.undeployed) throw cause;
+    error(`Could not read the commit production serves (${cause instanceof Error ? cause.message : String(cause)}); pinning ${values.commit} as undeployed.`);
+  }
   if (values.check) {
     if (pinned === production) {
       log(`The platform snapshot is pinned to the commit production serves (${production}).`);
@@ -124,7 +131,7 @@ export async function run(argv, { served = fetchProductionCommit, contractAt = p
     return 1;
   }
   if (target !== production)
-    log(`Pinned the platform snapshot to ${target}, which production does not serve yet (it serves ${production}). Hold this change until ${target} deploys.`);
+    log(`Pinned the platform snapshot to ${target}, which production does not serve yet${production ? ` (it serves ${production})` : ""}. Hold this change until ${target} deploys.`);
   else if (pinned === target) log(`The platform snapshot was already pinned to ${target}.`);
   else log(`Pinned the platform snapshot to ${target} (was ${pinned}). Run \`bun run check\` and update the pages it names.`);
   return 0;

@@ -101,6 +101,22 @@ test("a named commit production does not serve is refused unless --undeployed", 
   });
 });
 
+test("an undeployed pin proceeds when production cannot be read; an ordinary sync does not", async () => {
+  await inCopy(async ({ run, files, messages }) => {
+    const unreachable = async () => {
+      throw new Error("health timed out");
+    };
+    await assert.rejects(run([], { served: unreachable, contractAt: () => laterContract }), /health timed out/);
+    assert.equal(
+      await run(["--commit", later, "--undeployed"], { served: unreachable, contractAt: () => laterContract }),
+      0,
+    );
+    assert.ok(messages.some((line) => /Could not read the commit production serves \(health timed out\)/.test(line)));
+    assert.match(messages.at(-1), /does not serve yet\. Hold/);
+    assert.equal(JSON.parse(files()["contracts/sources.json"]).sources.platform.commit, later);
+  });
+});
+
 test("--check reports drift from production and takes no named commit", async () => {
   await inCopy(async ({ run, messages }) => {
     assert.equal(await run(["--check"], { served: async () => commit }), 0);
