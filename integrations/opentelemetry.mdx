@@ -221,8 +221,10 @@ Record timing as events on the same root span. Each event carries the attribute 
 Your application decides what is useful: Hue never treats an acknowledgement as an answer. `first_useful_answer_ms` on a trace is the playback time when recorded, else the server time. Events out of order, such as an answer before the start or a completion before the answer, are dropped from the timing and reported as incomplete.
 
 ```ts
-import { trace } from "@opentelemetry/api";
+import { SpanStatusCode, trace } from "@opentelemetry/api";
 
+// The globally registered provider, as NodeSDK or provider.register() sets it.
+// With a standalone provider, call provider.getTracer("support-agent") instead.
 const tracer = trace.getTracer("support-agent");
 
 export function handleRequest(input: string) {
@@ -240,6 +242,10 @@ export function handleRequest(input: string) {
       const reply = await runAgent(input, { onFirstToken: () => mark("hue.response.first") });
       mark("hue.response.useful");
       return reply;
+    } catch (error) {
+      // A failed request is an error span; its timing then has no useful answer.
+      root.setStatus({ code: SpanStatusCode.ERROR });
+      throw error;
     } finally {
       mark("hue.request.completed");
       root.end();
@@ -249,6 +255,8 @@ export function handleRequest(input: string) {
 ```
 
 `runAgent` stands for your agent. Put `hue.response.useful` where your application knows the answer is ready, not where it sends a placeholder.
+
+The example assumes `agent.support_reply` is the trace's root. When a framework span, such as an HTTP server span, is already active, `startActiveSpan` creates a child, and Hue would read the framework's root instead. Either set the attributes and events on the active root span, or put the manifest below on your span: the span that carries `hue.trace_checks` is the one Hue reads.
 
 ### Declare the checked boundaries
 
@@ -273,8 +281,26 @@ Trace checks read a manifest in the root span's `hue.trace_checks` attribute: a 
 - `request` points at the user's request, and `authorization` at up to eight earlier messages that authorized extra work. Both must cover their whole string.
 - `boundaries` lists up to 32 boundaries. An `action` is a step the agent took itself, judged by `action_scope`. A `delegation` is a handoff to a sub-agent, judged by `delegation_scope`, with `parent` pointing at the task the delegating agent was given. An `output_reduction` is code that reduced a tool's output before the agent used it, judged by `output_omission`; it points at `task`, the whole `original` and `retained` outputs, the reduction `code`, the next `decision` and the later `use`. The `delegation` check reads the request with every action and handoff.
 - Each boundary's span carries `hue.agent.role`, `orchestrator` or `subagent`.
+- Each boundary names its span, `spanId`, plus `traceId` for a span in a linked trace.
 - `linkedTraces` lists up to four sub-agent traces that started their own root, each with the handoff span in this trace that its top span hangs from.
 - `complete: true` says the list names every boundary of the request.
+
+An `output_reduction` boundary has this shape, for code that trimmed a tool's result before the agent read it:
+
+```json
+{
+  "kind": "output_reduction",
+  "spanId": "<reduction span id>",
+  "task": { "spanId": "<reduction span id>", "field": "attributes", "path": ["app.reduction_task"], "start": 0, "end": 40 },
+  "original": { "spanId": "<tool span id>", "field": "attributes", "path": ["gen_ai.tool.call.result"], "start": 0, "end": 5120 },
+  "retained": { "spanId": "<reduction span id>", "field": "attributes", "path": ["app.retained_output"], "start": 0, "end": 900 },
+  "code": { "spanId": "<reduction span id>", "field": "attributes", "path": ["app.reduction_code"], "start": 0, "end": 300 },
+  "decision": { "spanId": "<next model span id>", "field": "attributes", "path": ["app.decision"], "start": 0, "end": 200 },
+  "use": { "spanId": "<reply span id>", "field": "attributes", "path": ["app.final_reply"], "start": 0, "end": 480 }
+}
+```
+
+`original` and `retained` must each cover the whole output string. `task` is what the reduction was for, `code` the reducing code, `decision` the next decision that depended on the output, and `use` how the result was used later.
 
 A source reference names a span by its 16-hex `spanId` (and a linked trace's `traceId`), a `field` of `input`, `output` or `attributes`, a `path` of keys or indexes into it, and a half-open `start` and `end` in UTF-16 code units of the exact recorded string, at most 8,000 characters. Pointing at a string attribute your application sets, with `field: "attributes"` and the attribute key as the path, keeps the offsets exact; set `end` to the string's length when a reference must cover it whole. The trace-check model reads only what the manifest points at, at most 16,000 characters per check.
 
