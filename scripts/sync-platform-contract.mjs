@@ -6,9 +6,11 @@
 // exact commit through the GitHub CLI, then records the commit and digest in contracts/sources.json
 // and regenerates docs-contract.json.
 //
-//   node scripts/sync-platform-contract.mjs                 pin to the commit production serves
-//   node scripts/sync-platform-contract.mjs --commit <sha>  pin to a named, deployed commit
-//   node scripts/sync-platform-contract.mjs --check         report whether the pin is current
+//   node scripts/sync-platform-contract.mjs            pin to the commit production serves
+//   node scripts/sync-platform-contract.mjs --check    report whether the pin is still current
+//   node scripts/sync-platform-contract.mjs --commit <sha> --undeployed
+//                                                      pin a commit production does not serve yet,
+//                                                      for a pull request held until it deploys
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -62,40 +64,80 @@ function platformContractAt(repository, commit) {
   );
 }
 
-async function main() {
-  const { values } = parseArgs({ options: { commit: { type: "string" }, check: { type: "boolean", default: false } } });
+/**
+ * Runs the command and returns its exit code. The production lookup and the contract read are
+ * injectable so tests run without the network or the GitHub CLI.
+ */
+export async function run(argv, { served = fetchProductionCommit, contractAt = platformContractAt, log = console.log, error = console.error } = {}) {
+  let values;
+  try {
+    ({ values } = parseArgs({
+      args: argv,
+      options: {
+        commit: { type: "string" },
+        undeployed: { type: "boolean", default: false },
+        check: { type: "boolean", default: false },
+      },
+    }));
+  } catch (cause) {
+    error(cause instanceof Error ? cause.message : String(cause));
+    return 2;
+  }
+  if (values.check && (values.commit || values.undeployed)) {
+    error("--check compares the pin with production and takes no --commit or --undeployed.");
+    return 2;
+  }
+  if (values.undeployed && !values.commit) {
+    error("--undeployed needs --commit <sha>.");
+    return 2;
+  }
   const sourcesPath = resolve(root, "contracts/sources.json");
   const sources = readJson("contracts/sources.json");
   const pinned = sources.sources.platform.commit;
-  const target = values.commit ?? (await fetchProductionCommit());
+  const production = await served();
   if (values.check) {
-    if (pinned === target) {
-      console.log(`The platform snapshot is pinned to the commit production serves (${target}).`);
-      return;
+    if (pinned === production) {
+      log(`The platform snapshot is pinned to the commit production serves (${production}).`);
+      return 0;
     }
-    const source = values.commit ? `the named commit is ${target}` : `production serves ${target}`;
-    console.error(`The platform snapshot is pinned to ${pinned}, but ${source}. Run \`bun run docs:platform\`, then reconcile the pages.`);
-    process.exitCode = 1;
-    return;
+    error(`The platform snapshot is pinned to ${pinned}, but production serves ${production}. Run \`bun run docs:platform\` after production deploys, then reconcile the pages.`);
+    return 1;
   }
-  const repository = sources.sources.platform.repository;
-  const contractText = platformContractAt(repository, target);
-  const next = pinnedSources(sources, target, contractText);
+  const target = values.commit ?? production;
+  if (target !== production && !values.undeployed) {
+    error(`Production serves ${production}, not ${target}. Pin the served commit, or pass --undeployed for a pull request held until ${target} deploys.`);
+    return 1;
+  }
   const contractPath = resolve(root, sources.sources.platform.contractFile);
-  const changed = readFileSync(contractPath, "utf8") !== contractText || pinned !== target;
-  writeFileSync(contractPath, contractText);
-  writeFileSync(sourcesPath, `${JSON.stringify(next, null, 2)}\n`);
-  writeFileSync(resolve(root, "docs-contract.json"), renderDocsContract());
-  console.log(
-    changed
-      ? `Pinned the platform snapshot to ${target} (was ${pinned}). Run \`bun run check\` and update the pages it names.`
-      : `The platform snapshot was already pinned to ${target}.`,
-  );
+  const outputPath = resolve(root, "docs-contract.json");
+  const originals = [contractPath, sourcesPath, outputPath].map((path) => [path, readFileSync(path, "utf8")]);
+  try {
+    const contractText = contractAt(sources.sources.platform.repository, target);
+    const next = pinnedSources(sources, target, contractText);
+    writeFileSync(contractPath, contractText);
+    writeFileSync(sourcesPath, `${JSON.stringify(next, null, 2)}\n`);
+    // Rendering validates the snapshot against every other source before anything is kept.
+    writeFileSync(outputPath, renderDocsContract());
+  } catch (cause) {
+    for (const [path, text] of originals) writeFileSync(path, text);
+    error(`Nothing changed: ${cause instanceof Error ? cause.message : String(cause)}`);
+    return 1;
+  }
+  if (target !== production)
+    log(`Pinned the platform snapshot to ${target}, which production does not serve yet (it serves ${production}). Hold this change until ${target} deploys.`);
+  else if (pinned === target) log(`The platform snapshot was already pinned to ${target}.`);
+  else log(`Pinned the platform snapshot to ${target} (was ${pinned}). Run \`bun run check\` and update the pages it names.`);
+  return 0;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exitCode = 1;
-  });
+  run(process.argv.slice(2)).then(
+    (code) => {
+      process.exitCode = code;
+    },
+    (cause) => {
+      console.error(cause instanceof Error ? cause.message : String(cause));
+      process.exitCode = 1;
+    },
+  );
 }
