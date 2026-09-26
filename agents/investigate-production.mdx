@@ -6,7 +6,7 @@ description: "Tool-call recipes, fields, limits and errors for coding agents tha
 
 The [Hue MCP server](/agents/mcp-server) serves what Hue already stores for your project: traces, spans, recorded content on request, the attention state that trace findings set, and trace-check results and intents where the project set them up. It does not diagnose, classify or summarize when you ask. Your coding agent fetches the data and does the analysis. A **Read** connection is enough for everything on this page.
 
-Connect the server first; [Connect the Hue MCP server](/agents/mcp-server) covers every client. Every tool reads the one project the connection reaches. The [`observe` toolset](/agents/mcp-server#choose-toolsets) lists just the tools on this page, and `load_hue_guide` with topic `production` returns Hue's production guide inside the MCP session.
+Connect the server first; [Connect the Hue MCP server](/agents/mcp-server) covers every client. Every tool reads the one project the connection reaches. The [`observe` toolset](/agents/mcp-server#choose-toolsets) lists the tools the recipes below call; add the `intents` group (`observe,intents`) for `get_intent_taxonomy`. `load_hue_guide` with topic `production` returns Hue's production guide inside the MCP session.
 
 ## Example prompts
 
