@@ -120,6 +120,8 @@ Keep the AI SDK instrumentation that already feeds Langfuse: AI SDK 6 uses `expe
 
 Langfuse's `mask` hook belongs to its export path. Do not assume it redacts the copy sent through Hue's processor. Apply the same approved policy before both exporters or configure each exporter's redaction separately, and inspect both outputs using synthetic content. See [Langfuse masking](https://langfuse.com/docs/observability/features/masking) and [Hue capture policy](/guides/production-safety#capture-titles-and-retention).
 
+Hue reads Langfuse's span attributes as they are, with no Langfuse-specific setup. `langfuse.observation.type`, `langfuse.observation.model.name`, `langfuse.observation.usage_details` (input and output tokens), `langfuse.observation.input` and `langfuse.observation.output`, `langfuse.session.id` and `langfuse.user.id` fill Hue's operation, model, usage, content, session and user fields when no OpenTelemetry GenAI attribute supplies them; a GenAI attribute always wins. `langfuse.trace.name` names a trace that has no readable request text. Langfuse metadata, release, environment, tags and levels stay raw attributes, and a Langfuse `level` of `ERROR` does not mark a span failed: Hue reads the OpenTelemetry span status. The [field glossary](/agents/investigate-production#field-glossary) lists every attribute Hue reads.
+
 Hue SDK 0.10.0's metadata-only filter recognizes its [documented content fields](/reference/typescript#content-policy), not every custom attribute. In particular, `captureContent: false` alone does not remove native `langfuse.observation.input` or `langfuse.observation.output` attributes. Omit or redact those fields before they reach Hue, using a producer/collector policy or the Hue transport's `redact` hook. Apply the same rule to custom evidence attributes. Verify the exported result before relying on metadata-only capture.
 
 Verify one controlled request through the application's real entry point. Include a model span and tool span, preserve their OpenTelemetry IDs, finish the stream and flush both exporters within the host's allowed lifetime. Confirm those same IDs, parent relationships, content policy and expected fields in both destinations. Hue's [trace receipt](/sdks/typescript#verify-stored-trace-evidence) proves requested span and field presence; it does not certify payload correctness or Langfuse delivery. A Hue connection check alone proves neither. Repeat for a controlled error and cancellation before enabling ordinary traffic.
@@ -168,11 +170,24 @@ The example logs only delivery counters. Use an independent, non-throwing monito
 
 Hue preserves original resource, scope, status, events, links, dropped counts, typed attributes, and external trace/span IDs. It derives AI fields alongside those records using versioned normalization profiles.
 
-Supported profile families include generic OpenTelemetry, GenAI conventions, OpenInference, OpenLLMetry, and Vercel AI SDK 6/7. A profile family is not a guarantee that every package version or API surface has been tested. The TypeScript adapter is verified with AI SDK / OTel pairs `7.0.99 / 1.0.99` and `7.0.100 / 1.0.100`.
+Supported profile families include generic OpenTelemetry, GenAI conventions, OpenInference, OpenLLMetry, Vercel AI SDK 6/7, and Langfuse. A profile family is not a guarantee that every package version or API surface has been tested. The TypeScript adapter is verified with AI SDK / OTel pairs `7.0.99 / 1.0.99` and `7.0.100 / 1.0.100`.
 
 Prefer current GenAI attributes when your instrumentation supports them, including `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, and `gen_ai.usage.output_tokens`. Preserve unavailable fields as absent. Do not submit `0` for unknown usage or `null` for an output that was never captured.
 
 A child can arrive before its parent, and a correlated log can arrive before its span. Preserve the same trace ID and the correct parent/span IDs across services. Root-span completion does not prove that the whole distributed trace has arrived. Evaluations use a pinned evidence revision.
+
+## Make traces useful to a coding agent
+
+A coding agent that reads your traces over the [Hue MCP server](/agents/investigate-production) can only filter and group by what the spans record. These attributes make its answers precise:
+
+- **Mark failures on the span status.** Hue treats a span as failed only when its OpenTelemetry status is `ERROR`, and a trace is `error` when any finished span is. An `error.type` attribute or a Langfuse `level` alone does not mark a failure.
+- **Record a stable user id on every span, sub-agents included.** Use `user.id` (Hue also reads `enduser.id` and `langfuse.user.id`) with the same value everywhere; an id with a suffix such as a tool-call id no longer matches the user's other traces. With Langfuse, `propagateAttributes({ userId }, …)` in TypeScript or `propagate_attributes(user_id=…)` in Python stamps it on every nested observation. A sub-agent that runs in its own trace needs it set there too.
+- **Record the session.** Set `session.id` or `gen_ai.conversation.id` on the root span so an agent can list a conversation's traces with `list_sessions` and `search_traces`.
+- **Name root spans by task type.** `search_traces` matches its `query` against the root span name, so a stable, descriptive name per kind of work, such as `agent.support_reply`, lets an agent count and time each kind without opening traces.
+- **Trace tools as tool spans.** Set `gen_ai.tool.name`, and with content capture `gen_ai.tool.call.arguments` and `gen_ai.tool.call.result`, so failing tools can be counted by name and their inputs and outputs read.
+- **Connect sub-agent traces to their parent.** Keep a sub-agent in its parent's trace by propagating the OpenTelemetry context, or, when it must start its own root, add a span link to the handoff span in the parent trace. Otherwise the only connection is an id inside recorded content.
+- **Record the release.** Set `service.version` on the resource. Hue keeps it with the telemetry, but the MCP server does not return or filter by it, so also note deploy times to compare releases.
+- **Keep development traffic out of production.** Send development and staging traces to a separate Hue project with its own **Tracing only** key, so searches, attention states and intents cover production only.
 
 ## Control content at its source
 

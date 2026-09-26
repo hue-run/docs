@@ -107,15 +107,28 @@ Set `HUE_CAPTURE_CONTENT=true` in the serving environment. Hue can only show and
 
 In metadata-only mode, both SDKs strip recognized third-party content attributes on Hue's export path, but unrecognized custom keys pass through, so configure third-party instrumentors' own capture controls to match your choice. Custom names and arbitrary attributes are application-controlled.
 
-AI trace titles are off by default. An owner or admin can enable them in **Settings → Projects → Edit project**, which permits short excerpts of captured content to be sent to Google Gemini through Vercel AI Gateway. Turning the setting off stops new title requests; a request already in flight may finish. Existing titles remain.
+Hue names each trace from its own recorded request text, or from a trace name the producer set, inside Hue. Naming sends nothing to a model provider and needs no setting.
 
 Telemetry does not expire automatically in the pilot. Agree a retention and deletion process with Hue before sending sensitive content; archiving a project does not delete its data. Project quotas provide admission protection, not a storage-retention policy.
+
+## What Hue computes from your traces
+
+Hue assesses the traces it stores. Some of that work sends recorded conversation text to a model, so agree these settings with your capture policy. Owners and admins change the first three in **Settings → Projects → Edit project** and trace-check consent in **Settings → Trace checks**. Over MCP, `update_project` changes the first three and `set_trace_checks_consent` the last, both with **Read and write** access.
+
+| Setting | Default | What it does and sends |
+| --- | --- | --- |
+| **Trace findings** | On | Reads each ended trace's recorded spans inside Hue for rule findings, such as a tool error with no later success, and sets the trace's attention state. Nothing leaves Hue. |
+| **AI trace findings** | On | Once a trace has ended or stalled, sends its latest user request, up to eight earlier conversation turns and the final reply to TypeSafe's decision model for typed judgments about the reply. It never sends tool arguments, results, files or metadata. Turning it off stops new judgments. |
+| **AI intent classification** | On | Once the project publishes an intent taxonomy, sends excerpts of each trace's conversation to TypeSafe to sort traces by task type. |
+| Trace-check consent | Off | Trace checks run only after a project gives this separate consent and activates a version. They then send bounded recorded requests, replies, delegation instructions, tool outputs and reduced context to the trace-check model through the Vercel AI Gateway. Withdrawing consent stops new model work. |
+
+Traces from evaluation runs are not assessed. The [production investigation guide](/agents/investigate-production#data-model) describes the attention states, findings, trace checks and intents that these settings produce.
 
 ## Ingestion limits
 
 The default project allowance for customer telemetry uploads is 600 ingestion requests, 20,000 new records and 32 MiB of logical payload per one-minute window. Uploaded spans and logs share it. Hue's internally generated managed-evaluation root spans use a separate persistence path, so exhausting an upload allowance cannot prevent a completed managed job from recording its own orchestration evidence. That internal path retains tenant checks, transaction deadlines, trace limits and deduplication; an uploaded attribute or header cannot select it. The first window starts with an admitted request; after 60 seconds, the next request reservation or final evidence charge starts a new window. Requests count at admission; records and payload count at their final storage charge. Decoded authenticated attempts, including failed writes and exact retries, consume request allowance; exact retries do not consume additional record or payload allowance. Temporary admission limits return 429 or 503 with `Retry-After`; client queues can still overflow during a long outage.
 
-Tracing authentication and storage use a separate bounded database pool from ordinary application queries. Optional title work also uses that pool, with one background job per process, at most 30 trace IDs, one active title at a time, and bounded SQL/provider operations. Excess title schedules are skipped and repaired lazily on later page visits. This prevents completed uploads from accumulating an unbounded title queue.
+Tracing authentication and storage use a separate bounded database pool from ordinary application queries. Naming a trace that a page finds unnamed also uses that pool, at most thirty traces per visit and one at a time; a failure leaves the trace unnamed until a later visit, so completed uploads never accumulate an unbounded naming queue.
 
 These are protective limits, not a throughput SLA. Ask Hue to size your project's allowance for your expected instances, requests per minute, spans per request and average payload. Measure latency and resource overhead with your application's expected payload and concurrency. Do not assume local benchmark results establish production capacity.
 
