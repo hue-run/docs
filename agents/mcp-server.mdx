@@ -122,13 +122,13 @@ Start with **Any MCP client** for the connection settings, or choose your client
     <Accordion title="Connect with a project key" defaultOpen>
       First [prepare the key](#connect-with-a-project-key), then configure this client.
 
-      Add the server to `.cursor/mcp.json` in the repository, or to `~/.cursor/mcp.json` for all projects:
+      Add the server to `.cursor/mcp.json` in the repository, or to `~/.cursor/mcp.json` for all projects. The URL selects the [`observe` toolset](#choose-toolsets), the production reads, which keeps Cursor's tool list short:
 
       ```json .cursor/mcp.json
       {
         "mcpServers": {
           "hue": {
-            "url": "https://mcp.hue.run/mcp",
+            "url": "https://mcp.hue.run/mcp?toolsets=observe",
             "headers": {
               "Authorization": "Bearer ${env:HUE_MCP_KEY}"
             }
@@ -139,7 +139,7 @@ Start with **Any MCP client** for the connection settings, or choose your client
 
       Cursor loads a new server only after you approve it: turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue` with the Cursor CLI. Check that `HUE_MCP_KEY` holds the key you intend before you approve.
 
-      **Verify:** `cursor-agent mcp list` shows `hue: ready`, and `cursor-agent mcp list-tools hue` lists 81 tools for a **Read and write** key or 41 tools for a **Read** key.
+      **Verify:** `cursor-agent mcp list` shows `hue: ready`, and `cursor-agent mcp list-tools hue` lists the `observe` tools, from `list_projects` to `load_hue_guide`. Without `?toolsets=observe`, it lists 96 tools for a **Read and write** key or 50 tools for a **Read** key.
 
       <Accordion title="If the Cursor check fails">
         The approval covers the expanded header, so Cursor asks again whenever `HUE_MCP_KEY` changes or becomes unset. If `HUE_MCP_KEY` is unset, Cursor sends the unexpanded reference without a warning, and Hue refuses it. For a key Hue refuses with `401`, Cursor shows only `requires_authentication` and suggests `agent mcp login hue`. Don't run it; run the [curl check](#verify-the-connection) to see Hue's reason.
@@ -213,7 +213,7 @@ Most clients load a new server only when they start, and Claude Code and Cursor 
 Ask the agent in the client you just connected:
 
 ```text
-Use the Hue MCP: call get_project_context, then show my 5 most recent error traces with links.
+Use the Hue MCP: call list_projects and confirm which project to inspect. Then call get_project_context and show its 5 most recent error traces with links. For an organization connection, pass the project's id as project_id on each call after list_projects.
 ```
 
 Then ask it to call `get_trace` for one of the returned trace IDs. If there are no error traces, ask `search_traces` for recent traces without an error filter. An empty result is not an authentication failure; use a project with a known test trace to verify the full read path.
@@ -268,13 +268,13 @@ See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent) 
 
 ## What you can do
 
-Every tool is scoped to the one project the connection reaches. Write tools need **Read and write** without `?read_only=true`. Ask before any write. Never auto-approve a tool whose `readOnlyHint` annotation is `false`: every write tool carries it, whatever its name. Read tools have `readOnlyHint: true`.
+A project key reaches one project. A sign-in connection that covers an organization lists its projects with `list_projects`, and every other tool then takes the chosen project's id as `project_id`. Write tools need **Read and write** without `?read_only=true`. Ask before any write. Never auto-approve a tool whose `readOnlyHint` annotation is `false`: every write tool carries it, whatever its name. Read tools have `readOnlyHint: true`.
 
-For production questions (what needs attention, which tools fail, which task types are slow, time to first reply, release regressions), [Investigate production](/agents/investigate-production) gives the tool sequences, the fields, the finding and attention states, and the limits and error codes.
+For production questions (what needs attention, which tools fail, which task types or steps are slow, time to first reply, release regressions, one user's traces), [Investigate production](/agents/investigate-production) gives the tool sequences, the fields, the finding and attention states, and the limits and error codes.
 
 <AccordionGroup>
   <Accordion title="Investigate a failure">
-    "Show the error traces from the last 24 hours", "which traces need attention?", "open the slowest span of that trace", "what did the model see before it failed?" (recorded content requires `include_content: true` and the application must have captured it). Tools: `search_traces`, `get_trace`, `get_span`, `list_sessions`. `search_traces` filters by `status`, `attention` (`needs_attention` or `uncertain`), `check_key`, `min_duration_ms`, `session_id`, title text and a window, and its rows carry `attention_state`, `check_state` and `duration_ms`. Each trace reports a `state`: `running` while a span is still open, `stalled` when 15 minutes pass without new data and no end arrives, or `ended`. Only the TypeScript SDK 0.7.0 and Python SDK 0.4.0 or later report open spans, and only Hue and AI spans still open when their placeholder is exported, usually about 1.5 s after they start; other spans, including every span from other exporters, appear once they end.
+    "Show the error traces from the last 24 hours", "which traces need attention?", "open the slowest span of that trace", "what did the model see before it failed?" (recorded content requires `include_content: true` and the application must have captured it). Tools: `search_traces`, `get_trace`, `get_span`, `get_span_content`, `list_sessions`, `search_spans`, `aggregate`. `search_traces` filters a window by `status`, `attention` (`needs_attention` or `uncertain`), `finding`, `check_key`, `user` or `user_prefix`, `release`, `trace_name`, `model`, one root-span `attribute`, `session_id`, `min_duration_ms` and title text, and sorts by `started_at` or `duration`. Its rows carry `attention_state`, `finding_ids`, `check_state`, `duration_ms`, `user_id`, `release` and `trace_name`. `get_trace` returns the trace's stored findings and trace-check results with its span tree, and each span's status message, error type, tool, timing and recorded sizes. `search_spans` finds spans across traces in a window of up to 7 days, by span name, kind, status, model, duration or attribute, or their trace's name, user, release or session. `aggregate` counts, groups and takes percentiles of a window's traces or spans. `get_span_content` reads exact recorded values by path. Each trace reports a `state`: `running` while a span is still open, `stalled` when 15 minutes pass without new data and no end arrives, or `ended`. Only the TypeScript SDK 0.7.0 and Python SDK 0.4.0 or later report open spans, and only Hue and AI spans still open when their placeholder is exported, usually about 1.5 s after they start; other spans, including every span from other exporters, appear once they end.
   </Accordion>
   <Accordion title="Confirm delivery">
     "Did trace 0af7651916cd43dd8448eb211c80319c arrive with spans a and b, with model and usage recorded?" Tools: `verify_trace`.
@@ -296,6 +296,12 @@ For production questions (what needs attention, which tools fail, which task typ
   </Accordion>
   <Accordion title="Create a case from a trace">
     Requires **Read and write** without `?read_only=true`. In Hue, open the trace and choose **Create case** in the trace inspector, or choose **Create case** from **Suggested cases**. A coding agent runs the same review over MCP. `add_case_conversion` pins the trace into a draft case, and repeating the call with the same idempotency key returns the same draft. `get_case_conversion` reports readiness and findings, and returns the saved task, starting world and criteria only with `include_content: true`. `update_case_conversion` edits the draft, and `publish_case_conversion` publishes a ready draft into a new or existing eval set. `archive_case_conversion` abandons a draft; a published case can't be archived, but its eval set can. Before you publish, review the task and the starting world, and set success criteria independently of the recorded answer. A trace that is still running can't become a case. The REST endpoint `https://app.hue.run/api/v1/case-conversions` runs the same workflow. `list_cases` and `get_case` then read the case, whether it is a draft or published.
+  </Accordion>
+  <Accordion title="Suggested cases and bulk conversion">
+    `list_suggested_cases` ranks groups of production requests by what a case would add, with each group's `kind_key`, trace count and representative trace revisions. With **Read and write**, `add_case_conversion_batch` starts one draft per trace revision of a group, each with its own idempotency key; nothing is published. `get_case_conversion_batch` reports every item's state and draft, and `update_case_conversion_batch` retries failed items, cancels the batch or resumes one that stalled. `get_case_divergence` shows where a run of a trace-built case first went differently from its source trace.
+  </Accordion>
+  <Accordion title="Judge alignment">
+    `list_judge_results` lists a world judge's scored results with verdicts, reasons and label counts, and `get_judge_alignment` reports how a judge version agrees with people's labels against the project's bar. With **Read and write**, `label_judge_result` agrees or disagrees with one verdict, `check_judge_regression` rescores a judge version on labeled executions, `set_judge_promotion` promotes a version that meets the bar or demotes it to advisory, and `set_judge_alignment_bar` changes the bar, which needs an owner or admin.
   </Accordion>
   <Accordion title="Intents">
     Read the taxonomy and buckets with `get_intent_taxonomy`, `get_intent_summary` and `list_intent_traces`. Both take a `range` of `24h`, `7d`, `30d`, `90d` or `all`. The summary reports whether AI intent classification is on (`consent`) and bucket keys such as `category:<key>`, `other`, `uncertain` and `pending`; pass a key to `list_intent_traces` as `bucket`. `save_intent_taxonomy` republishes categories and requires an owner or admin.
@@ -320,7 +326,7 @@ Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or
 
 A client can list a subset of the tools. Select toolsets with `?toolsets=<names>` on a key-based URL, or with the `X-Hue-MCP-Toolsets: <names>` header for a client that cannot change its URL; together they select their union. Without either, the server lists every tool.
 
-- `observe` lists the production reads: `list_projects`, `get_project_context`, `search_traces`, `get_trace`, `get_span`, `get_span_content`, `list_sessions`, `list_trace_checks`, `get_trace_check_results`, `get_trace_check_summary`, `get_intent_summary`, `list_intent_traces`, `search_hue_docs` and `load_hue_guide`. Use it for Cursor and any client with a tool-count limit, and for an agent that only [investigates production](/agents/investigate-production).
+- `observe` lists the production reads: `list_projects`, `get_project_context`, `search_traces`, `get_trace`, `get_span`, `list_sessions`, `get_span_content`, `search_spans`, `aggregate`, `list_trace_checks`, `get_trace_check_results`, `get_trace_check_summary`, `get_intent_summary`, `list_intent_traces`, `search_hue_docs` and `load_hue_guide`. Use it for Cursor and any client with a tool-count limit, and for an agent that only [investigates production](/agents/investigate-production).
 - `all` lists everything, and the groups `project`, `traces`, `evals`, `environments`, `intents` and `docs` list one area each. Separate several names with commas.
 
 `list_projects` and `get_project_context` are always listed, and `get_project_context` reports the selection as `toolsets`: the names applied, any it ignored and the names available. An unknown name never fails a request; a selection with only unknown names lists every tool. **Read** access and `?read_only=true` still apply inside a selection.
