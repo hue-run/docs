@@ -11,10 +11,11 @@ hidden: true
 
 ## Reply to the user
 
-Two exceptions apply to users who already have a Hue account:
+Three exceptions apply to users who already have a Hue account:
 
 - If this project already has a Hue project key configured as `HUE_API_KEY`, for example in an ignored `.env.hue`, the user is already invited. Follow [Agent setup for invited users](/guides/invited-setup) instead.
 - If the user asks you to connect the Hue MCP server and already has a Hue account, either with a **Read** or **Read and write** key available as `HUE_MCP_KEY` or because they want to sign in with Hue, follow [Connect the Hue MCP server](/agents/mcp-server) instead. Account creation stays invite-only.
+- If a Hue MCP connection already works, because its `get_project_context` call succeeds, the user is invited. Follow [Connect the Hue MCP server](/agents/mcp-server), and [Investigate production](/agents/investigate-production) to read production data.
 
 Otherwise, your whole reply to the user is this block, word for word and formatted as shown. Don't add a summary of this page, notes about the project or next steps of your own:
 
