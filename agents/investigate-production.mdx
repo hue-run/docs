@@ -62,7 +62,7 @@ A trace whose agent retried a tool and then succeeded still has `status: "error"
 ### Time to first reply
 
 - `duration_ms` is end to end, not the time until the user got an answer.
-- For projects set up for request timing, `search_traces` rows carry `first_useful_answer_ms`, `useful_answer_timing_source` (`playback` or `server`) and `request_start_source`. `get_trace_check_summary` aggregates them in `requests`: `firstResponseP50Ms`, `usefulPlaybackP50Ms` and `usefulPlaybackP95Ms`, `usefulServerP50Ms` and `usefulServerP95Ms`, and `completionP50Ms` and `completionP95Ms`.
+- For projects [instrumented for request timing](/integrations/opentelemetry#mark-the-request-on-the-root-span) with trace checks active, `search_traces` rows carry `first_useful_answer_ms`, `useful_answer_timing_source` (`playback` or `server`) and `request_start_source`. `get_trace_check_summary` aggregates them in `requests`: `firstResponseP50Ms`, `usefulPlaybackP50Ms` and `usefulPlaybackP95Ms`, `usefulServerP50Ms` and `usefulServerP95Ms`, and `completionP50Ms` and `completionP95Ms`.
 - Otherwise the agent computes it from span times: `get_trace`, then the time from `trace.started_at` to the `ended_at` of the span that delivers the reply, such as the first model call that returns the answer or a reply tool span. Which span that is depends on the application, so the agent should name the span it used.
 
 ### Did a release regress
@@ -158,7 +158,7 @@ Model findings need the project's **AI trace findings** setting, which is on by 
 
 ### Trace checks
 
-Trace checks are project-owned, versioned checks of production behavior. They are advisory, not evaluator scores. The four checks are `delegation` (execution stayed with the orchestrator instead of a sub-agent), `action_scope` (execution expanded the request), `delegation_scope` (a handoff expanded the request) and `output_omission` (needed tool information was omitted). They produce results only after a project sets them up: instrumentation that marks the request and its boundaries, trace-check consent, which is off by default, and a version activated against labelled traces.
+Trace checks are project-owned, versioned checks of production behavior. They are advisory, not evaluator scores. The four checks are `delegation` (execution stayed with the orchestrator instead of a sub-agent), `action_scope` (execution expanded the request), `delegation_scope` (a handoff expanded the request) and `output_omission` (needed tool information was omitted). They produce results only after a project sets them up: [instrumentation](/integrations/opentelemetry#instrument-for-trace-checks-and-request-timing) that marks the request and its boundaries, trace-check consent, which is off by default, and a version activated against labelled traces.
 
 A result is `present`, `absent`, `uncertain`, `unavailable` (not enough evidence) or `not_applicable`. A trace's `check_state` is `needs_attention`, `pending`, `uncertain`, `unavailable`, `not_applicable`, `no_findings` or `null` when no active version applies to it.
 
