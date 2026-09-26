@@ -340,10 +340,11 @@ if (skillOverride) {
 } else if (digest(skillSource) !== sdk.skill.sha256) {
   fail("skill.md differs from the SDK-owned skill source");
 }
-// Hue Cloud is invite-only: no public page may hand an agent an anonymous setup or claim command.
-if (!publicSkill.includes("## Invite-only access") || !publicSkill.includes("https://docs.hue.run/guides/agent-setup")) {
-  fail("skill.md must contain the invite-only section that links to the agent setup gate");
+// Without a key, the skill sends a first-time setup to the one agent setup page.
+if (!publicSkill.includes("## Get a Hue API key") || !publicSkill.includes("https://docs.hue.run/guides/agent-setup")) {
+  fail("skill.md must contain the Get a Hue API key section that links to the agent setup page");
 }
+// Hue Cloud is invite-only: no public page may hand an agent an anonymous setup or claim command.
 for (const [path, text] of Object.entries(publicText)) {
   for (const [block] of text.matchAll(/^\s*```[\s\S]*?^\s*```/gm)) {
     for (const command of ["setup --agent", "resume --agent", "hue claim", "hue setup", "@hue-run/sdk@latest setup"]) {
@@ -363,17 +364,34 @@ for (const [path, text] of Object.entries(publicText)) {
 }
 const compatibilitySource = canonicalCompatibility(read("sdks/compatibility.mdx"));
 if (digest(compatibilitySource) !== sdk.compatibility.sha256) fail("sdks/compatibility.mdx differs from the SDK-owned source");
-const agentGate = publicText["guides/agent-setup.mdx"];
-for (const phrase of [
-  "invite-only",
-  "https://calendar.notion.so/meet/akethini/fd2smi4yej",
-  "founders@hue.run",
-  "Do not add packages",
-]) {
-  if (!agentGate.includes(phrase)) fail(`guides/agent-setup.mdx must contain the invite-only gate text: ${phrase}`);
+// Everyone follows one public agent setup page: the key step with the account contact line, tracing
+// through the skill, then the MCP connection. The invited-setup URL stays alive only as a stub.
+const frontmatterOf = (text) => text.match(/^---\n([\s\S]*?)\n---\n/)?.[1] ?? "";
+const agentSetup = publicText["guides/agent-setup.mdx"];
+if (/^hidden:\s*true$/m.test(frontmatterOf(agentSetup))) {
+  fail("guides/agent-setup.mdx must stay visible in navigation");
 }
-for (const install of ["npx ", "npm install", "pip install", "uv add", "skills add", "skill.md?v="]) {
-  if (agentGate.includes(install)) fail(`guides/agent-setup.mdx is the invite-only gate and must not contain an install step: ${install}`);
+for (const phrase of [
+  "https://calendar.notion.so/meet/akethini/hue",
+  "founders@hue.run",
+  "hue login",
+  "hue mcp install",
+  "https://docs.hue.run/skill.md",
+]) {
+  if (!agentSetup.includes(phrase)) fail(`guides/agent-setup.mdx must contain ${phrase}`);
+}
+if (agentSetup.includes("skill.md?v=")) fail("guides/agent-setup.mdx must link the unversioned skill.md");
+const movedSetup = publicText["guides/invited-setup.mdx"];
+if (!/^hidden:\s*true$/m.test(frontmatterOf(movedSetup)) || !movedSetup.includes("https://docs.hue.run/guides/agent-setup.md")) {
+  fail("guides/invited-setup.mdx must be a hidden stub that points to https://docs.hue.run/guides/agent-setup.md");
+}
+for (const [path, text] of Object.entries(publicText)) {
+  if (path !== "guides/invited-setup.mdx" && text.includes("guides/invited-setup")) {
+    fail(`${path} links the moved invited-setup page; link /guides/agent-setup instead`);
+  }
+  for (const phrase of ["heightened demand", "Many apologies", "invite-only gate", "request access"]) {
+    if (text.toLowerCase().includes(phrase.toLowerCase())) fail(`${path} contains retired access-gate text: ${phrase}`);
+  }
 }
 
 let generated;
