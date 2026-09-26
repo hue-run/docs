@@ -84,7 +84,7 @@ Each trace row carries `user_id`, the user id your application recorded (see the
 1. `list_sessions` with `{"query": "<session key or part of it>", "since": "7d"}`. `query` matches session keys and the titles of each session's traces.
 2. `search_traces` with `{"session_id": "<id from list_sessions>", "since": "7d"}`.
 
-A session is not always a user. The result is one user's traces only when the application gives each user a single session; otherwise a user can have several sessions, and a session can be shared. Check each row's `user_id` before attributing traces to a person. An application that derives a sub-agent's user id, for example by appending a call id, gives those traces a different `user_id`. Match the base id together with the separator the application appends, such as `user-1:`, never a bare prefix that would also match `user-12`. `list_sessions` rows also carry each session's status, trace count and token and span totals over all of its traces.
+A session is not always a user. The result is one user's traces only when the application gives each user a single session; otherwise a user can have several sessions, and a session can be shared. Check each row's `user_id` before attributing traces to a person. An application that derives a sub-agent's user id, for example by appending a call id, gives those traces a different `user_id`. Keep rows whose `user_id` is exactly the base id, such as `user-1`, or starts with the base id and the separator the application appends, such as `user-1:`; never match a bare prefix, which would also match `user-12`. `list_sessions` rows also carry each session's status, trace count and token and span totals over all of its traces.
 
 ### Find sub-agent handoffs
 
