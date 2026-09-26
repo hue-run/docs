@@ -24,12 +24,12 @@ The installable project-data server runs at `https://mcp.hue.run/mcp`. A separat
 - **The agent cannot run a shell**, for example a hosted assistant, **or you want several connected actions in one conversation** ("find yesterday's failing traces, show me the slowest span, compare the last two experiments"). Connect the MCP server; a hosted assistant that supports MCP sign-in adds the URL and signs in with Hue. Hue has not yet verified claude.ai or ChatGPT end to end.
 - **You are automating in CI.** Use the SDK evaluation clients and the receipt endpoint directly.
 
-## Keys
+## Authentication
 
-Each surface uses a different key so that a leaked credential has the smallest possible blast radius:
+Application telemetry and agent access have different authentication needs:
 
 - The application's `HUE_API_KEY` uses **Tracing only** for telemetry and known-trace receipts. Use **Read and write** only when that process also manages datasets, scorers, experiments, simulations, environments, or managed runs.
-- The agent's `HUE_MCP_KEY` uses **Read** for inspection, or **Read and write** when it should also write project data. Configure it in the MCP client, never in application code. Or skip the key: [sign in with Hue](/agents/mcp-server#sign-in-with-hue-instead-of-a-key) from the MCP client and approve **Read** or **Read and write** for one project.
+- For MCP access, [sign in with Hue](/agents/mcp-server#sign-in-with-hue-instead-of-a-key) and approve **Read** or **Read and write** for one project. Clients that accept project keys can instead use `HUE_MCP_KEY` with the same access choices. Configure that key in the MCP client, never in application code. The [MCP connection guide](/agents/mcp-server) covers both methods and client setup.
 
 See [project keys](/guides/project-keys) for the presets and rotation.
 
