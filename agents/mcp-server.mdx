@@ -6,9 +6,11 @@ description: "Connect an MCP client to your Hue project with browser sign-in or 
 
 The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install. Each connection reaches one project: **Read** access searches and inspects its data, such as traces, evaluations and cases, and **Read and write** access also changes project data. Billing and plan changes stay in Settings. `https://docs.hue.run/mcp` is a separate documentation-only server and cannot read your project.
 
+A connection lists Hue's production reads, and `search_hue_tools`, which finds every other tool the connection can call, such as evaluations, cases and writes. Clients that search their own tool lists add `?toolsets=all` to the URL to list every tool directly. See [choose toolsets](#choose-toolsets).
+
 ## Quick start
 
-1. Choose your client below and add `https://mcp.hue.run/mcp`. For **sign-in with Hue**, leave out API keys and custom headers.
+1. Choose your client below and add the server URL it shows: `https://mcp.hue.run/mcp`, with `?toolsets=all` for a client that searches its own tools. For **sign-in with Hue**, leave out API keys and custom headers.
 2. When the client opens Hue, sign in with your verified account, select one project and approve **Read**. You must belong to that project's organization. Choose **Read and write** only if the agent should change project data.
 3. Refresh the client's MCP status or start a new session, then [verify the connection](#verify-the-connection) by reading a trace through the agent.
 
@@ -31,7 +33,16 @@ Start with **Any MCP client** for the connection settings, or choose your client
 
     Save the server and choose its connect or authenticate action. Hue opens in your browser: sign in, select your project and approve **Read**. Leave custom headers and API-key fields empty; the client handles OAuth discovery and tokens. Return to the client and [verify the connection](#verify-the-connection).
 
-    Setting names vary by app. Use the tabs for exact Claude Code, Codex, Cursor and Conductor instructions. Hosted connectors can use the same URL and sign-in flow when their plan and workspace settings allow custom MCP servers; Hue has not yet verified claude.ai, Claude Desktop Connectors or ChatGPT end to end.
+    This URL lists the production reads and the [catalog tools](#choose-toolsets) that reach every other tool. If your client searches its own tool list, use `https://mcp.hue.run/mcp?toolsets=all` to list every tool directly.
+
+    Setting names vary by app. Use the tabs for exact Claude Code, Codex, Cursor and Conductor instructions. Hosted connectors, such as custom connectors in Claude.ai and Claude Desktop or ChatGPT's developer mode, take a URL and sign in the same way when their plan and workspace settings allow custom MCP servers:
+
+    | Tools | Connector URL |
+    | --- | --- |
+    | Production reads | `https://mcp.hue.run/mcp` |
+    | Everything | `https://mcp.hue.run/mcp?toolsets=all` |
+
+    A connector keeps the tool list it read when it was added, so after you edit its URL, remove the connector and add it again. Hue has not yet verified Claude.ai, Claude Desktop connectors or ChatGPT end to end.
 
     <Accordion title="Use a project key instead">
       If your client supports bearer authentication or custom headers, [create a Read or Read and write key](#connect-with-a-project-key) and configure `Authorization: Bearer <project key>` using the client's secret storage or environment-variable reference. Select key or bearer authentication instead of OAuth. Never put the key in the server URL or shared configuration. Environment-reference syntax depends on the client.
@@ -41,8 +52,10 @@ Start with **Any MCP client** for the connection settings, or choose your client
     Add the server, then run `/mcp` in Claude Code, select `hue` and choose **Authenticate**. This adds `hue` for the current project; add `--scope user` for all projects. Until you authenticate, `claude mcp get hue` shows `! Needs authentication`, which is expected.
 
     ```sh
-    claude mcp add --transport http hue https://mcp.hue.run/mcp
+    claude mcp add --transport http hue 'https://mcp.hue.run/mcp?toolsets=all'
     ```
+
+    `?toolsets=all` lists every Hue tool. Claude Code defers MCP tools behind its tool search and loads a tool's definition when a task needs it, so the whole list costs little; `list_projects`, `search_traces` and `get_trace` load at the start of every session.
 
     To replace a key entry, first run `claude mcp remove hue -s <scope>` with the scope `claude mcp get hue` reports, then add the URL-only entry. A local entry overrides project and user entries, so check that an older entry is not taking precedence.
 
@@ -52,7 +65,7 @@ Start with **Any MCP client** for the connection settings, or choose your client
       Add `hue` for all your projects. Keep the single quotes, and keep `--header` after the URL.
 
       ```sh
-      claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp \
+      claude mcp add --transport http --scope user hue 'https://mcp.hue.run/mcp?toolsets=all' \
         --header 'Authorization: Bearer ${HUE_MCP_KEY}'
       ```
 
@@ -63,7 +76,7 @@ Start with **Any MCP client** for the connection settings, or choose your client
         "mcpServers": {
           "hue": {
             "type": "http",
-            "url": "https://mcp.hue.run/mcp",
+            "url": "https://mcp.hue.run/mcp?toolsets=all",
             "headers": {
               "Authorization": "Bearer ${HUE_MCP_KEY}"
             }
@@ -85,8 +98,17 @@ Start with **Any MCP client** for the connection settings, or choose your client
     Add the server from a terminal where you can use a browser. `codex mcp add` may start sign-in immediately; `codex mcp login hue` starts or repeats sign-in:
 
     ```sh
-    codex mcp add hue --url https://mcp.hue.run/mcp
+    codex mcp add hue --url 'https://mcp.hue.run/mcp?toolsets=all'
     codex mcp login hue
+    ```
+
+    Codex searches its MCP tools before it loads them, so `?toolsets=all` lists every Hue tool at little cost. With a model provider that has no tool search, Codex loads every listed tool up front; leave the query off to list the production reads. The equivalent entry in `~/.codex/config.toml` sends the selection as a header and lets Codex run Hue's calls in parallel. `codex mcp add` cannot set `supports_parallel_tool_calls`, so after running it, add that line under `[mcp_servers.hue]`:
+
+    ```toml config.toml
+    [mcp_servers.hue]
+    url = "https://mcp.hue.run/mcp"
+    http_headers = { "X-Hue-MCP-Toolsets" = "all" }
+    supports_parallel_tool_calls = true
     ```
 
     To replace a key entry, run `codex mcp remove hue` first, then add the URL-only entry above. Check the project's `.codex/config.toml` too if it overrides your user configuration.
@@ -97,14 +119,15 @@ Start with **Any MCP client** for the connection settings, or choose your client
       Add the server for every project:
 
       ```sh
-      codex mcp add hue --url https://mcp.hue.run/mcp --bearer-token-env-var HUE_MCP_KEY
+      codex mcp add hue --url 'https://mcp.hue.run/mcp?toolsets=all' --bearer-token-env-var HUE_MCP_KEY
       ```
-      Codex reads the key from the environment variable each time it connects. The equivalent entry in `~/.codex/config.toml`, or in `.codex/config.toml` of a project Codex trusts:
+      Codex reads the key from the environment variable each time it connects. The equivalent entry in `~/.codex/config.toml`, or in `.codex/config.toml` of a project Codex trusts, also runs Hue's calls in parallel:
 
       ```toml config.toml
       [mcp_servers.hue]
-      url = "https://mcp.hue.run/mcp"
+      url = "https://mcp.hue.run/mcp?toolsets=all"
       bearer_token_env_var = "HUE_MCP_KEY"
+      supports_parallel_tool_calls = true
       ```
 
       **Verify:** start `codex` and run `/mcp`; `hue` is listed with its tools. `codex mcp list` and `codex mcp get hue` only print the configuration and do not contact Hue.
@@ -139,7 +162,7 @@ Start with **Any MCP client** for the connection settings, or choose your client
 
       Cursor loads a new server only after you approve it: turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue` with the Cursor CLI. Check that `HUE_MCP_KEY` holds the key you intend before you approve.
 
-      **Verify:** `cursor-agent mcp list` shows `hue: ready`, and `cursor-agent mcp list-tools hue` lists the `observe` tools, from `list_projects` to `load_hue_guide`. `observe` holds reads only: to use write tools or the evaluation, case and judge tools with Cursor, change the URL to another [toolset](#choose-toolsets) or remove `?toolsets=observe`, which lists 96 tools for a **Read and write** key or 50 tools for a **Read** key.
+      **Verify:** `cursor-agent mcp list` shows `hue: ready`, and `cursor-agent mcp list-tools hue` lists the `observe` tools, from `list_projects` to `load_hue_guide`, and the catalog tools `search_hue_tools`, `execute_hue_tool` and, with write access, `execute_hue_write_tool`. Through those, the agent reaches the evaluation, case, judge and write tools without a longer list; see [choose toolsets](#choose-toolsets).
 
       <Accordion title="If the Cursor check fails">
         The approval covers the expanded header, so Cursor asks again whenever `HUE_MCP_KEY` changes or becomes unset. If `HUE_MCP_KEY` is unset, Cursor sends the unexpanded reference without a warning, and Hue refuses it. For a key Hue refuses with `401`, Cursor shows only `requires_authentication` and suggests `agent mcp login hue`. Don't run it; run the [curl check](#verify-the-connection) to see Hue's reason.
@@ -151,10 +174,10 @@ Start with **Any MCP client** for the connection settings, or choose your client
 
     <CodeGroup>
     ```sh Claude Code
-    claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp
+    claude mcp add --transport http --scope user hue 'https://mcp.hue.run/mcp?toolsets=all'
     ```
     ```sh Codex
-    codex mcp add hue --url https://mcp.hue.run/mcp
+    codex mcp add hue --url 'https://mcp.hue.run/mcp?toolsets=all'
     ```
     </CodeGroup>
 
@@ -256,7 +279,7 @@ For key-based connections, the [curl check](#verify-the-connection) shows Hue's 
 | The client reports `invalid HTTP header` | The stored key ends with a newline | Store the key without a trailing newline. |
 | Cursor shows `not loaded (needs approval)` or `has not been approved` | Cursor has not approved the server, or `HUE_MCP_KEY` changed or became unset since you approved it | Check that `HUE_MCP_KEY` is exported and holds the key you intend, then turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue`. Cursor asks again after every change. |
 | A client you connected by signing in shows **Needs authentication** or `The hue MCP server is not logged in` | The approval ended: 30 days passed, someone disconnected it in **Settings → Connected apps**, you reset your password or signed out everywhere, or you left the organization or the project was archived | Use your client’s authentication action to sign in again: `/mcp` → **Authenticate** in Claude Code or `codex mcp login hue` in Codex. For Cursor, use the project-key instructions in its tab until native sign-in is supported. |
-| A tool call fails as an unknown tool | Write tools are hidden for **Read** access and for a URL with `?read_only=true`; [retired tool names](#retired-tool-names) are no longer served; a tool described in a development branch is not available until its platform release is deployed | Use a **Read and write** key without `?read_only=true`, approve **Read and write** at sign-in, or call the current tool name. Use the tools your connection's `tools/list` returns; an unknown tool is not evidence that the client should broaden its permissions. |
+| A tool call fails as an unknown tool | The connection does not list the tool: by default it lists the production reads. Write tools are also hidden for **Read** access and for a URL with `?read_only=true`, and a tool described in a development branch is not available until its platform release is deployed | Find the tool with `search_hue_tools` and call it through the executor its `call` field names, or add `?toolsets=all` to the server URL and reconnect. For a write tool, use a **Read and write** key without `?read_only=true`, or approve **Read and write** at sign-in. An unknown tool is not evidence that the client should broaden its permissions. |
 
 See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent) for tracing problems that are not specific to MCP.
 
@@ -269,6 +292,8 @@ See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent) 
 ## What you can do
 
 A project key reaches one project. A sign-in connection that covers an organization lists its projects with `list_projects`, and every other tool then takes the chosen project's id as `project_id`. Write tools need **Read and write** without `?read_only=true`. Ask before any write. Never auto-approve a tool whose `readOnlyHint` annotation is `false`: every write tool carries it, whatever its name. Read tools have `readOnlyHint: true`.
+
+A default connection lists the production reads; the other tools below are one [`search_hue_tools`](#choose-toolsets) call away, or listed directly with `?toolsets=all`.
 
 For production questions (what needs attention, which tools fail, which task types or steps are slow, time to first reply, release regressions, one user's traces), [Investigate production](/agents/investigate-production) gives the tool sequences, the fields, the finding and attention states, and the limits and error codes.
 
@@ -324,14 +349,27 @@ Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or
 
 ## Choose toolsets
 
-A client can list a subset of the tools. Select toolsets with `?toolsets=<names>` on a key-based URL, or with the `X-Hue-MCP-Toolsets: <names>` header for a client that cannot change its URL; together they select their union. Without either, the server lists every tool.
+Without a selection, a connection lists the `observe` toolset, the production reads: `list_projects`, `get_project_context`, `search_traces`, `get_trace`, `get_span`, `list_sessions`, `verify_trace`, `get_span_content`, `search_spans`, `aggregate`, `list_trace_checks`, `get_trace_check_results`, `get_trace_check_summary`, `get_intent_summary`, `list_intent_traces`, `search_hue_docs` and `load_hue_guide`. Beside them it lists three catalog tools that reach every other tool the connection's access allows, so a short list loses nothing:
 
-- `observe` lists the production reads: `list_projects`, `get_project_context`, `search_traces`, `get_trace`, `get_span`, `list_sessions`, `get_span_content`, `search_spans`, `aggregate`, `list_trace_checks`, `get_trace_check_results`, `get_trace_check_summary`, `get_intent_summary`, `list_intent_traces`, `search_hue_docs` and `load_hue_guide`. Use it for Cursor and any client with a tool-count limit, and for an agent that only [investigates production](/agents/investigate-production).
-- `all` lists everything, and the groups `project`, `traces`, `evals`, `environments`, `intents` and `docs` list one area each. Separate several names with commas.
+- `search_hue_tools` finds tools by keywords, such as `eval set`, or by `toolset`, 10 per page. Each result has the tool's `name`, `summary`, `access`, `input_schema` and `call`: the tool's own name when the connection lists it, otherwise the executor to call it through.
+- `execute_hue_tool` calls a read tool by `name` with its `arguments` and returns exactly what calling it directly returns.
+- `execute_hue_write_tool` calls a write tool the same way. It is listed only with write access and without `?read_only=true`. Ask the user before calling it.
 
-`list_projects` and `get_project_context` are always listed, and `get_project_context` reports the selection as `toolsets`: the names applied, any it ignored and the names available. An unknown name never fails a request; a selection with only unknown names lists every tool. **Read** access and `?read_only=true` still apply inside a selection.
+That is 20 tools with write access, or 19 tools with **Read** access. An executor call goes through the same access checks, project selection, audit log and content gating as a direct call. For example, to list an organization project's eval sets on a default connection, call `list_projects`, then `search_hue_tools` with `query: "eval set"`, then `execute_hue_tool` with `{"name": "list_eval_sets", "arguments": {"project_id": "<id>"}}`.
 
-With sign-in, never add `toolsets` or `read_only` to the URL: neither is part of the connection's identity, so the client's sign-in can fail. Send the header instead, or select nothing.
+To list tools directly, add `?toolsets=<names>` to the server URL, for a key or a sign-in connection. The `X-Hue-MCP-Toolsets: <names>` header selects the same way, and together they select their union. Separate several names with commas.
+
+- `all` lists every tool your access allows, without the catalog tools. Use it for clients that search their own tool lists, which load a tool's definition only when a task needs it.
+- `observe` is the default above. `project`, `traces`, `evals`, `environments`, `intents` and `docs` each list one area, with the catalog tools.
+
+| Client | Server URL | Why |
+| --- | --- | --- |
+| Claude Code, Codex, Conductor | `https://mcp.hue.run/mcp?toolsets=all` | They search their own tool lists, so every tool costs little. |
+| Claude.ai and Claude Desktop connectors, ChatGPT | `https://mcp.hue.run/mcp` for production reads, or `https://mcp.hue.run/mcp?toolsets=all` for everything | A connector takes only a URL. |
+| Cursor | `https://mcp.hue.run/mcp?toolsets=observe` | Cursor caps the tools it loads across servers; the URL keeps listing the production reads. |
+| VS Code, Windsurf, Gemini CLI and other clients | `https://mcp.hue.run/mcp` | The production reads and the catalog tools. |
+
+`list_projects` and `get_project_context` are always listed, and `get_project_context` reports the selection as `toolsets`: the names `selected`, a `source` of `default` when the connection named none, any names it `ignored`, the names `available`, and, when some tools are not listed, their count per group as `unlisted` with a `widen` hint on how to reach them. An unknown name never fails a request; a selection with only unknown names lists the default. **Read** access and `?read_only=true` still apply inside a selection. A client keeps the tool list it read when it connected: after you change the URL, restart the client, or remove a connector and add it again.
 
 ## Content and safety
 
@@ -341,45 +379,3 @@ With sign-in, never add `toolsets` or `read_only` to the URL: neither is part of
 - The key, or the project you approved at sign-in, is the tenant. Ids from another project, and `projectId` parameters on pasted links, resolve to `not_found`.
 - Add `?read_only=true` to a key-based URL to hide and reject any write tool regardless of the key. With sign-in, choose **Read** at approval instead.
 - Requests are limited to 1 MiB. Ten failed authentications for one key within a minute return `429` with `Retry-After: 60`, and for those 60 seconds the correct key is refused too. A busy server returns `503` with `Retry-After`.
-
-## Retired tool names
-
-Hue served the earlier tool names below as aliases of the current tools for one production release, then retired them. A call to a retired name now fails as an unknown tool. Update prompts, allowlists and approval rules to the current names.
-
-`add_trace_to_eval_set` and its earlier name `add_trace_to_dataset` were removed. To turn a trace into a case, use the case conversion tools, **Create case** in Hue or the `/api/v1/case-conversions` REST endpoint, as described under [what you can do](#what-you-can-do).
-
-<Accordion title="Retired and current tool names">
-  | Retired name | Current name |
-  | --- | --- |
-  | `add_dataset` | `add_eval_set` |
-  | `add_dataset_cases` | `add_eval_set_cases` |
-  | `add_dataset_draft` | `add_eval_set_draft` |
-  | `add_scorer` | `add_evaluator` |
-  | `add_experiment` | `add_run` |
-  | `add_evaluation_results` | `add_scoring_results` |
-  | `add_evaluation_run` | `add_scoring_run` |
-  | `archive_dataset` | `archive_eval_set` |
-  | `archive_scorer` | `archive_evaluator` |
-  | `complete_experiment_case` | `complete_run_case` |
-  | `copy_scorer` | `copy_evaluator` |
-  | `delete_dataset_case` | `delete_eval_set_case` |
-  | `finish_experiment` | `finish_run` |
-  | `freeze_dataset_version` | `freeze_eval_set_version` |
-  | `get_scenario` | `get_case` |
-  | `get_dataset` | `get_eval_set` |
-  | `get_scorer` | `get_evaluator` |
-  | `get_experiment` | `get_run` |
-  | `get_experiment_execution` | `get_run_execution` |
-  | `get_experiment_item` | `get_run_item` |
-  | `get_evaluation_run` | `get_scoring_run` |
-  | `list_scenarios` | `list_cases` |
-  | `list_datasets` | `list_eval_sets` |
-  | `list_scorers` | `list_evaluators` |
-  | `list_experiment_items` | `list_run_items` |
-  | `list_experiments` | `list_runs` |
-  | `list_evaluation_runs` | `list_scoring_runs` |
-  | `publish_scorer` | `publish_evaluator` |
-  | `start_experiment_case` | `start_run_case` |
-  | `update_dataset` | `update_eval_set` |
-  | `update_dataset_case` | `update_eval_set_case` |
-</Accordion>

@@ -169,6 +169,11 @@ if (!Array.isArray(platform.mcp.tools) || platform.mcp.tools.length === 0) {
 for (const { name } of platform.mcp.tools) {
   if (!publicText["agents/mcp-server.mdx"].includes(name)) fail(`MCP guide is missing tool ${name}`);
 }
+// The catalog tools are listed beside every selection but `all`; the guide names each one.
+const catalogTools = platform.mcp.toolsets?.catalogTools ?? [];
+for (const { name } of catalogTools) {
+  if (!publicText["agents/mcp-server.mdx"].includes(name)) fail(`MCP guide is missing catalog tool ${name}`);
+}
 const compact = (value) => value.replace(/\s+/g, " ").trim();
 const compactMcpGuide = compact(publicText["agents/mcp-server.mdx"]);
 // Match the snippets for the clients documented in this guide. The producer snapshot also
@@ -190,12 +195,23 @@ for (const key of [
     fail(`MCP guide does not match the generated ${key} snippet`);
   }
 }
-// Tool counts quoted as verification output must match the contract: every tool, or the read tools a
-// Read key or connection sees.
+// Tool counts quoted in the guide must match the contract: every tool, the read tools a Read key or
+// connection sees, or the default listing (the default toolsets and the catalog tools) with write
+// access or with Read access, which has no write executor.
 const readToolCount = platform.mcp.tools.filter(({ access }) => access === "read").length;
+const toolsets = platform.mcp.toolsets ?? {};
+const defaultListed = platform.mcp.tools.filter(({ name, toolset }) =>
+  (toolsets.default ?? []).some((selected) => (toolsets.profiles?.[selected] ?? []).includes(name) || selected === toolset),
+);
+const defaultCount = defaultListed.length + catalogTools.length;
+const defaultReadCount =
+  defaultListed.filter(({ access }) => access === "read").length + catalogTools.filter(({ access }) => access === "read").length;
+const toolCounts = [platform.mcp.tools.length, readToolCount, defaultCount, defaultReadCount];
 for (const [, count] of publicText["agents/mcp-server.mdx"].matchAll(/\b(\d+) tools\b/g)) {
-  if (![platform.mcp.tools.length, readToolCount].includes(Number(count))) {
-    fail(`MCP guide names ${count} tools; the contract has ${platform.mcp.tools.length} tools, ${readToolCount} of them read tools`);
+  if (!toolCounts.includes(Number(count))) {
+    fail(
+      `MCP guide names ${count} tools; the contract has ${platform.mcp.tools.length} tools, ${readToolCount} of them read tools, and a default listing of ${defaultCount} (${defaultReadCount} with Read access)`,
+    );
   }
 }
 for (const [variant, status] of Object.entries({

@@ -7,6 +7,7 @@
     "apps/web/src/server/mcp/catalog.ts",
     "apps/web/src/server/mcp/guides.ts",
     "apps/web/src/server/mcp/toolsets.ts",
+    "apps/web/src/server/mcp/catalog-tools.ts",
     "apps/web/src/server/mcp/install-snippets.ts",
     "tests/fixtures/sdk-compat.json"
   ],
@@ -1780,8 +1781,8 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "44dcb762c78007b4bd02c24d110115eee16d17aa6d761fd8e2674ea2110beccd",
-    "serverInstructionsSha256": "48c229052371281aab46a556658f84d1c8a2871761f618f8c05bf13b193f13b2",
+    "catalogSha256": "3bd0ea678c1f00cb3ee80e001dd68ed9bbf6659ff4260a18f8904068b7e87c2e",
+    "serverInstructionsSha256": "54f30d02852e5fab0b6deb56cf92b7d55714bb6c7abf9268572375b44fc4ce28",
     "guides": {
       "data-model": {
         "title": "Hue data model",
@@ -1789,7 +1790,7 @@
       },
       "production": {
         "title": "Read production traces with Hue",
-        "sha256": "08ee91fc738b026bd5788d50f94c87d0440248ffc476f0a254858a1d47b4b84a"
+        "sha256": "966a3b4d3327ed30a0a3271b0847dd285f2f140248872c72faec935f361858e8"
       },
       "investigate": {
         "title": "Investigate a failure with Hue",
@@ -1797,11 +1798,11 @@
       },
       "author": {
         "title": "Author evaluations with Hue",
-        "sha256": "5d2557b699c9519fe52b0bfee1a344fe28dbdfc03abfb4de85d631bcc8b519f8"
+        "sha256": "80073608cd44e91376d239e395b175336e9ff7fed249dcbe1b1e0ccc964caf66"
       },
       "evaluate": {
         "title": "Run your agent against a case",
-        "sha256": "f620f66642f7161ff5ad154d541e8e1e624ddfe1f21ad7c851f3dfd7946213fe"
+        "sha256": "6c2c5a676d51c6613491fdbe6a8417a36e7476659485d48f8fd4de81665b5460"
       }
     },
     "toolsets": {
@@ -1821,6 +1822,7 @@
           "get_trace",
           "get_span",
           "list_sessions",
+          "verify_trace",
           "get_span_content",
           "search_spans",
           "aggregate",
@@ -1832,20 +1834,60 @@
           "search_hue_docs",
           "load_hue_guide"
         ]
-      }
+      },
+      "default": [
+        "observe"
+      ],
+      "catalogTools": [
+        {
+          "name": "search_hue_tools",
+          "title": "Hue: search tools",
+          "access": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "execute_hue_tool",
+          "title": "Hue: call a read tool",
+          "access": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "execute_hue_write_tool",
+          "title": "Hue: call a write tool",
+          "access": "write",
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": true,
+            "idempotentHint": false,
+            "openWorldHint": false
+          }
+        }
+      ]
     },
     "installSnippets": {
       "oauthServerUrl": "https://mcp.hue.run/mcp",
-      "oauthClaudeCodeCli": "claude mcp add --transport http hue https://mcp.hue.run/mcp",
-      "oauthCodexCli": "codex mcp add hue --url https://mcp.hue.run/mcp\ncodex mcp login hue",
-      "claudeCodeProjectJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
-      "claudeCodeCli": "claude mcp add --transport http --scope user hue https://mcp.hue.run/mcp \\\n  --header 'Authorization: Bearer ${HUE_MCP_KEY}'",
+      "oauthServerUrlAll": "https://mcp.hue.run/mcp?toolsets=all",
+      "oauthClaudeCodeCli": "claude mcp add --transport http hue 'https://mcp.hue.run/mcp?toolsets=all'",
+      "oauthCodexCli": "codex mcp add hue --url 'https://mcp.hue.run/mcp?toolsets=all'\ncodex mcp login hue",
+      "oauthCodexToml": "[mcp_servers.hue]\nurl = \"https://mcp.hue.run/mcp\"\nhttp_headers = { \"X-Hue-MCP-Toolsets\" = \"all\" }\nsupports_parallel_tool_calls = true",
+      "claudeCodeProjectJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp?toolsets=all\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
+      "claudeCodeCli": "claude mcp add --transport http --scope user hue 'https://mcp.hue.run/mcp?toolsets=all' \\\n  --header 'Authorization: Bearer ${HUE_MCP_KEY}'",
       "cursorJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"url\": \"https://mcp.hue.run/mcp?toolsets=observe\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${env:HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "cursorDeeplink": "cursor://anysphere.cursor-deeplink/mcp/install?name=hue&config=eyJ1cmwiOiJodHRwczovL21jcC5odWUucnVuL21jcD90b29sc2V0cz1vYnNlcnZlIiwiaGVhZGVycyI6eyJBdXRob3JpemF0aW9uIjoiQmVhcmVyICR7ZW52OkhVRV9NQ1BfS0VZfSJ9fQ==",
-      "codexCli": "codex mcp add hue --url https://mcp.hue.run/mcp --bearer-token-env-var HUE_MCP_KEY",
-      "codexToml": "[mcp_servers.hue]\nurl = \"https://mcp.hue.run/mcp\"\nbearer_token_env_var = \"HUE_MCP_KEY\"",
+      "codexCli": "codex mcp add hue --url 'https://mcp.hue.run/mcp?toolsets=all' --bearer-token-env-var HUE_MCP_KEY",
+      "codexToml": "[mcp_servers.hue]\nurl = \"https://mcp.hue.run/mcp?toolsets=all\"\nbearer_token_env_var = \"HUE_MCP_KEY\"\nsupports_parallel_tool_calls = true",
       "vscodeJson": "{\n  \"servers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${input:hue-mcp-key}\"\n      }\n    }\n  },\n  \"inputs\": [\n    {\n      \"type\": \"promptString\",\n      \"id\": \"hue-mcp-key\",\n      \"description\": \"Hue Read or Read and write API key\",\n      \"password\": true\n    }\n  ]\n}",
-      "copilotCloudJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp?read_only=true&toolsets=observe\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $COPILOT_MCP_HUE_MCP_KEY\"\n      },\n      \"tools\": [\n        \"list_projects\",\n        \"get_project_context\",\n        \"search_traces\",\n        \"get_trace\",\n        \"get_span\",\n        \"list_sessions\",\n        \"get_span_content\",\n        \"search_spans\",\n        \"aggregate\",\n        \"list_trace_checks\",\n        \"get_trace_check_results\",\n        \"get_trace_check_summary\",\n        \"get_intent_summary\",\n        \"list_intent_traces\",\n        \"search_hue_docs\",\n        \"load_hue_guide\"\n      ]\n    }\n  }\n}",
+      "copilotCloudJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp?read_only=true&toolsets=observe\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $COPILOT_MCP_HUE_MCP_KEY\"\n      },\n      \"tools\": [\n        \"list_projects\",\n        \"get_project_context\",\n        \"search_traces\",\n        \"get_trace\",\n        \"get_span\",\n        \"list_sessions\",\n        \"verify_trace\",\n        \"get_span_content\",\n        \"search_spans\",\n        \"aggregate\",\n        \"list_trace_checks\",\n        \"get_trace_check_results\",\n        \"get_trace_check_summary\",\n        \"get_intent_summary\",\n        \"list_intent_traces\",\n        \"search_hue_docs\",\n        \"load_hue_guide\",\n        \"search_hue_tools\",\n        \"execute_hue_tool\"\n      ]\n    }\n  }\n}",
       "windsurfJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"serverUrl\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${env:HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "geminiCli": "gemini mcp add --scope user --transport http hue https://mcp.hue.run/mcp \\\n  --header 'Authorization: Bearer ${HUE_MCP_KEY}'",
       "geminiJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"httpUrl\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",

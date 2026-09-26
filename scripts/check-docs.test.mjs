@@ -100,10 +100,18 @@ test("the MCP guide must keep the sign-in snippets", () => {
 
 test("a tool count that disagrees with the contract fails", () => {
   const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
-    text.replace(/lists \d+ tools/, "lists 0 tools"),
+    text.replace(/\b\d+ tools\b/, "0 tools"),
   ));
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /MCP guide names 0 tools/);
+});
+
+test("the MCP guide must name every catalog tool", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
+    text.replaceAll("execute_hue_write_tool", "the write executor"),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /MCP guide is missing catalog tool execute_hue_write_tool/);
 });
 
 test("the retired key-only MCP statement cannot return", () => {
