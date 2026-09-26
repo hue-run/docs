@@ -121,6 +121,7 @@ const expectedPresetNames = ["Read", "Read and write", "Tracing only"];
 const legacyPresetNames = [
   "Tracing and evaluations",
   "Source capture only",
+  "Source capture (legacy)",
   "Coding agent (read-only)",
   "Coding agent (read + evaluations)",
 ];
@@ -139,6 +140,10 @@ for (const legacy of [
   "skill.md?v=0.2.2",
   "skill.md?v=0.2.3",
   "experiment comparison come later",
+  // Sign in with Hue (OAuth) is released; the key-only statements and unverified client limits are retired.
+  "does not provide an OAuth authorization flow",
+  "does not offer an OAuth authorization flow",
+  "Cursor limits the number of tools",
 ]) {
   if (allPublicText.includes(legacy)) fail(`public content contains retired text: ${legacy}`);
 }
@@ -170,11 +175,28 @@ for (const key of [
   "codexCli",
   "codexToml",
   "cursorJson",
+  "vscodeJson",
   "windsurfJson",
   "geminiCli",
+  "geminiJson",
+  "opencodeJson",
+  "oauthClaudeCodeCli",
+  "oauthCodexCli",
+  "connectPrompt",
+  "verifyPrompt",
 ]) {
-  if (!compactMcpGuide.includes(compact(platform.mcp.installSnippets[key]))) {
+  const snippet = platform.mcp.installSnippets[key];
+  if (typeof snippet !== "string") fail(`platform contract has no ${key} snippet`);
+  else if (!compactMcpGuide.includes(compact(snippet))) {
     fail(`MCP guide does not match the generated ${key} snippet`);
+  }
+}
+// Tool counts quoted as verification output must match the contract: every tool, or the read tools a
+// Read key or connection sees.
+const readToolCount = platform.mcp.tools.filter(({ access }) => access === "read").length;
+for (const [, count] of publicText["agents/mcp-server.mdx"].matchAll(/\b(\d+) tools\b/g)) {
+  if (![platform.mcp.tools.length, readToolCount].includes(Number(count))) {
+    fail(`MCP guide names ${count} tools; the contract has ${platform.mcp.tools.length} tools, ${readToolCount} of them read tools`);
   }
 }
 for (const [variant, status] of Object.entries({
@@ -211,7 +233,7 @@ const requirements = {
   "reference/typescript.mdx": ["Tracing only", "Read and write"],
   "reference/python.mdx": ["Tracing only", "Read and write"],
   "agents/overview.mdx": ["Tracing only", "**Read**", "Read and write"],
-  "agents/mcp-server.mdx": ["**Read**", "Read and write"],
+  "agents/mcp-server.mdx": ["**Read**", "Read and write", "**Settings → Connected apps**"],
   "guides/troubleshooting.mdx": ["Tracing only", "**Read**", "Read and write"],
   "guides/project-keys.mdx": expectedPresetNames.map((name) => `**${name}**`),
   "skill.md": ["Tracing only", "Read and write"],
@@ -327,6 +349,16 @@ for (const [path, text] of Object.entries(publicText)) {
   for (const [block] of text.matchAll(/^\s*```[\s\S]*?^\s*```/gm)) {
     for (const command of ["setup --agent", "resume --agent", "hue claim", "hue setup", "@hue-run/sdk@latest setup"]) {
       if (block.includes(command)) fail(`${path} has a code block with an anonymous setup command: ${command}`);
+    }
+    for (const line of block.replace(/\\\n\s*/g, " ").split("\n")) {
+      // A bare `npx hue` or `bunx hue` resolves an unrelated npm package named `hue`.
+      if (/(^|[\s;&|])(npx|bunx)( -y| --yes)? hue(\s|$)/.test(line)) {
+        fail(`${path} runs the hue CLI without naming @hue-run/sdk: ${line.trim()}`);
+      }
+      // A double-quoted reference is expanded by the shell, so `mcp add` stores the key itself.
+      if (/\bmcp add\b/.test(line) && /"Authorization: Bearer \$/.test(line)) {
+        fail(`${path} double-quotes a key reference in an mcp add command: ${line.trim()}`);
+      }
     }
   }
 }

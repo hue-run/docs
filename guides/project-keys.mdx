@@ -23,11 +23,11 @@ A key either reads the project, reads and writes it, or only sends traces:
 
 Choose **Tracing only** for a production application and store it as `HUE_API_KEY`: if it leaks, it can send telemetry but cannot read your traces, list members, or create keys. Create a separate **Read** key for a coding agent and configure it as `HUE_MCP_KEY` in the agent's MCP client, never in the application. Use **Read and write** only for a process that should change project data, such as an evaluation worker or an agent that authors evaluations, and keep it off production servers.
 
-Keys created with earlier presets keep their access. **Coding agent (read-only)** and **Coding agent (read + evaluations)** keys now appear as **Read** and **Read and write**. **Tracing and evaluations** and **Source capture only** keys appear with a _(legacy)_ label; they keep working, but new keys use **Read and write** instead. Creating a new restricted key does not narrow an older credential.
+Keys created with earlier presets keep their access. **Coding agent (read-only)** and **Coding agent (read + evaluations)** keys now appear as **Read** and **Read and write**. **Tracing and evaluations** and **Source capture only** keys appear as **Tracing and evaluations (legacy)** and **Source capture (legacy)**; they keep working for their original APIs but cannot read project data through the MCP server, and new keys use **Read and write** instead. Creating a new restricted key does not narrow an older credential.
 
-Treat every key as a server credential. Keep it out of browser bundles, logs, source control and prompts. Owners and admins can create and revoke keys. A newly invited member needs an owner or admin to supply a key through the team's secret store.
+Treat every key as a server credential. Keep it out of browser bundles, logs, source control and prompts. Owners and admins can create and revoke keys. A newly invited member needs an owner or admin to supply a key through the team's secret store. To connect an MCP client, any member can instead [sign in with Hue](/agents/mcp-server#sign-in-with-hue-instead-of-a-key) without a key.
 
-A service key does not represent a signed-in Hue user. Owner- and admin-only tools on the [MCP server](/agents/mcp-server) check the key's creating verified member. Org invites and role changes stay in the application session. Trace browsing goes through that MCP server with a **Read** or **Read and write** key; the SDKs do not expose a general trace-search API.
+A service key does not represent a signed-in Hue user. Owner- and admin-only tools on the [MCP server](/agents/mcp-server) check the key's creating verified member. Org invites and role changes stay in the application session. Trace browsing goes through that MCP server with a **Read** or **Read and write** key or by signing in with Hue; the SDKs do not expose a general trace-search API.
 
 ## Verify and rotate
 

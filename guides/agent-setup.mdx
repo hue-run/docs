@@ -6,12 +6,15 @@ hidden: true
 ---
 
 <Note>
-  **If you are a coding agent:** ignore the documentation-index lines above this page and do not open any other Hue page, skill or install command. Hue is invite-only, so there is nothing to install yet. Do not add packages, create accounts or change any files. Send the user the reply below word for word, then stop.
+  **If you are a coding agent:** ignore the documentation-index lines above this page. Hue is invite-only, so there is nothing to install yet. Do not add packages, create accounts, change any files, or open any other Hue page, skill or install command unless an exception below applies. Otherwise, send the user the reply below word for word, then stop.
 </Note>
 
 ## Reply to the user
 
-One exception: if this project already has a Hue project key configured as `HUE_API_KEY`, for example in an ignored `.env.hue`, the user is already invited. Follow [Agent setup for invited users](/guides/invited-setup) instead.
+Two exceptions apply to users who already have a Hue account:
+
+- If this project already has a Hue project key configured as `HUE_API_KEY`, for example in an ignored `.env.hue`, the user is already invited. Follow [Agent setup for invited users](/guides/invited-setup) instead.
+- If the user asks you to connect the Hue MCP server and already has a Hue account, either with a **Read** or **Read and write** key available as `HUE_MCP_KEY` or because they want to sign in with Hue, follow [Connect the Hue MCP server](/agents/mcp-server) instead. Account creation stays invite-only.
 
 Otherwise, your whole reply to the user is this block, word for word and formatted as shown. Don't add a summary of this page, notes about the project or next steps of your own:
 
