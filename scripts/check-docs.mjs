@@ -186,6 +186,7 @@ for (const key of [
   "cursorJson",
   "oauthClaudeCodeCli",
   "oauthCodexCli",
+  "oauthCodexToml",
   "connectPrompt",
   "verifyPrompt",
 ]) {
@@ -206,7 +207,17 @@ const defaultListed = platform.mcp.tools.filter(({ name, toolset }) =>
 const defaultCount = defaultListed.length + catalogTools.length;
 const defaultReadCount =
   defaultListed.filter(({ access }) => access === "read").length + catalogTools.filter(({ access }) => access === "read").length;
+// A count stated for an access level must be that level's count; any other count must be one of them.
 const toolCounts = [platform.mcp.tools.length, readToolCount, defaultCount, defaultReadCount];
+const describedCounts = [
+  [/\b(\d+) tools with write access\b/g, defaultCount, "the default listing with write access"],
+  [/\b(\d+) tools with \*\*Read\*\* access\b/g, defaultReadCount, "the default listing with Read access"],
+];
+for (const [pattern, expected, description] of describedCounts) {
+  for (const [, count] of publicText["agents/mcp-server.mdx"].matchAll(pattern)) {
+    if (Number(count) !== expected) fail(`MCP guide names ${count} tools for ${description}; the contract has ${expected}`);
+  }
+}
 for (const [, count] of publicText["agents/mcp-server.mdx"].matchAll(/\b(\d+) tools\b/g)) {
   if (!toolCounts.includes(Number(count))) {
     fail(

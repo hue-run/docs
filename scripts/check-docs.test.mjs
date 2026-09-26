@@ -106,6 +106,14 @@ test("a tool count that disagrees with the contract fails", () => {
   assert.match(result.stderr, /MCP guide names 0 tools/);
 });
 
+test("a tool count stated for write access must be that listing's count", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
+    text.replace(/\b\d+ tools with write access\b/, "19 tools with write access"),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /MCP guide names 19 tools for the default listing with write access; the contract has \d+/);
+});
+
 test("the MCP guide must name every catalog tool", () => {
   const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
     text.replaceAll("execute_hue_write_tool", "the write executor"),
