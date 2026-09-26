@@ -128,7 +128,7 @@ Start with **Any MCP client** for the connection settings, or choose your client
       {
         "mcpServers": {
           "hue": {
-            "url": "https://mcp.hue.run/mcp",
+            "url": "https://mcp.hue.run/mcp?toolsets=observe",
             "headers": {
               "Authorization": "Bearer ${env:HUE_MCP_KEY}"
             }
@@ -139,7 +139,7 @@ Start with **Any MCP client** for the connection settings, or choose your client
 
       Cursor loads a new server only after you approve it: turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue` with the Cursor CLI. Check that `HUE_MCP_KEY` holds the key you intend before you approve.
 
-      **Verify:** `cursor-agent mcp list` shows `hue: ready`, and `cursor-agent mcp list-tools hue` lists 93 tools for a **Read and write** key or 47 tools for a **Read** key.
+      **Verify:** `cursor-agent mcp list` shows `hue: ready`, and `cursor-agent mcp list-tools hue` lists the `observe` profile: project discovery, traces, trace checks, intents and documentation reads. To load the full catalog, change the URL to `?toolsets=all`, which lists 93 tools for a **Read and write** key or 47 tools for a **Read** key.
 
       <Accordion title="If the Cursor check fails">
         The approval covers the expanded header, so Cursor asks again whenever `HUE_MCP_KEY` changes or becomes unset. If `HUE_MCP_KEY` is unset, Cursor sends the unexpanded reference without a warning, and Hue refuses it. For a key Hue refuses with `401`, Cursor shows only `requires_authentication` and suggests `agent mcp login hue`. Don't run it; run the [curl check](#verify-the-connection) to see Hue's reason.
@@ -224,7 +224,13 @@ A successful check names the intended project and returns that project's trace t
 
 `list_projects` returns the active projects this connection can reach, in pages of up to 100. Follow `next_cursor` until it is `null` to see them all. An organization connection must pass a returned UUID as `project_id` on every other tool call, including `get_project_context`, `search_traces` and `get_trace`. A project key or earlier project connection returns only its project and keeps its existing tool arguments without `project_id`.
 
-`get_project_context` returns the selected project and what the credential can do. `can_write` is `true` when write tools are available; `read_only` reports only the `?read_only=true` URL flag, so a **Read** key shows `read_only: false` together with `can_write: false`, and `write_preset` names the access that writing needs, not the access you have. If it reports a different project than you expected, check the selected `project_id`, the project where the key was created, or the original project of an earlier sign-in connection.
+`get_project_context` returns the selected project and what the credential can do. `can_write` reports the credential’s write capability before toolset filtering; `read_only` reports only the `?read_only=true` URL flag, so a **Read** key shows `read_only: false` together with `can_write: false`, and `write_preset` names the access that writing needs, not the access you have. If it reports a different project than you expected, check the selected `project_id`, the project where the key was created, or the original project of an earlier sign-in connection. `toolsets` reports the selected groups or profiles and any ignored names.
+
+<Accordion title="Choose which tools to load">
+  A project-key connection can add `?toolsets=observe` to load production reads, including `list_projects`, trace checks, intents and documentation. Select groups with `?toolsets=traces,intents`, or send `X-Hue-MCP-Toolsets: observe` in clients that support custom headers. Groups are `project`, `traces`, `evals`, `environments`, `intents` and `docs`; `all` loads the full catalog. Recognized selections combine. Unknown names are reported by `get_project_context`; a request containing only unknown names falls back to the full catalog.
+
+  Leave the browser sign-in URL as `https://mcp.hue.run/mcp` without `toolsets`. A client that supports custom headers can select tools with `X-Hue-MCP-Toolsets` after sign-in. Tool selection does not change the approval or credential permissions. `list_projects` and `get_project_context` remain available, and an organization connection still supplies `project_id` after discovery.
+</Accordion>
 
 To check a key without an MCP client, send one tool call from a shell where `HUE_MCP_KEY` is exported. This is the check to use when a client shows only a short status, and the non-interactive check for a coding agent. It proves the key, not the client's configuration:
 
@@ -264,7 +270,7 @@ For key-based connections, the [curl check](#verify-the-connection) shows Hue's 
 | The client reports `invalid HTTP header` | The stored key ends with a newline | Store the key without a trailing newline. |
 | Cursor shows `not loaded (needs approval)` or `has not been approved` | Cursor has not approved the server, or `HUE_MCP_KEY` changed or became unset since you approved it | Check that `HUE_MCP_KEY` is exported and holds the key you intend, then turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue`. Cursor asks again after every change. |
 | A client you connected by signing in shows **Needs authentication** or `The hue MCP server is not logged in` | The approval ended: 30 days passed, someone disconnected it in **Settings → Connected apps**, you reset your password or signed out everywhere, or you left the organization. An earlier project-scoped approval also ends if its project is archived | Use your client’s authentication action to sign in again: `/mcp` → **Authenticate** in Claude Code or `codex mcp login hue` in Codex. For Cursor, use the project-key instructions in its tab until native sign-in is supported. |
-| A tool call fails as an unknown tool | Write tools are hidden for **Read** access and for a URL with `?read_only=true`; [retired tool names](#retired-tool-names) are no longer served; a tool described in a development branch is not available until its platform release is deployed | Use a **Read and write** key without `?read_only=true`, reconnect an earlier **Read** sign-in connection if organization-wide writes are intended, or call the current tool name. Use the tools your connection's `tools/list` returns; an unknown tool is not evidence that the client should broaden its permissions. |
+| A tool call fails as an unknown tool | A toolset selection can omit it; write tools are hidden for **Read** access and for a URL with `?read_only=true`; [retired tool names](#retired-tool-names) are no longer served; a tool described in a development branch is not available until its platform release is deployed | Check `get_project_context` for the toolset selection; select `all` to load the full authorized catalog. For writes, use a **Read and write** key without `?read_only=true` or reconnect an earlier **Read** sign-in connection if organization-wide writes are intended. Use current tool names. Use the tools your connection's `tools/list` returns; an unknown tool is not evidence that the client should broaden its permissions. |
 
 See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent) for tracing problems that are not specific to MCP.
 
@@ -318,7 +324,7 @@ For production questions (what needs attention, which tools fail, which task typ
     `list_api_keys` and `list_members` are reads. `add_api_key`, `revoke_api_key` and `update_project` require an owner or admin, and a connected app cannot call `add_api_key`. `update_project` changes the name, the description and the `trace_findings`, `ai_trace_findings` and `ai_intent_classification` settings; see [production safety](/guides/production-safety) for what the AI settings send. Wherever a tool requires an owner or admin, Hue checks the current role of the key's creator or of the member who signed in. Minted tokens appear once. Billing and plan changes are not on this server.
   </Accordion>
   <Accordion title="Look things up">
-    "How do I flush spans in a Next.js streaming route?" Tools: `search_hue_docs`, `load_hue_guide` (`data-model`, `investigate`, `author`, `evaluate`).
+    "How do I flush spans in a Next.js streaming route?" Tools: `search_hue_docs`, `load_hue_guide` (`data-model`, `production`, `investigate`, `author`, `evaluate`).
   </Accordion>
 </AccordionGroup>
 

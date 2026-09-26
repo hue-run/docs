@@ -4,9 +4,9 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "8571c08ab7b816581044715e5aba4666100c1a6e",
+      "commit": "fb5f146aa0484fc640775b1e3e1f6d282b4898cc",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:28eacfde1cb9b807be093a96358d244cc8b7b191667c50a98d2423f766e0c857"
+      "sha256": "sha256:dd106fbba775b422f544dbbad70c572261056218dbda3beb840d627ab098b0b0"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
@@ -182,7 +182,7 @@
       "search_hue_docs",
       "load_hue_guide"
     ],
-    "catalogSha256": "c3544fd965f1085b73c5287e879e65dcba6abdff5e3decdb361ce726345e39bf"
+    "catalogSha256": "897393f87d9bbbf2903679534330b58c861a230ac9a412072cd2d7161457a9c0"
   },
   "pages": [
     "index",

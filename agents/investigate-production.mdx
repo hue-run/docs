@@ -193,14 +193,16 @@ Langfuse metadata (`langfuse.observation.metadata.*`, `langfuse.trace.metadata.*
 | --- | --- |
 | Time windows | `since` and `until` take ISO-8601 or relative values from `15m` to `90d`. A window spans at most 90 days. `get_trace_check_summary` defaults to the last 7 days. |
 | Page sizes | `search_traces`, `list_sessions` and `list_intent_traces` return up to 50 rows (25 by default for the first two). `get_trace_check_results` and most list tools return up to 100. Pass `next_cursor` back unchanged as `cursor`. |
-| Spans per `get_trace` call | `max_spans` from 1 to 500, 200 by default; pass `next_span_cursor` back as `span_cursor`. A trace that changes between pages answers `conflict`; start again without the cursor. |
-| Result size | `max_chars` from 1,000 to 200,000, 24,000 by default. A result that does not fit is shortened and says `truncated: true` with a `hint`. |
+| Spans per `get_trace` call | `max_spans` from 1 to 500, 200 by default. A page can contain fewer spans to fit `max_chars`; pass `next_span_cursor` back as `span_cursor`. A trace that changes between pages answers `conflict`; start again without the cursor. |
+| Result size | `max_chars` defaults to 24,000 and accepts 1,000 to 200,000; values above 80,000 are treated as 80,000. `get_trace` and `get_eval_set` page rows that exceed the budget; `omitted_count` reports rows held for a later page. Shortened content says `truncated: true` with a `hint`. |
 | Counts | `total_count` counts up to 10,000 traces; beyond that `total_count_capped` is `true`. |
 | Query time | A `search_traces` query has a 2-second budget; a slower one fails with `timeout`. |
 | Request size | 1 MiB. |
 | Text caps | Titles and names are capped at 200 characters, session keys at 128 and status messages at 200. |
 
-A tool that fails returns an MCP error result (`isError: true`) whose text starts with a code, then the message and sometimes a hint, for example `timeout: The query exceeded its time budget. Narrow the window …`.
+Trace, span-tree and session list rows omit null and empty fields. When rows share a page URL, the response can provide `<list>_url_template` instead of a link per row; replace `{id}` with the row’s `id`.
+
+A tool that fails returns an MCP error result (`isError: true`) whose text starts with a code, then the message and sometimes a hint, for example `timeout: The query exceeded its time budget. Narrow the window …`. `_meta["hue.run/error"]` carries `code`, `message`, `retryable` and, when present, `hint` and `retry_after_ms`. Invalid arguments identify the bad fields and accepted arguments; use the schema returned by `tools/list`.
 
 | Code | Meaning | Retry? |
 | --- | --- | --- |
