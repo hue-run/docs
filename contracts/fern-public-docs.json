@@ -581,7 +581,7 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.10.0"
+      "version": "0.11.0"
     },
     "python": {
       "name": "hue-run",
@@ -1780,7 +1780,7 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "894bcd3b2a863b6c838dd408d478b947c5932491a2f145a1f541fbd95c387440",
+    "catalogSha256": "44dcb762c78007b4bd02c24d110115eee16d17aa6d761fd8e2674ea2110beccd",
     "serverInstructionsSha256": "48c229052371281aab46a556658f84d1c8a2871761f618f8c05bf13b193f13b2",
     "guides": {
       "data-model": {

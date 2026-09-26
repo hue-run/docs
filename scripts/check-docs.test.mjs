@@ -30,6 +30,19 @@ function changeSources(directory, change) {
   writeFileSync(path, `${JSON.stringify(sources, null, 2)}\n`);
 }
 
+/** The repository's skill override, or one that mirrors the SDK snapshot's own skill. */
+function ensureOverride(directory, sources) {
+  if (sources.skillOverride) return sources.skillOverride;
+  const sdk = JSON.parse(readFileSync(resolve(directory, "contracts/sdk-docs.json"), "utf8"));
+  const { commit, repository } = sources.sources.sdk;
+  sources.skillOverride = {
+    base: { commit, source: sdk.skill.source, sha256: sdk.skill.sha256 },
+    source: { repository, commit, skill: sdk.skill },
+    sha256: sdk.skill.sha256,
+  };
+  return sources.skillOverride;
+}
+
 function changePage(directory, page, change) {
   const path = resolve(directory, page);
   const before = readFileSync(path, "utf8");
@@ -49,12 +62,12 @@ test("a modified skill body cannot reuse the producer digest", () => {
     writeFileSync(path, `${readFileSync(path, "utf8")}\nUnrecorded skill change.\n`);
   });
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /differs from the later SDK-owned skill source/);
+  assert.match(result.stderr, /differs from the (later )?SDK-owned skill source/);
 });
 
 test("a skill override does not survive a changed package snapshot", () => {
   const result = checkSnapshot((directory) => changeSources(directory, (sources) => {
-    sources.skillOverride.base.commit = "0".repeat(40);
+    ensureOverride(directory, sources).base.commit = "0".repeat(40);
   }));
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /must be the pinned SDK snapshot commit/);
@@ -62,7 +75,7 @@ test("a skill override does not survive a changed package snapshot", () => {
 
 test("a complete skill override must come from the SDK repository", () => {
   const result = checkSnapshot((directory) => changeSources(directory, (sources) => {
-    sources.skillOverride.source.repository = "https://example.test/unrelated";
+    ensureOverride(directory, sources).source.repository = "https://example.test/unrelated";
   }));
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /must identify a full hue-sdk commit/);
@@ -103,7 +116,7 @@ test("the retired key-only MCP statement cannot return", () => {
 
 test("a bare npx hue command in a code block fails", () => {
   const result = checkSnapshot((directory) => changePage(directory, "sdks/cli.mdx", (text) =>
-    text.replace("npx --yes --package @hue-run/sdk@0.10.0 hue login --gitignore", "npx hue login --gitignore"),
+    text.replace(/npx --yes --package @hue-run\/sdk@\d+\.\d+\.\d+ hue login --gitignore/, "npx hue login --gitignore"),
   ));
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /sdks\/cli\.mdx runs the hue CLI without naming @hue-run\/sdk: npx hue login --gitignore/);
