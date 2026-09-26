@@ -88,6 +88,6 @@ The user restarts the client to load the server, so finish with one message that
 
 1. Your summary, in the form of the skill's **Handoff**. You have just configured the MCP server, so leave out the handoff's offer to connect it.
 2. How to restart the client with the key. Load the key into the shell that starts the client, for example with `set -a; . ./.env.hue; set +a` for the env file the key is in, or start the client through the secret manager's runner. Then restart it from that shell: `claude --continue` for Claude Code, approving the `hue` server when asked; `codex resume --last` for Codex; or quit Cursor, reopen it with `cursor .` and turn on **hue** in its MCP settings. Restart any other client from that shell.
-3. The prompt to send after the restart: `Use the Hue MCP: call get_project_context, then show my 5 most recent error traces with links.`
+3. The prompt to send after the restart: `Use the Hue MCP: call list_projects and confirm which project to inspect. Then call get_project_context and show its 5 most recent error traces with links. For an organization connection, pass the project's id as project_id on each call after list_projects.`
 4. What they can ask next, for example "What needs attention in the last 24 hours, and why?". [Investigate production](/agents/investigate-production) has the tool sequences for those questions.
 5. Optionally, that they can keep the Hue skill in the project with `npx skills add hue-run/hue-sdk --skill hue`.
