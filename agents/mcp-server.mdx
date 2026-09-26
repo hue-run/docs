@@ -310,11 +310,22 @@ For production questions (what needs attention, which tools fail, which task typ
     `list_api_keys` and `list_members` are reads. `add_api_key`, `revoke_api_key` and `update_project` require an owner or admin, and a connected app cannot call `add_api_key`. `update_project` changes the name, the description and the `trace_findings`, `ai_trace_findings` and `ai_intent_classification` settings; see [production safety](/guides/production-safety) for what the AI settings send. Wherever a tool requires an owner or admin, Hue checks the current role of the key's creator or of the member who signed in. Minted tokens appear once. Billing and plan changes are not on this server.
   </Accordion>
   <Accordion title="Look things up">
-    "How do I flush spans in a Next.js streaming route?" Tools: `search_hue_docs`, `load_hue_guide` (`data-model`, `investigate`, `author`, `evaluate`).
+    "How do I flush spans in a Next.js streaming route?" Tools: `search_hue_docs`, `load_hue_guide` (`data-model`, `investigate`, `production`, `author`, `evaluate`).
   </Accordion>
 </AccordionGroup>
 
 Every `trace_id` argument accepts a Hue id, the 32-hex OpenTelemetry trace id or a Hue trace link. Time windows accept ISO-8601 or relative values such as `15m`, `24h` or `7d` (up to 90 days). Results are paginated with opaque cursors and bounded by `max_chars`; truncated results say so and suggest a narrower request. Draft writes take `expected_revision` from `get_eval_set`, trace-check writes from `get_trace_checks`, and case-conversion writes from `get_case_conversion`. The [limits and error codes](/agents/investigate-production#limits-and-errors) apply to every tool.
+
+## Choose toolsets
+
+A client can list a subset of the tools. Select toolsets with `?toolsets=<names>` on a key-based URL, or with the `X-Hue-MCP-Toolsets: <names>` header for a client that cannot change its URL; together they select their union. Without either, the server lists every tool.
+
+- `observe` lists the production reads: `get_project_context`, `search_traces`, `get_trace`, `get_span`, `list_sessions`, `list_trace_checks`, `get_trace_check_results`, `get_trace_check_summary`, `get_intent_summary`, `list_intent_traces`, `search_hue_docs` and `load_hue_guide`. Use it for Cursor and any client with a tool-count limit, and for an agent that only [investigates production](/agents/investigate-production).
+- `all` lists everything, and the groups `project`, `traces`, `evals`, `environments`, `intents` and `docs` list one area each. Separate several names with commas.
+
+`get_project_context` is always listed and reports the selection as `toolsets`: the names applied, any it ignored and the names available. An unknown name never fails a request; a selection with only unknown names lists every tool. **Read** access and `?read_only=true` still apply inside a selection.
+
+With sign-in, never add `toolsets` or `read_only` to the URL: neither is part of the connection's identity, so the client's sign-in can fail. Send the header instead, or select nothing.
 
 ## Content and safety
 
