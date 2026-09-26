@@ -10,9 +10,9 @@
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "1d0e7607de9c7770b10c2f59f7d4bf60b37719a3",
+      "commit": "97da259cdeeafc03e2a21d0f875fc1e7924ee962",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:7c3df1170e8db962cff59e9cc113aae99d95c5f4c5ec51787a09d0c9a03361e7"
+      "sha256": "sha256:250a3f886c88b82a0a900481fd9c9349173b2f59853f697db7d192efa308aab4"
     }
   },
   "site": {
@@ -53,7 +53,7 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.10.0",
+      "version": "0.11.0",
       "entrypoints": [
         "@hue-run/sdk",
         "@hue-run/sdk/ai-sdk",
@@ -75,14 +75,8 @@
   },
   "skill": {
     "version": "0.5.4",
-    "sha256": "sha256:af91aff59379c458596cebe075bd6cf1f15ca7fd3dba8a8ddda0757207d79435",
-    "sdkSourceSha256": "sha256:a1952f05fddf5000fefedde733361c5b055a9d584a3792c2bd1486e1291c8d83",
-    "override": {
-      "baseCommit": "1d0e7607de9c7770b10c2f59f7d4bf60b37719a3",
-      "sourceCommit": "3a17f119389f1712cf79a820e87cf12363c3f2c7",
-      "source": "skills/hue/SKILL.md",
-      "sourceSha256": "sha256:58a628ff1fe48200311d08691a6273bd3f26c50553ce72b79288270d75731b29"
-    }
+    "sha256": "sha256:b06929ca250db4f25e736064633d812b825f9b74d51314ceb92930fa528807b0",
+    "sdkSourceSha256": "sha256:70b6e6327aab938ec21b4846aaab179e0d41fa3eca8cf1cc87255571a0675ce6"
   },
   "mcp": {
     "transport": "Streamable HTTP",

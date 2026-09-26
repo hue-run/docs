@@ -1,9 +1,9 @@
 ---
 title: "TypeScript API reference"
-description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.10.0."
+description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.11.0."
 ---
 
-This reference covers `@hue-run/sdk` **0.10.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+This reference covers `@hue-run/sdk` **0.11.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -394,8 +394,11 @@ Use these product-named methods in new code. They call the same v1 endpoints as 
 | Local code | `kind: "local_code"`, `language: "typescript"` or `"python"`, `entrypoint`, `sourceDigest`, `metrics`. `defineLocalScorer` creates the TypeScript declaration and binds the callback. |
 | Manual | `kind: "manual"`, `metrics`. Completion requires the platform's human workflow. |
 | Hosted judge | `kind: "llm_judge"`, `metrics`, `config`. Hosted dispatch is separate from a local run. |
+| Hue-executed outcome | `kind: "world_outcome"`, `entry` (`hue.conversion_outcome.v2`, `hue.outcome_assertions.v2` or `hue.outcome_assertions.v3`) and the `metrics` the entry fixes, which are filled in when omitted. A `hue.outcome_assertions.v3` version also pins its judge in `config.judge`. Hue scores these after the world seals; the local runner defers them. |
 
 Each `MetricDefinition` has a `name` and `type`: `boolean`, `text`, `number` (optional `min`/`max`), or `category` (required `categories: string[]`). Returned metrics must match the pinned definitions exactly.
+
+An `OutcomeJudgeConfig` pins a `hue.outcome_assertions.v3` judge: `model` (provider-prefixed), `provider`, `template` (the SHA-256 of the judge template), `samples` (1–9, majority decides), `temperature` (0–2), `maxOutputTokens` and `timeoutMs`.
 
 Hosted `config` is a `JudgeConfig` with required `model`, `provider`, `rubric`, `bindings` (an array of `{ name, path, required }`), `maxOutputTokens` and `timeoutMs`; `temperature` is optional. A declaration identifies the requested evaluation policy; the server validates supported values and project execution settings when it is used.
 
