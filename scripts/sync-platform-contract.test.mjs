@@ -118,10 +118,12 @@ test("an undeployed pin proceeds when production cannot be read; an ordinary syn
 });
 
 test("--check reports drift from production and takes no named commit", async () => {
-  await inCopy(async ({ run, messages }) => {
-    assert.equal(await run(["--check"], { served: async () => commit }), 0);
-    assert.equal(await run(["--check"], { served: async () => later }), 1);
-    assert.match(messages.at(-1), /but production serves b{40}/);
+  await inCopy(async ({ run, files, messages }) => {
+    const pinned = JSON.parse(files()["contracts/sources.json"]).sources.platform.commit;
+    const other = pinned === later ? "a".repeat(40) : later;
+    assert.equal(await run(["--check"], { served: async () => pinned }), 0);
+    assert.equal(await run(["--check"], { served: async () => other }), 1);
+    assert.ok(messages.at(-1).includes(`but production serves ${other}`));
     assert.equal(await run(["--check", "--commit", commit], { served: async () => commit }), 2);
     assert.equal(await run(["--undeployed"], { served: async () => commit }), 2);
   });
