@@ -231,6 +231,8 @@ AI SDK per-call integrations replace the global integrations for that call. If y
 
 ## Content policy
 
+See [redact sensitive trace content](/guides/redaction) for runnable email-masking examples and the correct attachment point for each integration.
+
 - `captureContent: false` disables Hue helper content and removes recognized GenAI, Vercel AI SDK, OpenInference and OpenLLMetry content, legacy GenAI content events, log bodies, status messages and exception text before Hue exports records, including records from other instrumentations on a shared provider. The exported `contentPrefixes` array lists the attribute keys, and their dotted children, that are removed; the [compatibility matrix](/sdks/compatibility) reproduces it. It does not classify every custom attribute name.
 - `captureContent: true` permits supplied content. Received content is stored by Hue; the SDK does not set a retention timer. Helpers still omit exception messages and stack traces.
 - With `captureContent: false`, a record whose tool definitions are removed keeps a summary of them: `hue.tool.names` lists each definition's `name` (Chat Completions `function.name`, or the `type` of an unnamed built-in tool such as `mcp`) in order, and `hue.tool.definitions.sha256` is the lowercase hex SHA-256 of the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical JSON of the credential-scrubbed definition list. The digest does not change when a credential rotates. Only definitions another integration recorded can be summarized: `hueTelemetry(hue)` with `captureContent: false` records none.

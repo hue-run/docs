@@ -57,7 +57,8 @@
         "pages": [
           "guides/project-keys",
           "guides/troubleshooting",
-          "guides/production-safety"
+          "guides/production-safety",
+          "guides/redaction"
         ]
       },
       {

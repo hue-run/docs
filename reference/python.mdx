@@ -108,6 +108,8 @@ Choose logs or span attributes for the same content event to avoid duplicate sto
 
 ## Content policy
 
+See [redact sensitive trace content](/guides/redaction) for runnable email-masking examples and the correct attachment point for each integration.
+
 `capture_content=False` omits input/output content from Hue's helpers **before it enters an OpenTelemetry queue** and, at export, strips recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes, legacy `gen_ai.*` message events, log bodies and status descriptions from every record on Hue's export path, including spans from third-party instrumentors on a borrowed provider. The key list is identical to TypeScript's `contentPrefixes` and is reproduced in the [compatibility matrix](/sdks/compatibility). `True` permits that content. The policy does not classify arbitrary attribute names, span names, session identifiers or another exporter's records; unrecognized custom keys pass through. Configure an external instrumentor's own content policy before enabling it.
 
 When content is captured, export replaces hosted-tool credentials (such as `authorization`, `authorization_token`, `headers` and `api_key`) in recorded tool definitions and in the `tools` and `mcp_servers` entries of recorded raw requests with `"[redacted]"`, and exports a `blob` or `file` message part over 64 KiB as its `sha256` and `size` instead of its payload; a message attribute over 8 MiB is dropped by the snapshot budget instead. When `capture_content=False` removes tool definitions, the record keeps `hue.tool.names` and `hue.tool.definitions.sha256`. The [compatibility matrix](/sdks/compatibility) lists the exact fields.

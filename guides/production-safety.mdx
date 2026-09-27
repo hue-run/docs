@@ -103,13 +103,13 @@ Before rollout, test your real entry point against a loopback receiver that retu
 
 ## Capture, titles and retention
 
-Set `HUE_CAPTURE_CONTENT=true` in the serving environment. Hue can only show and evaluate what a trace records, so capturing prompts, responses and tool inputs and outputs alongside model, usage, timing and errors is the recommended setting. The snippets treat any other value, including an unset variable, as `false` and send metadata only. Choose `false` when your team would rather not send that content, or when an application or data policy forbids sending it to another service. Content capture does not turn off your redactor or Hue's credential scrubbing.
+Set `HUE_CAPTURE_CONTENT=true` in the serving environment. Hue can only show and evaluate what a trace records, so capturing prompts, responses and tool inputs and outputs alongside model, usage, timing and errors is the recommended setting. The snippets treat any other value, including an unset variable, as `false` and send metadata only. Choose `false` when your team would rather not send that content, or when an application or data policy forbids sending it to another service. Content capture does not turn off your redactor or Hue's credential scrubbing. Use the [redaction recipe](/guides/redaction) to mask email addresses and add your own field rules before supported content leaves your application.
 
 In metadata-only mode, both SDKs strip recognized third-party content attributes on Hue's export path, but unrecognized custom keys pass through, so configure third-party instrumentors' own capture controls to match your choice. Custom names and arbitrary attributes are application-controlled.
 
 Hue names each trace from its own recorded request text, or from a trace name the producer set, inside Hue. Naming sends nothing to a model provider and needs no setting.
 
-Telemetry does not expire automatically in the pilot. Agree a retention and deletion process with Hue before sending sensitive content; archiving a project does not delete its data. Project quotas provide admission protection, not a storage-retention policy.
+Telemetry retention is configured per project with Hue. Projects with a retention policy have eligible older traces and their telemetry removed by a periodic sweep; without a policy, telemetry does not expire automatically. Confirm your project’s retention period and deletion process with Hue. Saved snapshots retain their own evidence after the original trace expires and need separate deletion handling. Archiving a project does not delete its data. Project quotas provide admission protection, not a storage-retention policy.
 
 ## What Hue computes from your traces
 

@@ -1,0 +1,174 @@
+---
+title: "Redact sensitive trace content"
+description: "Mask email addresses and apply your own content policy before supported trace data leaves your application."
+---
+
+Keep useful prompts, responses and tool evidence while removing information you do not want to send to Hue. You supply a synchronous redaction callback; Hue applies it locally to the supported content below. The SDK does not include a general PII detector or email-masking preset.
+
+Start with the email example, then adapt it to your application's data. Pattern matching catches common email addresses, not every address format, encoded value or category of personal information. Keep opaque user and session IDs for grouping; avoid using an email address as an identifier. Redaction affects future exports, not data already stored.
+
+## Choose the attachment point
+
+| Integration | Where to configure the callback | What it covers |
+| --- | --- | --- |
+| TypeScript Hue helpers | `createHue({ redact, ... })` | Supported string values on Hue's export path, including span/resource attributes, event/link attributes, status descriptions and log bodies. |
+| TypeScript with an existing provider | `createHueTransport({ redact, ... })` | The same filtering for records sent through that transport, including third-party instrumentation. |
+| Python Hue helpers | `Hue(redactor=..., ...)` | Helper input/output, tool and inference-log content before serialization, plus supported helper text fields. It does not rewrite arbitrary external OpenTelemetry records. |
+| A standard OTLP exporter without a Hue SDK | Your instrumentation or collector | Hue SDK callbacks do not run on this path. |
+
+Callbacks do not cover every OpenTelemetry field. Keep sensitive information out of span and event names, attribute keys and instrumentation names. Python user/session metadata and custom attributes also need your own producer-side policy. See the complete [TypeScript](/reference/typescript#content-policy) and [Python](/reference/python#content-policy) contracts.
+
+## TypeScript: mask email addresses
+
+[Install the SDK](/installation#typescript) and set `HUE_API_KEY` to a **Tracing only** project key in your server environment. Save this reusable callback as `redaction.ts`:
+
+```ts
+export function redactEmails(value: string, _path: string): string {
+  return value.replace(
+    /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
+    "[EMAIL]",
+  );
+}
+```
+
+Save this diagnostic example alongside it as `trace.ts` in a package whose `package.json` contains `"type": "module"`, then run `node trace.ts` on Node 24. It makes no model or email-provider calls.
+
+```ts
+import assert from "node:assert/strict";
+import { createHue } from "@hue-run/sdk";
+import { redactEmails } from "./redaction.ts";
+
+const hue = createHue({
+  apiKey: process.env.HUE_API_KEY,
+  serviceName: "redaction-demo",
+  captureContent: true,
+  redact: redactEmails,
+});
+const input = {
+  messages: [{ role: "user", content: "Find mail from alex@example.com" }],
+  limit: 3,
+};
+
+try {
+  const result = await hue.withSpan("mail.lookup", async (span) => {
+    const output = await hue.tool("lookup_contact", { email: "alex@example.com" }, () => ({
+      contact: { email: "alex@example.com" },
+      count: 1,
+    }));
+    span.setOutput(output);
+    return output;
+  }, { input, userId: "user_123", sessionId: "session_456" });
+
+  // The callback changes telemetry, not the application's data.
+  assert.equal(result.contact.email, "alex@example.com");
+  assert.equal(input.messages[0].content, "Find mail from alex@example.com");
+  await hue.flush();
+} finally {
+  await hue.shutdownSafe();
+}
+```
+
+In Hue, captured input and output contain `[EMAIL]`; `user_123`, `session_456`, counts, timing and trace/span IDs remain available. Replacing every address with one marker loses recipient distinctions. If your evaluations need to compare recipients, use stable aliases generated under your application's policy instead.
+
+### Use the same callback with an existing provider
+
+Put the callback on the **transport** when supplying a transport to `createHue`. Add Hue's processors to the provider your application already constructs; keep its other processors, resources, sampling and registration. For example, extend the existing bootstrap as follows:
+
+```diff
++ import { createHueTransport } from "@hue-run/sdk";
++ import { redactEmails } from "./redaction.ts";
+
++ const hueTransport = createHueTransport({
++   apiKey: process.env.HUE_API_KEY,
++   serviceName: "my-agent",
++   captureContent: true,
++   redact: redactEmails,
++ });
+  const provider = new TracerProvider({
+    resource,
+    spanProcessors: [
+      existingProcessor,
++     hueTransport.spanProcessor,
+    ],
+  });
+```
+
+`provider`, `resource` and `existingProcessor` represent your existing setup. If you also export logs, add `hueTransport.logRecordProcessor` to your existing logger provider. Follow the [complete OpenTelemetry setup](/integrations/opentelemetry#attach-hue-transport-to-javascript-providers) for lifecycle handling and [production safety](/guides/production-safety) for fail-open initialization.
+
+Each exporter needs its own policy. A Langfuse `mask` callback does not automatically scrub Hue's copy, and Hue's callback does not scrub Langfuse's copy. Keep the current instrumentation and provider; see [keep Langfuse and add Hue](/integrations/opentelemetry#keep-langfuse-and-add-hue).
+
+## Python: mask nested helper content
+
+[Install `hue-run`](/installation#python) and set `HUE_API_KEY` to a **Tracing only** project key. Save this as `trace.py` and run `python trace.py` in that environment:
+
+```python
+import os
+import re
+from hue_sdk import Hue
+
+EMAIL = re.compile(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.IGNORECASE)
+
+
+def redact_emails(field, value):
+    if isinstance(value, str):
+        return EMAIL.sub("[EMAIL]", value)
+    if isinstance(value, dict):
+        return {key: redact_emails(field, item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [redact_emails(field, item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(redact_emails(field, item) for item in value)
+    return value
+
+
+hue = Hue(
+    api_key=os.environ["HUE_API_KEY"],
+    service_name="redaction-demo",
+    capture_content=True,
+    redactor=redact_emails,
+)
+inputs = {
+    "messages": [{"role": "user", "content": "Find mail from alex@example.com"}],
+    "limit": 3,
+}
+result = {"contact": {"email": "alex@example.com"}, "count": 1}
+
+try:
+    with hue.context(user_id="user_123", session_id="session_456"):
+        with hue.span("mail.lookup") as span:
+            span.set_input(inputs)
+            with hue.tool("lookup_contact") as tool:
+                tool.set_input({"email": "alex@example.com"})
+                tool.set_output(result)
+            span.set_output(result)
+
+    assert result["contact"]["email"] == "alex@example.com"
+    assert inputs["messages"][0]["content"] == "Find mail from alex@example.com"
+    if not hue.force_flush():
+        raise RuntimeError("Check Hue's sanitized export counters.")
+finally:
+    hue.shutdown_safe(timeout_millis=1000)
+```
+
+The callback walks string values in nested dictionaries, lists and tuples while retaining numbers, booleans and nulls. It leaves dictionary keys unchanged: use fixed field names, not personal data, as keys. Hue supplies a detached copy of supported helper content. Return a new value and avoid effects through globals or captured application objects.
+
+If OpenInference, Langfuse or another instrumentor creates the Python spans, configure redaction in that instrumentor or before export through your collector. Attaching `Hue(redactor=...)` to its provider does not apply this callback to those external spans.
+
+## Customize the policy
+
+Use the callback to combine text patterns with the fields your application knows are sensitive. Keep it synchronous, fast and free of network calls.
+
+- **TypeScript:** `path` identifies the exported value, such as `attributes.input.value` or `attributes.customer.email`. Return `[REDACTED]` for a sensitive string attribute. Helper inputs/outputs are serialized JSON strings: `path` does not identify their nested `email` field. For rules on nested fields, explicitly parse known JSON content fields, transform the structure, then serialize it, or sanitize a separate telemetry copy before recording it. If required parsing fails, omit or replace the content rather than returning the original sensitive value.
+- **Python:** `field` identifies the helper's content field, not each nested dictionary key. Add key-based rules inside the dictionary branch when you need to replace a field such as `email` regardless of its format. The example processes values only; add separate handling if your data uses sensitive dictionary keys.
+
+Preserve the structure and non-sensitive evidence your debugging and evaluations need. An email pattern does not cover names, phone numbers, message bodies containing other personal information, or secrets. Hue's built-in filtering of credential fields in tool definitions is also not a general secret scanner.
+
+With `captureContent: false` / `capture_content=False`, Hue removes recognized content fields instead. That choice does not classify arbitrary attributes; native Langfuse content keys also need explicit handling as described in the [OpenTelemetry guide](/integrations/opentelemetry#keep-langfuse-and-add-hue).
+
+## Verify before rollout
+
+Run a synthetic request through the application's actual instrumentation, including nested messages and tool results. Inspect the Hue-bound export or the stored trace: the raw test address should be absent and `[EMAIL]` present, while opaque user/session IDs, numeric values, trace/span IDs and parent relationships remain intact. Check logs and any running-span placeholders too. With multiple exporters, inspect each destination separately.
+
+Test a callback that throws. TypeScript rejects the affected export record and reports an export issue; Python omits the affected helper content field and counts an instrumentation failure. The original sensitive value must not be sent as a fallback, and application results and errors must remain unchanged. Inspect `hue.transport.getReport()` / `getIssues()` or Python's `hue.export_status`; log only sanitized counters and status, never original content or callback exceptions.
+
+A successful [trace receipt](/sdks/typescript#verify-stored-trace-evidence) confirms requested spans and field presence, not correct redaction. The examples use strict flush checks for diagnostics; use the [production-safe lifecycle](/guides/production-safety) in serving applications. Existing stored traces are unaffected; agree [retention and deletion](/guides/production-safety#capture-titles-and-retention) separately.

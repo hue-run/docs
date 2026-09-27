@@ -21,6 +21,8 @@ The installable project-data server runs at `https://mcp.hue.run/mcp`. A separat
 - **The agent cannot run a shell**, for example a hosted assistant, **or you want several connected actions in one conversation** ("find yesterday's failing traces, show me the slowest span, compare the last two runs"). Connect the MCP server; a hosted assistant that supports MCP sign-in adds the URL and signs in with Hue. Hue has not yet verified claude.ai or ChatGPT end to end.
 - **You are automating in CI.** Use the SDK evaluation clients and the receipt endpoint directly.
 
+For a coding agent implementing content scrubbing, use the [redaction recipe](/guides/redaction). It includes email examples, exporter attachment points and a synthetic verification checklist. The [Hue skill](https://docs.hue.run/skill.md) routes agents to the same guide.
+
 ## Authentication
 
 Application telemetry and agent access have different authentication needs:
