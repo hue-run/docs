@@ -3,9 +3,9 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "8e1a07b6240cbe5c8fb7ee3e25463d431706cc9f",
+      "commit": "d18c3434eadde323c1cd7bd0be33587672a8f35f",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:4459ae4101ad90bb335625f58803e400542255f3cb482d83e17ae53eadfc9ed0"
+      "sha256": "sha256:92f5772f1391e1dd40bb0309686f2f93e0c03fbd12de4a2e436259f9662206ed"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
@@ -22,18 +22,18 @@
     },
     "source": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "21e2e0f943e27cffdfcdc873558094f625b741c1",
+      "commit": "8c388ec1b9fdfeeda99ddbe7f1eec5387b4c4b4d",
       "skill": {
         "description": "Set up or troubleshoot Hue tracing in an existing application, preserving its provider, framework, and OpenTelemetry setup, and read production traces over the Hue MCP. Use when a developer asks to set up or integrate Hue, verify that requests reach Hue, or find out what needs attention, fails or is slow in production.",
         "metadata": {
           "author": "hue-run",
-          "version": "0.5.7"
+          "version": "0.5.10"
         },
         "name": "hue",
-        "sha256": "sha256:d6f5e9ad6486e18770520eeb9f58b2d5665c1a896c03ce82223878f02511a630",
+        "sha256": "sha256:e0317f5856c4b3d49467a7741ffa2f76e43abbc13ce9ed6ac6b7b431340f57d5",
         "source": "skills/hue/SKILL.md"
       }
     },
-    "sha256": "sha256:d6f5e9ad6486e18770520eeb9f58b2d5665c1a896c03ce82223878f02511a630"
+    "sha256": "sha256:e0317f5856c4b3d49467a7741ffa2f76e43abbc13ce9ed6ac6b7b431340f57d5"
   }
 }

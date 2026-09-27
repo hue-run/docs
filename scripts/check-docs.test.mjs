@@ -149,6 +149,14 @@ test("the MCP guide must keep each tool in its generated group", () => {
   assert.match(result.stderr, /does not list the generated eval_sets toolset/);
 });
 
+test("retired MCP field names cannot return", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
+    `${text}\nPass the eval set as dataset_id.\n`,
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /MCP documentation contains retired field name: dataset_id/);
+});
+
 test("the retired key-only MCP statement cannot return", () => {
   const result = checkSnapshot((directory) => changePage(directory, "guides/invited-setup.mdx", (text) =>
     `${text}\nHue does not offer an OAuth authorization flow in this release.\n`,

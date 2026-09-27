@@ -66,7 +66,6 @@ export function buildDocsContract() {
     site: {
       origin: platform.endpoints.documentation.origin,
       projectMcpUrl: platform.endpoints.productMcp.production.endpoint,
-      projectMcpAlias: platform.endpoints.productMcp.production.applicationAlias,
       docsMcpUrl: platform.endpoints.documentation.mcpEndpoint,
       skillUrl: `${platform.endpoints.documentation.origin}/skill.md`,
       pageCount: pages.length,
