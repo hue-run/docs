@@ -79,7 +79,7 @@
     "sdkSourceSha256": "sha256:64b2695a8dde763338b331bfb1d7cb0e105678076b477d78bffcfc1281960697",
     "override": {
       "baseCommit": "0836a549ea340b965f6a17cdb937971ac49bbbc5",
-      "sourceCommit": "45855f15fd2aa1767c040cf6c9a02f37fdf1a5cc",
+      "sourceCommit": "cf338658edfc0732a8496d17a539b588b01d0670",
       "source": "skills/hue/SKILL.md",
       "sourceSha256": "sha256:dbcabe7e4b5f23a03ebfa2fc9e9e31441d280f44e0949904a3643144b6b28b80"
     }
