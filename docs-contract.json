@@ -21,7 +21,7 @@
     "projectMcpAlias": "https://app.hue.run/api/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
     "skillUrl": "https://docs.hue.run/skill.md",
-    "pageCount": 23
+    "pageCount": 24
   },
   "serviceKeyPresets": [
     {
@@ -74,14 +74,14 @@
     }
   },
   "skill": {
-    "version": "0.5.6",
-    "sha256": "sha256:47ee99cb4f9c0832c5785f2f5add7bcdfe65dd821307fc1df95960a258a5f3ea",
+    "version": "0.5.7",
+    "sha256": "sha256:51ff9f6cdc9d2829427646fbf72c8234d114dd15ab3b2d5e97fded1a60161087",
     "sdkSourceSha256": "sha256:64b2695a8dde763338b331bfb1d7cb0e105678076b477d78bffcfc1281960697",
     "override": {
       "baseCommit": "0836a549ea340b965f6a17cdb937971ac49bbbc5",
-      "sourceCommit": "45be430295e915a0ac0e3d19c59a2a818a5f2016",
+      "sourceCommit": "21e2e0f943e27cffdfcdc873558094f625b741c1",
       "source": "skills/hue/SKILL.md",
-      "sourceSha256": "sha256:8ac665c20c8d7c0a1edf3ac7704adefe6f768abaab6a326518018181d19a44a9"
+      "sourceSha256": "sha256:d6f5e9ad6486e18770520eeb9f58b2d5665c1a896c03ce82223878f02511a630"
     }
   },
   "mcp": {
@@ -208,6 +208,7 @@
     "guides/project-keys",
     "guides/troubleshooting",
     "guides/production-safety",
+    "guides/redaction",
     "reference/typescript",
     "reference/python",
     "skill.md"

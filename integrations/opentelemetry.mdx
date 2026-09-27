@@ -23,6 +23,8 @@ These routes accept the OpenTelemetry wire format, not arbitrary application JSO
 
 ## Attach Hue transport to JavaScript providers
 
+To scrub exported content, pass `redact` when creating the transport. The [redaction recipe](/guides/redaction#use-the-same-callback-with-an-existing-provider) shows a reusable email scrubber and where to attach it.
+
 If you want Hue's content controls and export diagnostics while keeping provider ownership, attach its processors when you construct your providers. [Install the TypeScript package](/installation#typescript), then install these explicit provider dependencies:
 
 ```sh
@@ -87,10 +89,11 @@ Your providers own the resource in this mode: set `service.name`, `deployment.en
 
 If Langfuse already receives your application's spans, keep its instrumentation and exporter. Add Hue's span processor to the **same provider at construction time**. Find the module that creates your existing `NodeSDK`, `NodeTracerProvider` or framework-owned provider; do not create or register a second global provider. Preserve its resources, sampling, context propagation, existing processors and Langfuse filters. See [Langfuse's existing OpenTelemetry guidance](https://langfuse.com/faq/all/existing-otel-setup).
 
-For example, this is the change to an existing `NodeSDK` setup after installing `@hue-run/sdk`; keep the rest of that application's initialization:
+For example, this is the change to an existing `NodeSDK` setup after installing `@hue-run/sdk` and saving the [email callback](/guides/redaction#typescript-mask-email-addresses) as `redaction.ts`; keep the rest of that application's initialization:
 
 ```diff
 + import { createHueTransport } from "@hue-run/sdk";
++ import { redactEmails } from "./redaction.ts";
 
   const langfuseSpanProcessor = new LangfuseSpanProcessor();
 + let hueTransport: ReturnType<typeof createHueTransport> | undefined;
@@ -99,7 +102,8 @@ For example, this is the change to an existing `NodeSDK` setup after installing 
 +     apiKey: process.env.HUE_API_KEY ?? "",
 +     enabled: process.env.HUE_TRACING_ENABLED !== "false",
 +     serviceName: "my-agent",
-+     captureContent: true, // Authorize capture and configure redaction for Hue too.
++     captureContent: true,
++     redact: redactEmails,
 +   });
 + } catch {
 +   // Keep existing tracing available. Do not log the key or exception object.
