@@ -174,16 +174,11 @@ for (const legacy of [
 }
 
 const canonicalMcp = "https://mcp.hue.run/mcp";
-const aliasMcp = "https://app.hue.run/api/mcp";
 const docsMcp = "https://docs.hue.run/mcp";
 if (platform.endpoints.productMcp.production.endpoint !== canonicalMcp) fail("platform product MCP endpoint drifted");
-if (platform.endpoints.productMcp.production.applicationAlias !== aliasMcp) fail("platform product MCP alias drifted");
 if (platform.endpoints.documentation.mcpEndpoint !== docsMcp) fail("platform docs MCP endpoint drifted");
 if ((publicText["agents/mcp-server.mdx"].match(new RegExp(canonicalMcp.replaceAll(".", "\\."), "g")) ?? []).length < 8) {
   fail("MCP installation snippets must use the canonical product MCP endpoint");
-}
-if ((allPublicText.match(new RegExp(aliasMcp.replaceAll(".", "\\."), "g")) ?? []).length !== 1) {
-  fail("the application-host MCP alias must appear once, as compatibility information only");
 }
 if (!publicText["agents/mcp-server.mdx"].includes(docsMcp)) fail("MCP guide must distinguish the documentation MCP endpoint");
 if (!Array.isArray(platform.mcp.tools) || platform.mcp.tools.length === 0) {
