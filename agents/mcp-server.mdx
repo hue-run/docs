@@ -4,14 +4,14 @@ sidebarTitle: "Connect MCP"
 description: "Connect an MCP client to your Hue project with browser sign-in or a project key, with setup instructions for Claude Code, Codex, Cursor and Conductor."
 ---
 
-The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install. Each connection reaches one project: **Read** access searches and inspects its data, such as traces, evaluations and cases, and **Read and write** access also changes project data. Billing and plan changes stay in Settings. `https://docs.hue.run/mcp` is a separate documentation-only server and cannot read your project.
+The Hue project-data MCP server is a hosted [Model Context Protocol](https://modelcontextprotocol.io) server at `https://mcp.hue.run/mcp`. There is nothing to install. A project key reaches its project; browser sign-in reaches the active projects in one organization, or can be [pinned to one](#pin-a-connection-to-one-project). **Read** access searches and inspects project data, such as traces, evaluations and cases, and **Read and write** access also changes it. Billing and plan changes stay in Settings. `https://docs.hue.run/mcp` is a separate documentation-only server and cannot read your project.
 
 A connection lists Hue's production reads, and `search_hue_tools`, which finds every other tool the connection can call, such as evaluations, cases and writes. Clients that search their own tool lists add `?toolsets=all` to the URL to list every tool directly. See [choose toolsets](#choose-toolsets).
 
 ## Quick start
 
 1. Choose your client below and add the server URL it shows: `https://mcp.hue.run/mcp`, with `?toolsets=all` for a client that searches its own tools. For **sign-in with Hue**, leave out API keys and custom headers.
-2. When the client opens Hue, sign in with your verified account, select one project and approve **Read**. You must belong to that project's organization. Choose **Read and write** only if the agent should change project data.
+2. When the client opens Hue, sign in with your verified account, select one organization and approve **Read**. You must belong to that organization. Choose **Read and write** only if the agent should change project data.
 3. Refresh the client's MCP status or start a new session, then [verify the connection](#verify-the-connection) by reading a trace through the agent.
 
 Already have a project key, or using a client without sign-in support? [Prepare the key](#connect-with-a-project-key), then use your client's key instructions below. A **Tracing only** key cannot connect to this MCP server.
@@ -31,7 +31,7 @@ Start with **Any MCP client** for the connection settings, or choose your client
     | Transport | Streamable HTTP |
     | Authentication | OAuth / sign in |
 
-    Save the server and choose its connect or authenticate action. Hue opens in your browser: sign in, select your project and approve **Read**. Leave custom headers and API-key fields empty; the client handles OAuth discovery and tokens. Return to the client and [verify the connection](#verify-the-connection).
+    Save the server and choose its connect or authenticate action. Hue opens in your browser: sign in, select your organization and approve **Read**. Leave custom headers and API-key fields empty; the client handles OAuth discovery and tokens. Return to the client and [verify the connection](#verify-the-connection).
 
     This URL lists the production reads and the [catalog tools](#choose-toolsets) that reach every other tool. If your client searches its own tool list, use `https://mcp.hue.run/mcp?toolsets=all` to list every tool directly.
 
@@ -181,7 +181,7 @@ Start with **Any MCP client** for the connection settings, or choose your client
     ```
     </CodeGroup>
 
-    Open **MCP status** from the plug icon or `/mcp-status`, refresh, then use **hue**'s authentication action. Sign in to Hue, choose your project and **Read**, and approve. Leave out API keys and custom headers for this connection. If an older `hue` entry uses a key, replace it using the **Claude Code** or **Codex** tab.
+    Open **MCP status** from the plug icon or `/mcp-status`, refresh, then use **hue**'s authentication action. Sign in to Hue, choose your organization and **Read**, and approve. Leave out API keys and custom headers for this connection. If an older `hue` entry uses a key, replace it using the **Claude Code** or **Codex** tab.
 
     Start a new agent session if its tool list has not updated, then [verify the connection](#verify-the-connection). These instructions cover local workspaces; a cloud workspace has a separate configuration and browser callback environment. See [Conductor's MCP setup guide](https://www.conductor.build/docs/guides/configure-mcp-servers#check-status-in-conductor).
 
@@ -191,9 +191,9 @@ Start with **Any MCP client** for the connection settings, or choose your client
 
 ## Sign in with Hue instead of a key
 
-Sign-in uses OAuth and requires no project key. Your account must be verified and an actual member of the project's organization; any member can approve a connection, without an owner or admin role. If you were invited, accept the invitation in Hue first, then connect again. Only active projects appear. Administrative visibility without membership does not grant access to a connected app.
+Sign-in uses OAuth and requires no project key. Your account must be verified and an actual member of the organization; any member can approve a connection, without an owner or admin role. If you were invited, accept the invitation in Hue first, then connect again. Only active projects appear. Administrative visibility without membership does not grant access to a connected app.
 
-Each approval covers one project and one access level. Check the signed-in account and project on the consent page before approving. Choose **Read** for inspection. To change projects, disconnect and reconnect the app.
+Each approval covers one organization and one access level. Check the signed-in account and organization on the consent page before approving. Choose **Read** for inspection. An organization connection lists its active projects with `list_projects`; you can [pin its URL to one project](#pin-a-connection-to-one-project) when the agent should not choose among them.
 
 Leave out the `Authorization` header and any bearer-token environment-variable setting when signing in. An old key entry can suppress sign-in or carry a failing header into authorization. Replace it using the instructions in your [client's tab](#connect-your-client).
 
@@ -202,8 +202,44 @@ Leave out the `Authorization` header and any bearer-token environment-variable s
   - The client receives access tokens that last 10 minutes and refreshes them automatically. Your approval lasts 30 days from when you connect; refreshing never extends it, so sign in again after that.
   - The connection acts for you. Writes are attributed to you, and owner- or admin-only tools check your current role: revoking keys, changing project settings or trace checks, archiving eval sets and evaluators, registering managed targets and publishing the intent taxonomy. A connected app can never create project keys with `add_api_key`.
   - Sign-in covers the MCP server only. The SDKs and REST API still need a project key.
-  - **Settings → Connected apps** lists your connections and disconnects them; owners and admins see and disconnect everyone's in the organization. Resetting your password or signing out everywhere disconnects every app you approved, and removal from the organization or an archived project ends the connection too.
+  - **Settings → Connected apps** lists your connections and disconnects them; owners and admins see and disconnect everyone's in the organization. Resetting your password or signing out everywhere disconnects every app you approved, and removal from the organization ends the connection too. An archived project stops appearing to that connection.
 </Accordion>
+
+## Pin a connection to one project
+
+Add `?project=<id-or-slug>` to the MCP URL to narrow a key or sign-in connection to one project it
+already reaches. Combine it with a tool selection like this; keep the quotes because `&` has a
+meaning in the shell:
+
+```sh
+claude mcp add --transport http --scope user hue-support-agent \
+  'https://mcp.hue.run/mcp?project=support-agent&toolsets=all'
+```
+
+Name the server `hue-<slug>` so the pinned connection can sit beside an organization-wide `hue`
+connection. For Codex TOML, the equivalent header form keeps the URL bare:
+
+```toml
+[mcp_servers.hue-support-agent]
+url = "https://mcp.hue.run/mcp"
+http_headers = { "X-Hue-MCP-Toolsets" = "all", "X-Hue-MCP-Project" = "support-agent" }
+supports_parallel_tool_calls = true
+```
+
+On a project's **Settings → Connected apps** page, **Connect this project** shows the pinned URL
+and Claude Code command for that project.
+
+When you use the Hue CLI from an SDK version that includes this option,
+`hue mcp install --client <client> --project support-agent` adds or replaces the query parameter,
+keeps the toolset selection and uses the coexisting server name for you.
+
+A pinned connection publishes no `project_id` argument. Its tools act on the pinned project, and
+`list_projects` returns only that project with `connection.pinned: true`. Do not pass a stray
+`project_id`: Hue rejects it even when it names the pinned project. The query and
+`X-Hue-MCP-Project` header may be used together only when they name the same project. An empty pin
+returns HTTP `400`. An unknown, archived or unreachable project returns HTTP `404` before an MCP
+method runs; the credential is still valid, so signing in again does not fix it. Change the pin or
+remove it.
 
 ## Connect with a project key
 
@@ -236,7 +272,7 @@ Most clients load a new server only when they start, and Claude Code and Cursor 
 Ask the agent in the client you just connected:
 
 ```text
-Use the Hue MCP: call list_projects and confirm which project to inspect. Then call get_project_context and show its 5 most recent error traces with links. For an organization connection, pass the project's id as project_id on each call after list_projects.
+Use the Hue MCP: call list_projects and confirm which project to inspect. Then call get_project_context and show its 5 most recent error traces with links. For an organization connection, pass the project's id or slug as project_id on each call after list_projects. For a pinned connection, confirm connection.pinned is true and do not pass project_id.
 ```
 
 Then ask it to call `get_trace` for one of the returned trace IDs. If there are no error traces, ask `search_traces` for recent traces without an error filter. An empty result is not an authentication failure; use a project with a known test trace to verify the full read path.
@@ -264,7 +300,7 @@ For key-based connections, the [curl check](#verify-the-connection) shows Hue's 
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Your organization or project is missing from the consent page | The signed-in account is unverified, has not accepted its organization invitation, is not a member, or the project is archived | Check the account shown on the page, verify your email and accept your invitation in Hue, then reconnect. Ask an organization owner or admin to check your membership and the project. Staff or administrative visibility alone is not membership. |
+| Your organization is missing from the consent page | The signed-in account is unverified, has not accepted its organization invitation, or is not a member | Check the account shown on the page, verify your email and accept your invitation in Hue, then reconnect. Ask an organization owner or admin to check your membership. Staff or administrative visibility alone is not membership. |
 | The client reports missing OAuth metadata | The URL is wrong, a saved entry still targets an old endpoint, or discovery failed | Use `https://mcp.hue.run/mcp` without a custom authorization header, refresh the client's configuration and retry. If it persists, report the client/version and error text without tokens. |
 | Consent succeeds but no Hue tools appear | The running agent session has not loaded the new connection | Refresh MCP status and start a new session, then run the verification above. In Conductor, check the configuration for the selected agent. |
 | A Hue sign-in page opens, or the client shows **Needs authentication**, `Authentication required`, `requires_authentication` (Cursor), `The hue MCP server is not logged in` (Codex), although you configured a key | Hue refused the key. Usually `HUE_MCP_KEY` is unset or empty where the client started, the header lacks `Bearer ` or repeats it, the key is in another header such as `x-api-key`, or the key is wrong or revoked. Also check that the saved configuration still holds the `${HUE_MCP_KEY}` reference rather than `Bearer` or the key (a CLI `--header` in double quotes), that no other `hue` entry without the header overrides it (Claude Code), and that Codex was added with `--bearer-token-env-var` | Run the curl check and match its message to the rows below. Export `HUE_MCP_KEY` in the shell that starts the client, restart the client, and send exactly `Authorization: Bearer <key>`. Don't finish a sign-in that opened because of a failing key: it fails too. |
@@ -273,25 +309,27 @@ For key-based connections, the [curl check](#verify-the-connection) shows Hue's 
 | `401` `The bearer token is not a Hue credential` | The client sent something other than a key: the reference itself, such as `${HUE_MCP_KEY}`, because the variable was unset or the syntax is not the client's, or a value with extra characters such as surrounding quotes | Set the variable to the key alone before starting the client, and use the client's syntax: `${HUE_MCP_KEY}` for Claude Code and `${env:HUE_MCP_KEY}` for Cursor. For other clients, follow their environment-variable or secret-storage syntax. Codex needs `bearer_token_env_var` and does not expand `${…}` in `http_headers`. |
 | `401` `A valid project service key is required` | The key is wrong, truncated, revoked or expired | Copy the key again from your secret manager, or create a new one in **Settings → Integrations & API keys**. |
 | `403` `This key cannot read project data` | The key is **Tracing only** or a legacy **Tracing and evaluations** or **Source capture (legacy)** key | Create a **Read** or **Read and write** key and configure it in your client. Or [sign in with Hue](#sign-in-with-hue-instead-of-a-key). |
+| `400` says the project pin is empty or the query and header name different projects | The URL has an empty or conflicting `project` selection | Name one project id or slug in `?project=`, make `X-Hue-MCP-Project` match it, or remove the pin. |
+| `404` says the project this MCP URL pins is not reachable | The project is unknown, archived, outside the credential's organization or different from the project key's project | Change the pin to an active project this credential reaches, or remove it. Signing in again does not fix this response. |
 | `Unexpected content type: text/html`, HTTP `404` or `MCP endpoint not found` | Wrong URL: the host root, `/api` without `/mcp`, or `/mcp` on `app.hue.run` | Use `https://mcp.hue.run/mcp` exactly. A trailing slash is fine. |
 | `429` `Too many failed authentications for this key`, or `Too many requests. Please try again later.` while a client tries to sign in | Ten failed attempts with this key within a minute, often from another client with an old or truncated copy, or repeated sign-in attempts from a client whose key header keeps failing | Fix or stop that client, then wait a minute. Until then the correct key is refused too. |
 | `503` with `Retry-After: 1` | The server is momentarily busy | Retry after a second. |
 | The client reports `invalid HTTP header` | The stored key ends with a newline | Store the key without a trailing newline. |
 | Cursor shows `not loaded (needs approval)` or `has not been approved` | Cursor has not approved the server, or `HUE_MCP_KEY` changed or became unset since you approved it | Check that `HUE_MCP_KEY` is exported and holds the key you intend, then turn on **hue** in Cursor's MCP settings, or run `cursor-agent mcp enable hue`. Cursor asks again after every change. |
-| A client you connected by signing in shows **Needs authentication** or `The hue MCP server is not logged in` | The approval ended: 30 days passed, someone disconnected it in **Settings → Connected apps**, you reset your password or signed out everywhere, or you left the organization or the project was archived | Use your client’s authentication action to sign in again: `/mcp` → **Authenticate** in Claude Code or `codex mcp login hue` in Codex. For Cursor, use the project-key instructions in its tab until native sign-in is supported. |
+| A client you connected by signing in shows **Needs authentication** or `The hue MCP server is not logged in` | The approval ended: 30 days passed, someone disconnected it in **Settings → Connected apps**, you reset your password or signed out everywhere, or you left the organization | Use your client’s authentication action to sign in again: `/mcp` → **Authenticate** in Claude Code or `codex mcp login hue` in Codex. For Cursor, use the project-key instructions in its tab until native sign-in is supported. |
 | A tool call fails as an unknown tool | The connection does not list the tool: by default it lists the production reads. Write tools are also hidden for **Read** access and for a URL with `?read_only=true`, and a tool described in a development branch is not available until its platform release is deployed | Find the tool with `search_hue_tools` and call it through the executor its `call` field names, or add `?toolsets=all` to the server URL and reconnect. For a write tool, use a **Read and write** key without `?read_only=true`, or approve **Read and write** at sign-in. An unknown tool is not evidence that the client should broaden its permissions. |
 
 See [troubleshooting](/guides/troubleshooting#the-mcp-server-rejects-the-agent) for tracing problems that are not specific to MCP.
 
 <Accordion title="Endpoints and protocol details">
-  The project-data server is a dynamic Node.js route in Hue's main web application, not a separate data service. `https://app.hue.run/api/mcp` remains a compatibility alias for project keys. Use the canonical URL for browser sign-in: the alias can fail when a client omits the OAuth resource parameter. The `search_hue_docs` tool delegates documentation searches to the Mintlify-hosted documentation endpoint without changing the project-data server's authentication boundary.
+  The project-data server is available only at `https://mcp.hue.run/mcp`. The `search_hue_docs` tool delegates documentation searches to the Mintlify-hosted documentation endpoint without changing the project-data server's authentication boundary.
 
   The server is stateless and accepts clients that start with `initialize` (MCP revisions up to 2025-11-25) as well as clients on the stateless 2026-07-28 revision, so clients need no extra flags. It accepts `POST` only. A `GET` with no `Authorization` header gets `401` with the sign-in challenge. A `GET` with an `Authorization` header gets `405` with `Allow: POST`; the header value is not checked. Use the POST key check above to diagnose a failing key. A request carrying `Mcp-Session-Id` gets `404`, because the server keeps no sessions. MCP clients handle these answers themselves.
 </Accordion>
 
 ## What you can do
 
-A project key reaches one project. A sign-in connection that covers an organization lists its projects with `list_projects`, and every other project tool then takes the chosen project's id or slug as `project_id`. Write tools need **Read and write** without `?read_only=true`. Ask before any write. Never auto-approve a tool whose `readOnlyHint` annotation is `false`: every write tool carries it, whatever its name. Read tools have `readOnlyHint: true`. `search_hue_docs` and `launch_managed_run` carry `openWorldHint: true` because they reach outside Hue, and every `set_*` tool carries `idempotentHint: true`; annotations are client hints, not permission to write without confirmation.
+A project key reaches one project. A sign-in connection that covers an organization lists its projects with `list_projects`, and every other project tool then takes the chosen project's id or slug as `project_id`. A connection pinned by URL or header instead has a single-project shape: its schemas omit `project_id`, and `list_projects` returns its one project with `connection.pinned: true`. Write tools need **Read and write** without `?read_only=true`. Ask before any write. Never auto-approve a tool whose `readOnlyHint` annotation is `false`: every write tool carries it, whatever its name. Read tools have `readOnlyHint: true`. `search_hue_docs` and `launch_managed_run` carry `openWorldHint: true` because they reach outside Hue, and every `set_*` tool carries `idempotentHint: true`; annotations are client hints, not permission to write without confirmation.
 
 A default connection lists the production reads; the other tools below are one [`search_hue_tools`](#choose-toolsets) call away, or listed directly with `?toolsets=all`.
 
@@ -308,7 +346,7 @@ For production questions (what needs attention, which tools fail, which task typ
     Read the project's production trace checks with `list_trace_checks` and `get_trace_checks`, their paged results with `get_trace_check_results` (source excerpts require `include_content: true`), and coverage and request timing with `get_trace_check_summary`. Results are advisory, not evaluator scores. With **Read and write**, save a new draft version with `save_trace_checks`, set the separate consent to send recorded content to the trace-check model with `set_trace_checks_consent`, test a saved version on up to ten traces with `test_trace_checks`, turn automatic checks on or off with `activate_trace_checks` and `deactivate_trace_checks`, and queue a `since`/`until` window for the active version with `reassess_trace_checks`; relative windows such as `2d` and `1d` work there too. `definitions_json` and `calibration_json` use the same recursive `snake_case` keys that the read tools return. Through sign-in, only an owner or admin can make these changes.
   </Accordion>
   <Accordion title="Read evaluations">
-    "List my eval sets", "show the cases in the latest version of the regression set", "summarize the last run and list the failing cases", "compare it against the baseline run". Tools: `list_eval_sets`, `get_eval_set`, `list_evaluators`, `get_evaluator`, `list_runs`, `get_run`, `list_run_items`, `get_run_item`, `get_run_execution`, `list_scoring_runs`, `get_scoring_run`, `list_environments`, `get_environment`. `list_runs` takes `since` and `until`; its `dataset_id` accepts the eval-set id or link, and scoring-run `run_id` arguments accept the id or scoring-run link.
+    "List my eval sets", "show the cases in the latest version of the regression set", "summarize the last run and list the failing cases", "compare it against the baseline run". Tools: `list_eval_sets`, `get_eval_set`, `list_evaluators`, `get_evaluator`, `list_runs`, `get_run`, `list_run_items`, `get_run_item`, `get_run_execution`, `list_scoring_runs`, `get_scoring_run`, `list_environments`, `get_environment`. `list_runs` takes `since` and `until`; its `eval_set_id` accepts the eval-set id or link, and `scoring_run_id` arguments accept the scoring-run id or link.
   </Accordion>
   <Accordion title="Author evaluations">
     Create an eval set (`add_eval_set`), add cases (`add_eval_set_cases`), edit a draft (`update_eval_set`, `update_eval_set_case`, `delete_eval_set_case`, `add_eval_set_draft`), freeze it (`freeze_eval_set_version`), then pin evaluators (`add_evaluator`, `publish_evaluator`, `copy_evaluator`) and create a run (`add_run`). Record scoring results with `add_scoring_run` and `add_scoring_results`. Hide retired identities with `archive_eval_set`, `archive_evaluator` or `archive_environment`. Case execution can stay with the SDK, a managed run, a local agent, or `start_run_case` / `complete_run_case` / `finish_run`.
@@ -346,6 +384,12 @@ For production questions (what needs attention, which tools fail, which task typ
 </AccordionGroup>
 
 Hue-owned argument and output names are recursively `snake_case`; recorded span attribute maps keep the application's own keys. JSON arguments that round-trip a returned trace-check definition, calibration or judge bar use those returned `snake_case` keys and reject camelCase. Every id with an app page accepts its Hue link: `trace_id` also accepts the 32-hex OpenTelemetry id, `span_id` and `span_ids` accept a span link, `session_id` accepts the traces link from `list_sessions`, and eval-set, run, scoring-run, evaluator, environment and case-conversion ids accept their object links. Time windows accept ISO-8601 or relative values such as `15m`, `24h` or `7d` (up to 90 days). Results are paginated with opaque cursors and bounded by `max_chars`; paged lists, including `get_trace_check_results` and `list_intent_traces`, return `next_cursor`. Truncated results say so and suggest a narrower request. Draft writes take `expected_revision` from `get_eval_set`, trace-check writes from `get_trace_checks`, and case-conversion writes from `get_case_conversion`. The [limits and error codes](/agents/investigate-production#limits-and-errors) apply to every tool.
+
+### Product vocabulary
+
+MCP ids are named after the object they identify. Evaluation tools use `eval_set_id`, `eval_set_version_id`, `from_eval_set_version_id` and `eval_set_case_id`; `evaluator_id`, `evaluator_version_id` and `evaluator_version_ids`; `run_id` and `baseline_run_id`; and `scoring_run_id` and `scoring_item_id`. Run dispatches use `managed_run_id` and `local_run_id`. Reviewed cases use `case_id`, environment versions use `environment_version_id`, and trace-check versions use `trace_check_version_id` or `active_trace_check_version_id`.
+
+Evaluation list results are named `eval_sets`, `evaluators`, `runs`, `scoring_runs` and `cases`. Single-object results use the matching singular name, such as `eval_set`, `evaluator`, `run`, `scoring_run`, `case`, `managed_run` or `local_run`. A row's own identifier stays `id`; foreign identifiers spell out their object, such as `eval_set_version_id` on a run or `evaluator_version_id` on a scoring result.
 
 ## Choose toolsets
 

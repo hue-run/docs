@@ -150,17 +150,35 @@ for (const legacy of [
   if (allPublicText.includes(legacy)) fail(`public content contains retired text: ${legacy}`);
 }
 
+const mcpVocabularyText = [
+  publicText["agents/mcp-server.mdx"],
+  publicText["agents/investigate-production.mdx"],
+].join("\n");
+for (const legacy of [
+  "dataset_id",
+  "dataset_version_id",
+  "version_id",
+  "from_version_id",
+  "scorer_id",
+  "scorer_version_id",
+  "scorer_version_ids",
+  "experiment_id",
+  "baseline_experiment_id",
+  "scenario_id",
+  "evaluation_item_id",
+  "active_version_id",
+]) {
+  if (new RegExp(`\\b${legacy}\\b`).test(mcpVocabularyText)) {
+    fail(`MCP documentation contains retired field name: ${legacy}`);
+  }
+}
+
 const canonicalMcp = "https://mcp.hue.run/mcp";
-const aliasMcp = "https://app.hue.run/api/mcp";
 const docsMcp = "https://docs.hue.run/mcp";
 if (platform.endpoints.productMcp.production.endpoint !== canonicalMcp) fail("platform product MCP endpoint drifted");
-if (platform.endpoints.productMcp.production.applicationAlias !== aliasMcp) fail("platform product MCP alias drifted");
 if (platform.endpoints.documentation.mcpEndpoint !== docsMcp) fail("platform docs MCP endpoint drifted");
 if ((publicText["agents/mcp-server.mdx"].match(new RegExp(canonicalMcp.replaceAll(".", "\\."), "g")) ?? []).length < 8) {
   fail("MCP installation snippets must use the canonical product MCP endpoint");
-}
-if ((allPublicText.match(new RegExp(aliasMcp.replaceAll(".", "\\."), "g")) ?? []).length !== 1) {
-  fail("the application-host MCP alias must appear once, as compatibility information only");
 }
 if (!publicText["agents/mcp-server.mdx"].includes(docsMcp)) fail("MCP guide must distinguish the documentation MCP endpoint");
 if (!Array.isArray(platform.mcp.tools) || platform.mcp.tools.length === 0) {

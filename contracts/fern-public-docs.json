@@ -19,13 +19,11 @@
     "productMcp": {
       "production": {
         "origin": "https://mcp.hue.run",
-        "endpoint": "https://mcp.hue.run/mcp",
-        "applicationAlias": "https://app.hue.run/api/mcp"
+        "endpoint": "https://mcp.hue.run/mcp"
       },
       "staging": {
         "origin": "https://mcp.staging.hue.run",
-        "endpoint": "https://mcp.staging.hue.run/mcp",
-        "applicationAlias": "https://staging.hue.run/api/mcp"
+        "endpoint": "https://mcp.staging.hue.run/mcp"
       }
     },
     "documentation": {
@@ -600,10 +598,6 @@
         "canonical": {
           "production": "https://mcp.hue.run/mcp",
           "staging": "https://mcp.staging.hue.run/mcp"
-        },
-        "aliases": {
-          "production": "https://app.hue.run/api/mcp",
-          "staging": "https://staging.hue.run/api/mcp"
         }
       },
       "documentation": {
@@ -1781,12 +1775,12 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "62daf1c8b7b70c6080b9f89dab86d2c1f26dc721a3d8d46a82954b675e0f9b60",
+    "catalogSha256": "f4068c9b49d73eb62b98589f0887a2a4d9a106a07d88aee4d58cfb9ade9e464d",
     "serverInstructionsSha256": "af588665843e8345ec1de2b317b42dd2f49a6d959ceb581a976e9b49cf6ddf9a",
     "guides": {
       "data-model": {
         "title": "Hue data model",
-        "sha256": "2541e060e56b61a7c69f76c2efff6cd41a52d06ff7edab870a7cef18f4b81716"
+        "sha256": "e7d704a0e796cb7aeddb6cc3d0d6015c58168974a3d2dda805f80da5afd49076"
       },
       "production": {
         "title": "Read production traces with Hue",
@@ -1798,11 +1792,11 @@
       },
       "author": {
         "title": "Author evaluations with Hue",
-        "sha256": "5241c5169e34f7289671f0a16e02e160bd54dca83791fc79c126ad5b383fc26a"
+        "sha256": "8e0690f3abf5507b65391d53d202c10cfb11af7a69f5801f7370556175cf9524"
       },
       "evaluate": {
         "title": "Run your agent against a case",
-        "sha256": "d670634d963a78a86b105e7640414bb6aa5c6c8b6490a0b10cbc39719daaec5d"
+        "sha256": "f2913a0e897a795c841a044a74a78c1ab78746b38aacb6e6557e1f69d44db09f"
       }
     },
     "toolsets": {
@@ -1952,7 +1946,7 @@
       "geminiJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"httpUrl\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "opencodeJson": "{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"mcp\": {\n    \"hue\": {\n      \"type\": \"remote\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"enabled\": true,\n      \"headers\": {\n        \"Authorization\": \"Bearer {env:HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "connectPrompt": "Connect me to the Hue MCP server.\n\nIt is a remote MCP server (Streamable HTTP) at https://mcp.hue.run/mcp. Authenticate with a bearer token read from the HUE_MCP_KEY environment variable — reference the variable, do not write the key into a config file.\n\nRegister it under the name \"hue\" using whatever MCP configuration my client uses, then call get_project_context and tell me which Hue project it reached.",
-      "verifyPrompt": "Use the Hue MCP: call list_projects and confirm which project to inspect. Then call get_project_context and show its 5 most recent error traces with links. For an organization connection, pass the project's id as project_id on each call after list_projects."
+      "verifyPrompt": "Use the Hue MCP: call list_projects and confirm which project to inspect. Then call get_project_context and show its 5 most recent error traces with links. For an organization connection, pass the project's id or slug as project_id on each call after list_projects."
     }
   },
   "simulationGateway": {
