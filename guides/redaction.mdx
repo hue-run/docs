@@ -31,7 +31,7 @@ export function redactEmails(value: string, _path: string): string {
 }
 ```
 
-Save this diagnostic example alongside it as `trace.ts` and run `node trace.ts` on Node 24. It makes no model or email-provider calls.
+Save this diagnostic example alongside it as `trace.ts` in a package whose `package.json` contains `"type": "module"`, then run `node trace.ts` on Node 24. It makes no model or email-provider calls.
 
 ```ts
 import assert from "node:assert/strict";
