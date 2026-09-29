@@ -7,22 +7,22 @@ description: "Store a Hue key with hue login, connect your coding agent with hue
 
 <CodeGroup>
 ```sh npm
-npm install @hue-run/sdk@0.11.3
+npm install @hue-run/sdk@0.11.4
 ```
 
 ```sh Bun
-bun add @hue-run/sdk@0.11.3
+bun add @hue-run/sdk@0.11.4
 ```
 </CodeGroup>
 
-Run the commands from that project with `npx --yes --package @hue-run/sdk@0.11.3 hue …`. Always name the package: a bare `npx hue` can run an unrelated npm package called `hue`. Every command accepts `--help`.
+Run the commands from that project with `npx --yes --package @hue-run/sdk@0.11.4 hue …`. Always name the package: a bare `npx hue` can run an unrelated npm package called `hue`. Every command accepts `--help`.
 
 ## Store your key
 
 Create a **Read and write** key in **Settings → Integrations & API keys** for the project you want to use, then run:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.11.3 hue login --gitignore
+npx --yes --package @hue-run/sdk@0.11.4 hue login --gitignore
 ```
 
 `hue login` prints the key settings page and opens it in your browser when a terminal is attached. It reads the key without echoing it, checks it against Hue, and stores it once as both `HUE_API_KEY` (for evaluations) and `HUE_MCP_KEY` (for your coding agent) in `./.env.hue`, together with `HUE_BASE_URL` and `HUE_MCP_URL`. `--gitignore` adds that file to `.gitignore`. Key values are never printed.
@@ -45,20 +45,22 @@ To revoke evaluation and agent access separately, run `--keys evaluations` and `
 ## Connect your coding agent
 
 ```sh
-npx --yes --package @hue-run/sdk@0.11.3 hue mcp install --client claude-code --auth oauth
+npx --yes --package @hue-run/sdk@0.11.4 hue mcp install --client claude-code --auth oauth
 ```
 
 `hue mcp install` writes a server named `hue` at `https://mcp.hue.run/mcp` for your client. Supported clients are `claude-code`, `codex`, `conductor`, `cursor`, `vscode`, `windsurf` and `gemini`. For `windsurf` it only prints the snippet; merge it into the configuration opened by Cascade's **… (Actions) → MCPs → Open MCP config file**. See the [Cascade MCP guide](https://docs.devin.ai/desktop/cascade/mcp) for that client's configuration. Add `--dry-run` to see the change first, or `--print` for the snippet only.
 
 | Option | Effect |
 | --- | --- |
-| `--auth key` | The default, except for `conductor`: the configuration reads the key from the `HUE_MCP_KEY` environment variable and never holds the key itself. |
-| `--auth oauth` | The configuration holds only the URL, and you [sign in with Hue](/agents/mcp-server#sign-in-with-hue) in the client. Available for `claude-code`, `codex` and `conductor`. |
+| `--auth key` | The configuration reads the key from the `HUE_MCP_KEY` environment variable and never holds the key itself. The only choice for `cursor`, `vscode`, `windsurf` and `gemini`. |
+| `--auth oauth` | The configuration holds only the URL, and you [sign in with Hue](/agents/mcp-server#sign-in-with-hue) in the client. Available for `claude-code`, `codex` and `conductor`, and their default. |
 | `--client conductor` | Registers the server for Conductor's Claude Code (user scope) and Codex agents with each CLI on `PATH`, and signs in by default. Hue has not yet verified the complete signed-in Conductor flow end to end; if the tools do not load, run it again with `--auth key`. |
-| `--read-only` | Adds `?read_only=true` to a key configuration's URL, so write tools are hidden whatever the key allows. A sign-in connection has **Read and write** access; use a **Read** key for read-only access. |
+| `--read-only` | Selects a key and adds `?read_only=true` to its URL, so write tools are hidden whatever the key allows. A sign-in connection has **Read and write** access; use a **Read** key for read-only access. |
 | `--project ID-OR-SLUG` | Pins the connection to one project, replaces any `project` already in the URL, and names the server `hue-<value>` so it can coexist with `hue`. Its tools omit `project_id`; `list_projects` returns only that project with `connection.pinned: true`. An unreachable pin is HTTP `404`, which signing in again does not fix. |
 | `--toolsets NAMES` | Selects the [toolsets](/agents/mcp-server#choose-toolsets) the connection lists, such as `all` or `observe` for production reads, as `?toolsets=` on the URL, with a key or with sign-in. Without it, `claude-code`, `codex` and `conductor` select `all`, since they search their own tools; `cursor` selects `observe`; other clients list Hue's default, the production reads and `search_hue_tools`, which reaches every other tool. |
 | `--scope user` | For `claude-code`, registers the server for all your projects instead of writing `.mcp.json`. |
+
+Without `--auth`, `claude-code`, `codex` and `conductor` sign in with Hue, and the other clients use a key. `--read-only`, or `read_only=true` or `1` in `--url`, selects a key instead. `claude-code` and `codex` also keep the choice of the server's existing entry, in `./.mcp.json` or as `codex mcp get` reports it, so a rerun keeps a key and its `read_only`; for a new entry they use a key when `HUE_MCP_KEY` is set. When `codex` is on `PATH` but `codex mcp get` fails, the command asks you to pass `--auth` rather than guess. The command names its choice on stderr; pass `--auth` to replace an entry as given. Outside a terminal, such as in CI or a coding agent's shell tool, `codex` and `conductor` without `--auth` print the `codex mcp add` command instead of running it, because it signs in at once and waits up to 5 minutes for the browser.
 
 A Codex configuration sets `supports_parallel_tool_calls = true`, so Codex runs Hue's calls in parallel; `codex mcp add` cannot set it, so after registering with Codex the command names the line to add to `~/.codex/config.toml`. A printed sign-in TOML block keeps its URL bare and sends project and toolset selections as `X-Hue-MCP-Project` and `X-Hue-MCP-Toolsets` headers.
 
@@ -72,11 +74,11 @@ With a key, export `HUE_MCP_KEY` in the shell that starts your client; an app st
 
 ```sh
 npm install zod
-npx --yes --package @hue-run/sdk@0.11.3 hue eval --set "Billing regressions" --scorer <evaluator-slug> ./hue-agent.ts --env-file .env.hue
-npx --yes --package @hue-run/sdk@0.11.3 hue eval --worker ./hue-agent.ts --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.11.4 hue eval --set "Billing regressions" --scorer <evaluator-slug> ./hue-agent.ts --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.11.4 hue eval --worker ./hue-agent.ts --env-file .env.hue
 ```
 
-To run an agent that is not a TypeScript module, pass `--command "<shell command>"` instead of an adapter file. `hue eval` starts the command once per case with the case inputs and configuration as JSON on stdin and reads the answer from stdout. For a direct case, which has no simulated world, the command runs in a private case directory: `HUE_CASE_INPUTS` names the inputs file, the case's input files are under `files/<role>/`, and every file the command writes to `HUE_CASE_OUTPUT_DIR` is uploaded as a generated file for grading. The command inherits your environment except Hue's own credentials: `HUE_API_KEY`, `HUE_MCP_KEY` and any other variable holding a Hue key are removed unless you pass `--allow-hue-credentials`, so your model keys and settings still reach the agent but the project key does not. For a case with a simulated world, the command also receives a world-scoped MCP URL and token in `HUE_MCP_URL` and `HUE_MCP_TOKEN`; the token is never logged. `--revision` names the agent revision under test, and `--concurrency` runs up to 64 cases at once (default 1).
+To run an agent that is not a TypeScript module, pass `--command "<shell command>"` instead of an adapter file. `hue eval` starts the command once per case with the case inputs and configuration as JSON on stdin and reads the answer from stdout. For a direct case, which has no simulated world, the command runs in a private case directory: `HUE_CASE_INPUTS` names the inputs file, the case's input files are under `files/<role>/`, and every file the command writes to `HUE_CASE_OUTPUT_DIR` is uploaded as a generated file for grading. The command inherits your environment except Hue's own credentials: `HUE_API_KEY`, `HUE_MCP_KEY` and any other variable holding a Hue key are removed unless you pass `--allow-hue-credentials`, so your model keys and settings still reach the agent but the project key does not. For a case with a simulated world, the command also receives a world-scoped MCP URL and token in `HUE_MCP_URL` and `HUE_MCP_TOKEN`; the token is never logged. Only the current case's world sets these and its other world variables (`HUE_WORLD_*`, `HUE_SIM_*_URL`): a value inherited from your environment never reaches the command. `--revision` names the agent revision under test, and `--concurrency` runs up to 64 cases at once (default 1).
 
 `--worker` registers your agent so runs started from Hue execute on your machine. See [simulations](/evaluations/simulations) for the agent adapter that receives each case's inputs and tools, and the [TypeScript reference](/reference/typescript) for the underlying `runSimulation`, `runLocalAgent` and `runExperiment` APIs.
 
