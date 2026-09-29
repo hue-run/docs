@@ -84,7 +84,7 @@ Claude Code, Codex and Conductor sign in with Hue. The command is this, where `<
 npx --yes --package @hue-run/sdk@0.11.4 hue mcp install --client <client> --auth oauth
 ```
 
-Run it yourself for `claude-code`. Don't run it yourself for `codex` or `conductor`: it runs `codex mcp add`, which opens the Hue sign-in in the browser at once and waits up to 5 minutes for the user to approve it. Give the user the command in your final message instead, to run from the repository root in their own terminal. For the same reason, without `--auth` and outside a terminal, such as your shell tool, the command prints `codex mcp add` instead of running it.
+Run it yourself for `claude-code`. Don't run it yourself for `codex` or `conductor`: it runs `codex mcp add`, which opens the Hue sign-in in the browser at once and waits up to 5 minutes for the user to approve it. Give the user the command in your final message instead, to run from the repository root in their own terminal.
 
 Cursor, VS Code, Windsurf and Gemini CLI connect with the key as `HUE_MCP_KEY`. Run this, where `<client>` is `cursor`, `vscode`, `windsurf` or `gemini`:
 
