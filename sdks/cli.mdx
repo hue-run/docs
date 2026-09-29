@@ -45,7 +45,7 @@ To revoke evaluation and agent access separately, run `--keys evaluations` and `
 ## Connect your coding agent
 
 ```sh
-npx --yes --package @hue-run/sdk@0.11.1 hue mcp install --client claude-code
+npx --yes --package @hue-run/sdk@0.11.1 hue mcp install --client claude-code --auth oauth
 ```
 
 `hue mcp install` writes a server named `hue` at `https://mcp.hue.run/mcp` for your client. Supported clients are `claude-code`, `codex`, `conductor`, `cursor`, `vscode`, `windsurf` and `gemini`. For `windsurf` it only prints the snippet; merge it into the configuration opened by Cascade's **… (Actions) → MCPs → Open MCP config file**. See the [Cascade MCP guide](https://docs.devin.ai/desktop/cascade/mcp) for that client's configuration. Add `--dry-run` to see the change first, or `--print` for the snippet only.
