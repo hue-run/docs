@@ -91,8 +91,9 @@ test("a double-quoted key reference in an mcp add command fails", () => {
 });
 
 test("the MCP guide must keep the sign-in snippets", () => {
+  // The key command starts with the sign-in command, so it alone does not satisfy the check.
   const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
-    text.replace("codex mcp login hue\n", ""),
+    text.replaceAll("codex mcp add hue --url 'https://mcp.hue.run/mcp?toolsets=all'\n", ""),
   ));
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /does not match the generated oauthCodexCli snippet/);
@@ -124,7 +125,7 @@ test("a tool count stated for write access must be that listing's count", () => 
 
 test("the default tool counts stay attached to their access context", () => {
   const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
-    text.replace("20 tools with write access", "19 tools with write access"),
+    text.replace("18 tools with write access", "17 tools with write access"),
   ));
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /must report the default listing as/);
