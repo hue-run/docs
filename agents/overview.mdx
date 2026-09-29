@@ -28,7 +28,7 @@ For a coding agent implementing content scrubbing, use the [redaction recipe](/g
 Application telemetry and agent access have different authentication needs:
 
 - The application's `HUE_API_KEY` uses **Tracing only** for telemetry and known-trace receipts. Use **Read and write** only when that process also manages datasets, scorers, experiments, simulations, environments, or managed runs.
-- For MCP access, [sign in with Hue](/agents/mcp-server#sign-in-with-hue-instead-of-a-key) and approve **Read** or **Read and write** for one project. Clients that accept project keys can instead use `HUE_MCP_KEY` with the same access choices. Configure that key in the MCP client, never in application code. The [MCP connection guide](/agents/mcp-server) covers both methods and client setup.
+- For MCP access, [sign in with Hue](/agents/mcp-server#sign-in-with-hue): the connection can read and write the active projects of one organization, within your role, for 30 days. Use a key as `HUE_MCP_KEY` instead for read-only access (a **Read** key), or for a client that can't sign in or a run without a browser (**Read** or **Read and write**). Configure that key in the MCP client, never in application code. The [MCP connection guide](/agents/mcp-server) covers both methods and client setup.
 
 See [project keys](/guides/project-keys) for the presets and rotation.
 
