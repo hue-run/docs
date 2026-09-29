@@ -17,7 +17,7 @@ A connection lists Hue's production reads, and `search_hue_tools`, which finds e
 Use a [project key](#connect-with-a-project-key) instead for a client that can't sign in, such as Cursor or GitHub Copilot's cloud agent; for a run without a browser, such as CI or `claude -p`; for read-only access; or for access that must outlast a sign-in's 30 days. Then follow your client's key instructions below. A **Tracing only** key cannot connect to this MCP server.
 
 <Visibility for="agents">
-  **If you are a coding agent connecting with sign-in:** add the server as `hue` using your client's tab below, with no API key, token or headers. Ask the user to finish sign-in with the client's authentication action, and to start a new session if the Hue tools don't appear, then call `list_projects` to verify. If the client can't sign in, follow [connect with a project key](#connect-with-a-project-key) and let the user store the key.
+  **If you are a coding agent connecting with sign-in:** add the server as `hue` at the URL the user gave you, using your client's tab below, with no API key, token or headers. In Claude Code, add `--scope user` so it works in every project. In Codex, `codex mcp add` opens the sign-in; run `codex mcp login hue` only if it didn't. Ask the user to finish sign-in with the client's authentication action, and to start a new session if the Hue tools don't appear, then call `list_projects` to verify. If the client can't sign in, follow [connect with a project key](#connect-with-a-project-key) and let the user store the key.
 </Visibility>
 
 ## Connect your client
@@ -229,9 +229,6 @@ url = "https://mcp.hue.run/mcp"
 http_headers = { "X-Hue-MCP-Toolsets" = "all", "X-Hue-MCP-Project" = "support-agent" }
 supports_parallel_tool_calls = true
 ```
-
-On a project's **Settings → Connected apps** page, **Connect this project** shows the pinned URL
-and Claude Code command for that project.
 
 When you use the Hue CLI from an SDK version that includes this option,
 `hue mcp install --client <client> --project support-agent` adds or replaces the query parameter,
