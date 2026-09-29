@@ -1,6 +1,6 @@
 ---
 title: "Set up Hue with your coding agent"
-description: "Copy one prompt into your coding agent. You create and store a Hue API key; the agent adds tracing, verifies a real request and connects the Hue MCP server."
+description: "Copy one prompt into your coding agent. You create and store a Hue API key for traces and evaluations; the agent adds tracing, verifies a real request and connects the Hue MCP server."
 sidebarTitle: "Agent setup"
 ---
 
@@ -11,7 +11,7 @@ sidebarTitle: "Agent setup"
   Set up Hue in this project. Use curl to read https://docs.hue.run/guides/agent-setup.md and follow it, and show me the plan before you change anything.
   ```
 
-  Your agent shows you its plan and asks you to create a **Read and write** API key in Hue and store it yourself, so the key never goes into the chat. It then adds tracing, verifies a real request and connects the Hue MCP server, which your agent can use once you restart it.
+  Your agent shows you its plan and asks you to create a **Read and write** API key in Hue and store it yourself, so the key never goes into the chat. The key sends traces and runs evaluations. The agent then adds tracing, verifies a real request and connects the Hue MCP server. After you restart the agent, you sign in to Hue to approve that connection; Cursor, VS Code, Windsurf and Gemini CLI use the same key instead.
 
   Don't have a Hue account yet? The Hue team sets up accounts: email [founders@hue.run](mailto:founders@hue.run) or book a time at [https://calendar.notion.so/meet/akethini/hue](https://calendar.notion.so/meet/akethini/hue).
 
@@ -28,25 +28,27 @@ sidebarTitle: "Agent setup"
 
 ## 1. Get your Hue API key
 
-This setup uses one **Read and write** project key, stored as both `HUE_API_KEY` and `HUE_MCP_KEY`. It sends traces, checks what Hue stored, runs evaluations and connects the [Hue MCP server](/agents/mcp-server).
+This setup uses one **Read and write** project key, stored as `HUE_API_KEY`. It sends traces, checks what Hue stored and runs evaluations. Claude Code, Codex and Conductor connect to the [Hue MCP server](/agents/mcp-server) in step 4 by signing in with Hue and need no key. A client that connects with a key instead reads the same key as `HUE_MCP_KEY`: Cursor, VS Code, Windsurf and Gemini CLI, a client that runs without a browser or must keep access past a sign-in's 30 days, and any client when the user asks for a key.
 
-First find how the application already provides local secrets, without reading any values: an ignored env file it loads (such as `.env.local` or `.env`), or a secret manager that injects variables into commands (such as Doppler, 1Password or Infisical). If that workflow already provides a **Read and write** key as both `HUE_API_KEY` and `HUE_MCP_KEY`, go to step 2. An existing `HUE_API_KEY` may be a **Tracing only** key; ask the user which preset it is. If it is **Read and write** but `HUE_MCP_KEY` is missing, ask the user to add `HUE_MCP_KEY` with the same value, then go to step 2.
+First find how the application already provides local secrets, without reading any values: an ignored env file it loads (such as `.env.local` or `.env`), or a secret manager that injects variables into commands (such as Doppler, 1Password or Infisical). If that workflow already provides a **Read and write** key as `HUE_API_KEY`, and as `HUE_MCP_KEY` when the client connects with a key, go to step 2. An existing `HUE_API_KEY` may be a **Tracing only** key; ask the user which preset it is. If it is **Read and write** but the client connects with a key and `HUE_MCP_KEY` is missing, ask the user to add `HUE_MCP_KEY` with the same value, then go to step 2.
 
 Otherwise, tell the user, in this wording or close to it:
 
 > Hue needs a **Read and write** API key from your Hue account. You create and store it yourself, so please don't paste it into this chat.
 >
 > 1. Sign in at https://app.hue.run, select the project that should receive this application's traces, open **Settings → Integrations & API keys** (https://app.hue.run/settings/integrations) and create a **Read and write** key. Members ask an owner or admin for one.
-> 2. Store it as `HUE_API_KEY` and `HUE_MCP_KEY` in your secret manager, or run this in your own terminal from the repository root and paste the key at its hidden prompt: `npx --yes --package @hue-run/sdk@0.11.1 hue login --gitignore`
+> 2. Store it as `HUE_API_KEY` in your secret manager, or run this in your own terminal from the repository root and paste the key at its hidden prompt: `npx --yes --package @hue-run/sdk@0.11.1 hue login --gitignore`
 > 3. Tell me when it's stored. You don't need to run the next steps it prints; I'll do those.
 >
 > Don't have a Hue account yet? The Hue team sets up accounts: email founders@hue.run or book a time at https://calendar.notion.so/meet/akethini/hue. When your account is ready, paste the setup prompt again.
 
+For a client that connects with a key, say "Store it as `HUE_API_KEY` and `HUE_MCP_KEY`" in item 2.
+
 Don't run `hue login` yourself: it waits for the key at a hidden prompt. Never print, log or commit the key, and wait until the user says it's stored.
 
-`hue login` checks the key against Hue, writes both variables to `.env.hue` and adds the file to `.gitignore` if it isn't ignored yet. It refuses a **Read** or **Tracing only** key and never prints the key. If the application loads another ignored env file, add `--env-path` with that file's path to the command in your message; add `--force` if the file already holds a different `HUE_API_KEY` or `HUE_MCP_KEY`.
+`hue login` checks the key against Hue, writes it to `.env.hue` as both `HUE_API_KEY` and `HUE_MCP_KEY`, and adds the file to `.gitignore` if it isn't ignored yet. It refuses a **Read** or **Tracing only** key and never prints the key. If the application loads another ignored env file, add `--env-path` with that file's path to the command in your message; add `--force` if the file already holds a different `HUE_API_KEY` or `HUE_MCP_KEY`.
 
-No Node.js? The user skips the command and adds `HUE_API_KEY=` and `HUE_MCP_KEY=` lines with the key to an ignored env file in an editor.
+No Node.js? The user skips the command and adds a `HUE_API_KEY=` line with the key to an ignored env file in an editor, and a `HUE_MCP_KEY=` line with the same key for a client that connects with a key.
 
 ## 2. Check the key
 
@@ -74,20 +76,32 @@ Keep the **Read and write** key on development machines. Before the application 
 
 ## 4. Connect the Hue MCP server
 
-This is the last step because most clients load a new MCP server only when they start. From the repository root, run this command, where `<client>` is `claude-code`, `codex`, `conductor`, `cursor`, `vscode`, `windsurf` or `gemini`:
+This is the last step because most clients load a new MCP server only when they start. From the repository root, run the command for the user's client.
+
+Claude Code, Codex and Conductor sign in with Hue. Run this, where `<client>` is `claude-code`, `codex` or `conductor`:
+
+```sh
+npx --yes --package @hue-run/sdk@0.11.1 hue mcp install --client <client> --auth oauth
+```
+
+Cursor, VS Code, Windsurf and Gemini CLI connect with the key as `HUE_MCP_KEY`. Run this, where `<client>` is `cursor`, `vscode`, `windsurf` or `gemini`:
 
 ```sh
 npx --yes --package @hue-run/sdk@0.11.1 hue mcp install --client <client>
 ```
 
-The command writes a server named `hue` that references `HUE_MCP_KEY`; it never writes the key. `.mcp.json` (Claude Code) and `.cursor/mcp.json` (Cursor) are safe to commit, and each teammate then needs their own key. For Codex, the command runs `codex mcp add`, which writes `~/.codex/config.toml`; if your sandbox blocks that, ask the user to approve it. VS Code prompts for the key when the server starts, and for Windsurf the command prints a snippet to merge into the file it names. Without Node.js, use the key instructions for the user's client in [Connect your client](/agents/mcp-server#connect-your-client); for a client without its own tab there, such as VS Code, Windsurf or Gemini CLI, use the **Any MCP client** tab's project-key settings.
+`hue mcp install` configures these four clients with a key only. If VS Code, Windsurf or Gemini CLI supports MCP sign-in, you can instead connect it with the sign-in settings in the **Any MCP client** tab of [Connect your client](/agents/mcp-server#connect-your-client); Hue does not accept Cursor's sign-in.
 
-If the user prefers browser sign-in, or the client can't send a key, add `--auth oauth` for `claude-code`, `codex` or `conductor`, or follow [sign in with Hue](/agents/mcp-server#sign-in-with-hue-instead-of-a-key) for another client; the client then holds no key. `--client conductor` signs in by default.
+A sign-in connection can read and write every active project in the organization the user approves, within their role, for 30 days. When Claude Code, Codex or Conductor connects with a key for a reason step 1 names, use the key command for `claude-code` or `codex` too, and add `--auth key` for `conductor`. That connection reads `HUE_MCP_KEY`, which `hue login` already stored; otherwise the user adds it as step 1 describes. For read-only access, the user creates a **Read** key and stores it as `HUE_MCP_KEY` instead, in the secret manager or with `npx --yes --package @hue-run/sdk@0.11.1 hue login --keys coding-agent --force --gitignore` (with the same `--env-path`, if step 1 used one), which replaces only `HUE_MCP_KEY` in the env file; then run the key command for the client, with `--auth key` for `conductor`.
+
+With `--auth oauth`, the command writes only the server URL. With a key, it writes a server named `hue` that references `HUE_MCP_KEY` and never the key itself. `.mcp.json` (Claude Code) and `.cursor/mcp.json` (Cursor) are safe to commit; with a key, each teammate then needs their own key. For Codex and Conductor, the command runs `codex mcp add`, which writes `~/.codex/config.toml`, and for Conductor also `claude mcp add --scope user`; if your sandbox blocks that, ask the user to approve it. VS Code prompts for the key when the server starts, and for Windsurf the command prints a snippet to merge into the file it names. Without Node.js, use the instructions for the user's client in [Connect your client](/agents/mcp-server#connect-your-client); for a client without its own tab there, such as VS Code, Windsurf or Gemini CLI, use the **Any MCP client** tab's project-key settings.
 
 The user restarts the client to load the server, so finish with one message that gives the user:
 
 1. Your summary, in the form of the skill's **Handoff**. You have just configured the MCP server, so leave out the handoff's offer to connect it.
-2. How to restart the client. With `--auth oauth`, or `--client conductor` without `--auth key`, there is no key to load: the user restarts the client and completes sign-in with its authentication action, such as `/mcp` in Claude Code or MCP status in Conductor. Otherwise, how to restart it with the key. Load the key into the shell that starts the client, for example with `set -a; . ./.env.hue; set +a` for the env file the key is in, or start the client through the secret manager's runner. Then restart it from that shell: `claude --continue` for Claude Code, approving the `hue` server when asked; `codex resume --last` for Codex; or quit Cursor, reopen it with `cursor .` and turn on **hue** in its MCP settings. Restart any other client from that shell.
-3. The prompt to send after the restart: `Use the Hue MCP: call get_project_context, then show my 5 most recent error traces with links.`
+2. How to restart the client and finish connecting:
+   - With `--auth oauth`, there is no key to load. The user restarts the client and completes sign-in with its authentication action. In Claude Code: `claude --continue`, approving the `hue` server when asked, then `/mcp`, select `hue` and choose **Authenticate**. In Codex: `codex mcp login hue` in a terminal, unless Codex already opened Hue in the browser, then `codex resume --last`. In Conductor: open **MCP status** from the plug icon or `/mcp-status`, refresh and use **hue**'s authentication action, then start a new agent session if the Hue tools don't appear. On Hue's consent page, the user checks the organization and chooses **Allow**. Add that if sign-in doesn't complete or the Hue tools don't load, you can connect with the key instead; then run the key command for the client and give the user the key restart below. For Codex, run `codex mcp remove hue` first; for Conductor, run `claude mcp remove hue -s user` and `codex mcp remove hue` first, then the command with `--auth key`.
+   - With a key, load the key into the shell that starts the client, for example with `set -a; . ./.env.hue; set +a` for the env file the key is in, or start the client through the secret manager's runner. Then restart it from that shell: `claude --continue` for Claude Code, approving the `hue` server when asked; `codex resume --last` for Codex; or quit Cursor, reopen it with `cursor .` and turn on **hue** in its MCP settings. Restart any other client from that shell.
+3. The prompt to send after the restart: `Use the Hue MCP: call list_projects and confirm which project to inspect. Then call get_project_context and show its 5 most recent error traces with links. For an organization connection, pass the project's id or slug as project_id on each call after list_projects.`
 4. What they can ask next, for example "What needs attention in the last 24 hours, and why?". [Investigate production](/agents/investigate-production) has the tool sequences for those questions.
 5. Optionally, that they can keep the Hue skill in the project with `npx skills add hue-run/hue-sdk --skill hue`.
