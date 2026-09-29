@@ -229,6 +229,16 @@ test("the default listing sentence must name every default tool", () => {
   assert.match(result.stderr, /must name exactly the default observe profile's tools/);
 });
 
+test("punctuation in the default listing sentence does not cut its list short", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
+    text.replace(
+      "lists the `observe` toolset, the production reads: `list_projects`",
+      "lists the `observe` toolset, the production reads (e.g. traces and spans): `list_projects`",
+    ),
+  ));
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test("the tool reference must list every tool", () => {
   const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-tools.mdx", (text) =>
     text.replace(/^\| `get_case_divergence` \|.*\n/m, ""),

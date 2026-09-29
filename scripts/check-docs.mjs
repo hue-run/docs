@@ -214,9 +214,15 @@ for (const [profile, tools] of Object.entries(toolsets.profiles ?? {})) {
     continue;
   }
   const opening = `Without a selection, a connection lists the \`${profile}\` toolset`;
+  // The list is the run of code-formatted names right after the sentence's colon, joined by commas
+  // or "and", so an abbreviation or other punctuation in the sentence cannot cut it short.
   const start = compactMcpGuide.indexOf(opening);
-  const sentence = start === -1 ? "" : compactMcpGuide.slice(start, compactMcpGuide.indexOf(". ", start));
-  const listed = [...sentence.slice(sentence.indexOf(":") + 1).matchAll(/`([a-z_]+)`/g)].map(([, name]) => name);
+  const colon = start === -1 ? -1 : compactMcpGuide.indexOf(":", start + opening.length);
+  const run =
+    colon === -1
+      ? ""
+      : (/^\s*(`[a-z_]+`(?:(?:,\s*(?:and\s+)?|\s+and\s+)`[a-z_]+`)*)/.exec(compactMcpGuide.slice(colon + 1))?.[1] ?? "");
+  const listed = [...run.matchAll(/`([a-z_]+)`/g)].map(([, name]) => name);
   if (JSON.stringify([...listed].sort()) !== JSON.stringify([...tools].sort())) {
     fail(`MCP guide's "Without a selection" sentence must name exactly the default ${profile} profile's tools`);
   }
