@@ -16,6 +16,10 @@ A connection lists Hue's production reads, and `search_hue_tools`, which finds e
 
 Use a [project key](#connect-with-a-project-key) instead for a client that can't sign in, such as Cursor or GitHub Copilot's cloud agent; for a run without a browser, such as CI or `claude -p`; for read-only access; or for access that must outlast a sign-in's 30 days. Then follow your client's key instructions below. A **Tracing only** key cannot connect to this MCP server.
 
+<Visibility for="agents">
+  **If you are a coding agent connecting with sign-in:** add the server as `hue` using your client's tab below, with no API key, token or headers. Ask the user to finish sign-in with the client's authentication action, and to start a new session if the Hue tools don't appear, then call `list_projects` to verify. If the client can't sign in, follow [connect with a project key](#connect-with-a-project-key) and let the user store the key.
+</Visibility>
+
 ## Connect your client
 
 Start with **Any MCP client** for the connection settings, or choose your client for exact commands.
