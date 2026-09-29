@@ -207,7 +207,7 @@ for (const profile of ["author", "evaluate"]) {
 }
 // Match the snippets for the clients documented in this guide. The producer snapshot also
 // includes other clients; its complete contents and source digest remain checked below.
-for (const key of [
+const guideSnippetKeys = [
   "claudeCodeProjectJson",
   "claudeCodeCli",
   "codexCli",
@@ -218,12 +218,22 @@ for (const key of [
   "oauthCodexToml",
   "connectPrompt",
   "verifyPrompt",
-]) {
+];
+for (const key of guideSnippetKeys) {
   const snippet = platform.mcp.installSnippets[key];
-  if (typeof snippet !== "string") fail(`platform contract has no ${key} snippet`);
-  else if (!compactMcpGuide.includes(compact(snippet))) {
-    fail(`MCP guide does not match the generated ${key} snippet`);
+  if (typeof snippet !== "string") {
+    fail(`platform contract has no ${key} snippet`);
+    continue;
   }
+  // A sign-in command is the start of its key form, so it must also appear outside that form.
+  let guide = compactMcpGuide;
+  for (const other of guideSnippetKeys) {
+    const longer = platform.mcp.installSnippets[other];
+    if (typeof longer === "string" && longer.length > snippet.length && compact(longer).includes(compact(snippet))) {
+      guide = guide.replaceAll(compact(longer), "");
+    }
+  }
+  if (!guide.includes(compact(snippet))) fail(`MCP guide does not match the generated ${key} snippet`);
 }
 // Tool counts quoted in the guide must match the contract: every tool, the read tools a Read key or
 // connection sees, or the default listing (the default toolsets and the catalog tools) with write

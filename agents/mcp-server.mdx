@@ -17,7 +17,7 @@ A connection lists Hue's production reads, and `search_hue_tools`, which finds e
 Use a [project key](#connect-with-a-project-key) instead for a client that can't sign in, such as Cursor or GitHub Copilot's cloud agent; for a run without a browser, such as CI or `claude -p`; for read-only access; or for access that must outlast a sign-in's 30 days. Then follow your client's key instructions below. A **Tracing only** key cannot connect to this MCP server.
 
 <Visibility for="agents">
-  **If you are a coding agent connecting with sign-in:** add the server as `hue` at the URL the user gave you, using your client's tab below, with no API key, token or headers. In Claude Code, add `--scope user` so it works in every project. In Codex, `codex mcp add` opens the sign-in; run `codex mcp login hue` only if it didn't. Ask the user to finish sign-in with the client's authentication action, and to start a new session if the Hue tools don't appear, then call `list_projects` to verify. If the client can't sign in, follow [connect with a project key](#connect-with-a-project-key) and let the user store the key.
+  **If you are a coding agent connecting with sign-in:** add the server as `hue` at the URL the user gave you, using your client's tab below, with no API key, token or headers. In Claude Code, keep `--scope user` so it works in every project. In Codex, `codex mcp add` opens the sign-in in the browser at once and waits for the user to approve it, so ask the user to run it in their own terminal, and to run `codex mcp login hue` once only if that sign-in did not finish. Ask the user to finish sign-in with the client's authentication action, and to start a new session if the Hue tools don't appear, then call `list_projects` to verify. If the client can't sign in, follow [connect with a project key](#connect-with-a-project-key) and let the user store the key.
 </Visibility>
 
 ## Connect your client
@@ -53,13 +53,13 @@ Start with **Any MCP client** for the connection settings, or choose your client
     </Accordion>
   </Tab>
   <Tab title="Claude Code">
-    Add the server, then run `/mcp` in Claude Code, select `hue` and choose **Authenticate**. This adds `hue` for the current project; add `--scope user` for all projects. Until you authenticate, `claude mcp get hue` shows `! Needs authentication`, which is expected.
+    Add `hue` for all your projects, then run `/mcp` in Claude Code, select `hue` and choose **Authenticate**. Until you authenticate, `claude mcp get hue` shows `! Needs authentication`, which is expected.
 
     ```sh
-    claude mcp add --transport http hue 'https://mcp.hue.run/mcp?toolsets=all'
+    claude mcp add --transport http --scope user hue 'https://mcp.hue.run/mcp?toolsets=all'
     ```
 
-    `?toolsets=all` lists every Hue tool. Claude Code defers MCP tools behind its tool search and loads a tool's definition when a task needs it, so the whole list costs little; `list_projects`, `search_traces` and `get_trace` load at the start of every session.
+    `?toolsets=all` lists every Hue tool. Claude Code defers MCP tools behind its tool search and loads a tool's definition when a task needs it, so the whole list costs little; `list_projects`, `search_traces`, `get_trace` and `get_request_answer` load at the start of every session.
 
     To replace a key entry, first run `claude mcp remove hue -s <scope>` with the scope `claude mcp get hue` reports, then add the URL-only entry. A local entry overrides project and user entries, so check that an older entry is not taking precedence.
 
@@ -99,12 +99,13 @@ Start with **Any MCP client** for the connection settings, or choose your client
     </Accordion>
   </Tab>
   <Tab title="Codex">
-    Add the server from a terminal where you can use a browser. `codex mcp add` may start sign-in immediately; `codex mcp login hue` starts or repeats sign-in:
+    Add the server from a terminal where you can use a browser. `codex mcp add` starts the sign-in itself, so there is no separate login step:
 
     ```sh
     codex mcp add hue --url 'https://mcp.hue.run/mcp?toolsets=all'
-    codex mcp login hue
     ```
+
+    Run `codex mcp login hue` only if that sign-in did not finish, or later to sign in again.
 
     Codex searches its MCP tools before it loads them, so `?toolsets=all` lists every Hue tool at little cost. With a model provider that has no tool search, Codex loads every listed tool up front; leave the query off to list the production reads. The equivalent entry in `~/.codex/config.toml` sends the selection as a header and lets Codex run Hue's calls in parallel. `codex mcp add` cannot set `supports_parallel_tool_calls`, so after running it, add that line under `[mcp_servers.hue]`:
 
@@ -230,7 +231,6 @@ http_headers = { "X-Hue-MCP-Toolsets" = "all", "X-Hue-MCP-Project" = "support-ag
 supports_parallel_tool_calls = true
 ```
 
-When you use the Hue CLI from an SDK version that includes this option,
 `hue mcp install --client <client> --project support-agent` adds or replaces the query parameter,
 keeps the toolset selection and uses the coexisting server name for you.
 
@@ -259,7 +259,7 @@ Never put the key in application code, shared configuration or a prompt. See [pr
 For a client that supports environment-variable references, paste this into your coding agent, started from a shell where `HUE_MCP_KEY` is exported. If your client uses a secure credential prompt, configure the key there instead.
 
 ```text Prompt wrap
-Connect me to the Hue MCP server.
+Connect me to Hue MCP.
 
 It is a remote MCP server (Streamable HTTP) at https://mcp.hue.run/mcp. Authenticate with a bearer token read from the HUE_MCP_KEY environment variable — reference the variable, do not write the key into a config file.
 
@@ -273,7 +273,7 @@ Most clients load a new server only when they start, and Claude Code and Cursor 
 Ask the agent in the client you just connected:
 
 ```text
-Use the Hue MCP: call list_projects and confirm which project to inspect. Then call get_project_context and show its 5 most recent error traces with links. For an organization connection, pass the project's id or slug as project_id on each call after list_projects. For a pinned connection, confirm connection.pinned is true and do not pass project_id.
+Use Hue MCP: call list_projects and confirm which project to inspect. Then call get_project_context and show its 5 most recent error traces with links. For an organization connection, pass the project's id or slug as project_id on each call after list_projects. For a pinned connection, confirm connection.pinned is true and do not pass project_id.
 ```
 
 Then ask it to call `get_trace` for one of the returned trace IDs. If there are no error traces, ask `search_traces` for recent traces without an error filter. An empty result is not an authentication failure; use a project with a known test trace to verify the full read path.
@@ -340,6 +340,9 @@ For production questions (what needs attention, which tools fail, which task typ
   <Accordion title="Investigate a failure">
     "Show the error traces from the last 24 hours", "which traces need attention?", "open the slowest span of that trace", "what did the model see before it failed?" (recorded content requires `include_content: true` and the application must have captured it). Tools: `search_traces`, `get_trace`, `get_span`, `get_span_content`, `list_sessions`, `search_spans`, `aggregate`. `search_traces` filters a window by `status`, `attention` (`needs_attention` or `uncertain`), `finding`, `check_key`, `user` or `user_prefix`, `release`, `trace_name`, `model`, one root-span `attribute`, `session_id`, `min_duration_ms` and title text, and sorts by `started_at` or `duration`. Its rows carry `attention_state`, `finding_ids`, `check_state`, `duration_ms`, `user_id`, `release` and `trace_name`. `get_trace` returns the trace's stored findings and trace-check results with its span tree, and each span's status message, error type, tool, timing and recorded sizes. `search_spans` finds spans across traces in a window of up to 7 days, by span name, kind, status, model, duration or attribute, or their trace's name, user, release or session. `aggregate` counts, groups and takes percentiles of a window's traces or spans. `get_span_content` reads exact recorded values by path. Each trace reports a `state`: `running` while a span is still open, `stalled` when 15 minutes pass without new data and no end arrives, or `ended`. Only the TypeScript SDK 0.7.0 and Python SDK 0.4.0 or later report open spans, and only Hue and AI spans still open when their placeholder is exported, usually about 1.5 s after they start; other spans, including every span from other exporters, appear once they end.
   </Accordion>
+  <Accordion title="Agent behavior across requests">
+    "How often does the agent hand work to sub-agents?", "which task types are slow?", "what do users ask for?" Tool: `get_request_answer`. It answers one `question` over a window, by default the last 7 days of production traffic without simulator traffic: `delegation`, `added_work`, `handoff_scope`, `data_cuts` (tool output the agent dropped), `slow_tasks`, `task_types` or `answer_time`, or every finding at once with `overview`. Each answer carries its count `n`, `coverage`, the environment and user split and example requests with their traces; `group_by` adds a series by `day`, `release`, `model`, `program`, `environment`, `user` or `intent` (the request's task type). `notes` lists every caveat on the numbers, and an answer without notes needs none. `no_data` means no mapped request fell in the window and filters. Where `get_project_context` reports `features.request_answers.available: false`, Hue does not map the project's requests, and trace checks or spans answer these questions instead.
+  </Accordion>
   <Accordion title="Confirm delivery">
     "Did trace 0af7651916cd43dd8448eb211c80319c arrive with spans a and b, with model and usage recorded?" Tools: `verify_trace`.
   </Accordion>
@@ -394,21 +397,21 @@ Evaluation list results are named `eval_sets`, `evaluators`, `runs`, `scoring_ru
 
 ## Choose toolsets
 
-Without a selection, a connection lists the `observe` toolset, the production reads: `list_projects`, `get_project_context`, `search_traces`, `get_trace`, `get_span`, `list_sessions`, `verify_trace`, `get_span_content`, `search_spans`, `aggregate`, `list_trace_checks`, `get_trace_check_results`, `get_trace_check_summary`, `get_intent_summary`, `list_intent_traces`, `search_hue_docs` and `load_hue_guide`. Beside them it lists three catalog tools that reach every other tool the connection's access allows, so a short list loses nothing:
+Without a selection, a connection lists the `observe` toolset, the production reads: `list_projects`, `get_project_context`, `search_traces`, `get_trace`, `get_span`, `list_sessions`, `verify_trace`, `get_span_content`, `search_spans`, `aggregate`, `get_intent_summary`, `list_intent_traces`, `get_request_answer`, `search_hue_docs` and `load_hue_guide`. Beside them it lists three catalog tools that reach every other tool the connection's access allows, so a short list loses nothing:
 
 - `search_hue_tools` finds tools by keywords, such as `eval set`, or by `toolset`, 10 per page. Each result has the tool's `name`, `summary`, `access`, `input_schema` and `call`: the tool's own name when the connection lists it, otherwise the executor to call it through.
 - `execute_hue_tool` calls a read tool by `name` with its `arguments` and returns exactly what calling it directly returns.
 - `execute_hue_write_tool` calls a write tool the same way. It is listed only with write access and without `?read_only=true`. Ask the user before calling it.
 
-That is 20 tools with write access, or 19 tools with **Read** access. An executor call goes through the same access checks, project selection, audit log and content gating as a direct call. For example, to list an organization project's eval sets on a default connection, call `list_projects`, then `search_hue_tools` with `query: "eval set"`, then `execute_hue_tool` with `{"name": "list_eval_sets", "arguments": {"project_id": "<id>"}}`.
+That is 18 tools with write access, or 17 tools with **Read** access. An executor call goes through the same access checks, project selection, audit log and content gating as a direct call. For example, to list an organization project's eval sets on a default connection, call `list_projects`, then `search_hue_tools` with `query: "eval set"`, then `execute_hue_tool` with `{"name": "list_eval_sets", "arguments": {"project_id": "<id>"}}`.
 
 To list tools directly, add `?toolsets=<names>` to the server URL, for a key or a sign-in connection. The `X-Hue-MCP-Toolsets: <names>` header selects the same way, and together they select their union. Separate several names with commas.
 
-Every group holds at most 20 tools. `author` and `evaluate` are profiles for the MCP guides of the same names:
+`author` and `evaluate` are profiles for the MCP guides of the same names:
 
 | Selection | Directly listed tools |
 | --- | --- |
-| `observe` | The 17 production reads listed above. |
+| `observe` | The 15 production reads listed above. |
 | `author` | `get_trace`, `list_eval_sets`, `get_eval_set`, `add_eval_set`, `update_eval_set`, `add_eval_set_draft`, `add_eval_set_cases`, `update_eval_set_case`, `delete_eval_set_case`, `freeze_eval_set_version`, `list_evaluators`, `get_evaluator`, `add_evaluator`, `publish_evaluator`, `copy_evaluator`, `list_runs`, `get_run`, `add_run`, `list_run_items`, `get_run_item`, `start_run_case`, `complete_run_case`, `finish_run`, `launch_managed_run`, `launch_local_run`, `add_case_conversion`, `get_case_conversion`, `update_case_conversion`, `publish_case_conversion`, `archive_case_conversion`, `list_environments`, `get_environment`, `add_environment`, `publish_environment_version`. |
 | `evaluate` | `load_hue_guide`, `get_trace`, `get_span`, `list_cases`, `get_case`, `add_case_conversion`, `get_case_conversion`, `update_case_conversion`, `publish_case_conversion`, `get_environment`, `list_local_agents`, `launch_local_run`, `get_local_run`, `get_run`, `list_run_items`, `get_run_item`, `get_run_execution`. |
 | `project` | `list_projects`, `get_project_context`, `list_api_keys`, `add_api_key`, `revoke_api_key`, `list_members`, `update_project`. |
@@ -419,7 +422,7 @@ Every group holds at most 20 tools. `author` and `evaluate` are profiles for the
 | `cases` | `list_cases`, `get_case`, `add_case_conversion`, `get_case_conversion`, `update_case_conversion`, `publish_case_conversion`, `archive_case_conversion`, `get_case_divergence`, `list_suggested_cases`, `add_case_conversion_batch`, `get_case_conversion_batch`, `update_case_conversion_batch`. |
 | `runners` | `list_managed_targets`, `add_managed_target`, `preflight_managed_run`, `launch_managed_run`, `get_managed_run`, `cancel_managed_run`, `list_local_agents`, `launch_local_run`, `get_local_run`, `list_artifacts`, `get_artifact`. |
 | `environments` | `list_environments`, `get_environment`, `add_environment`, `publish_environment_version`, `archive_environment`. |
-| `intents` | `get_intent_taxonomy`, `save_intent_taxonomy`, `get_intent_summary`, `list_intent_traces`. |
+| `intents` | `get_intent_taxonomy`, `save_intent_taxonomy`, `get_intent_summary`, `list_intent_traces`, `get_request_answer`. |
 | `docs` | `search_hue_docs`, `load_hue_guide`. |
 | `all` | Every tool your access allows, without the catalog tools. Use it for clients that search their own tool lists and load a definition only when a task needs it. |
 

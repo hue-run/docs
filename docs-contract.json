@@ -4,15 +4,15 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "d18c3434eadde323c1cd7bd0be33587672a8f35f",
+      "commit": "2cad943cc9a22f2012b21f124dc37735a5afcbf4",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:92f5772f1391e1dd40bb0309686f2f93e0c03fbd12de4a2e436259f9662206ed"
+      "sha256": "sha256:3d8203a8c2fd812e84b39c08698285125b7bd3d80a5004ea2c7bf1da545530b0"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "0836a549ea340b965f6a17cdb937971ac49bbbc5",
+      "commit": "89c3543f6407bf12f9747a1cab34389d051f275b",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:052584ca144549c262b4e83dd9f6c2e03edac6ced718371c3ef67c1b52f35950"
+      "sha256": "sha256:f7ab57577b37fb178e4d91868a0399cc60a40cc8136a7a59d4fade3f26ab269d"
     }
   },
   "site": {
@@ -29,7 +29,7 @@
       "capabilities": [
         "project_read"
       ],
-      "use": "Read every project surface through Hue's MCP server, including recorded trace content."
+      "use": "Read every project surface through Hue MCP, including recorded trace content."
     },
     {
       "id": "read_write",
@@ -52,7 +52,7 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.11.1",
+      "version": "0.11.4",
       "entrypoints": [
         "@hue-run/sdk",
         "@hue-run/sdk/ai-sdk",
@@ -64,7 +64,7 @@
     },
     "python": {
       "name": "hue-run",
-      "version": "0.6.1",
+      "version": "0.6.2",
       "modules": [
         "hue_sdk",
         "hue_sdk.evals",
@@ -75,13 +75,7 @@
   "skill": {
     "version": "0.5.10",
     "sha256": "sha256:bc13c2ab0144b3648382fca1dd4ae239fcddb694509bf88e2e3a1f6da1b07301",
-    "sdkSourceSha256": "sha256:64b2695a8dde763338b331bfb1d7cb0e105678076b477d78bffcfc1281960697",
-    "override": {
-      "baseCommit": "0836a549ea340b965f6a17cdb937971ac49bbbc5",
-      "sourceCommit": "8c388ec1b9fdfeeda99ddbe7f1eec5387b4c4b4d",
-      "source": "skills/hue/SKILL.md",
-      "sourceSha256": "sha256:e0317f5856c4b3d49467a7741ffa2f76e43abbc13ce9ed6ac6b7b431340f57d5"
-    }
+    "sdkSourceSha256": "sha256:e0317f5856c4b3d49467a7741ffa2f76e43abbc13ce9ed6ac6b7b431340f57d5"
   },
   "mcp": {
     "transport": "Streamable HTTP",
@@ -168,6 +162,7 @@
       "save_intent_taxonomy",
       "get_intent_summary",
       "list_intent_traces",
+      "get_request_answer",
       "list_managed_targets",
       "add_managed_target",
       "preflight_managed_run",
@@ -184,7 +179,7 @@
       "search_hue_docs",
       "load_hue_guide"
     ],
-    "catalogSha256": "f4068c9b49d73eb62b98589f0887a2a4d9a106a07d88aee4d58cfb9ade9e464d"
+    "catalogSha256": "b9e21e2021ede2befcb5a1bf34ecec17a47462af8294def6de4abbda20925d64"
   },
   "pages": [
     "index",

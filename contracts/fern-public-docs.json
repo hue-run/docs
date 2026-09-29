@@ -557,7 +557,7 @@
       "capabilities": [
         "project_read"
       ],
-      "use": "Read every project surface through Hue's MCP server, including recorded trace content."
+      "use": "Read every project surface through Hue MCP, including recorded trace content."
     },
     {
       "id": "read_write",
@@ -580,11 +580,11 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.11.1"
+      "version": "0.11.4"
     },
     "python": {
       "name": "hue-run",
-      "version": "0.6.1"
+      "version": "0.6.2"
     }
   },
   "mcp": {
@@ -1594,6 +1594,18 @@
         }
       },
       {
+        "name": "get_request_answer",
+        "title": "Hue: get request answer",
+        "toolset": "intents",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
         "name": "list_managed_targets",
         "title": "Hue: list managed targets",
         "toolset": "runners",
@@ -1775,16 +1787,16 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "f4068c9b49d73eb62b98589f0887a2a4d9a106a07d88aee4d58cfb9ade9e464d",
-    "serverInstructionsSha256": "af588665843e8345ec1de2b317b42dd2f49a6d959ceb581a976e9b49cf6ddf9a",
+    "catalogSha256": "b9e21e2021ede2befcb5a1bf34ecec17a47462af8294def6de4abbda20925d64",
+    "serverInstructionsSha256": "a57ca5d20b45f22f4e1edcb1935b3555d47afeb0601f7bef597bef4e45d7a2ce",
     "guides": {
       "data-model": {
         "title": "Hue data model",
-        "sha256": "e7d704a0e796cb7aeddb6cc3d0d6015c58168974a3d2dda805f80da5afd49076"
+        "sha256": "3d4e2d678082324788a0db16514851447c54f7714dbb085efe8b69b794ccdaae"
       },
       "production": {
         "title": "Read production traces with Hue",
-        "sha256": "0b8a741ced41a28ce484b1c86b48f8c446f8ba43452f1913c8cfb689a89ae376"
+        "sha256": "9e518f641d8c848b130cdeab1068602094cf4fc999bf985a7cde721155dd6fec"
       },
       "investigate": {
         "title": "Investigate a failure with Hue",
@@ -1792,11 +1804,11 @@
       },
       "author": {
         "title": "Author evaluations with Hue",
-        "sha256": "8e0690f3abf5507b65391d53d202c10cfb11af7a69f5801f7370556175cf9524"
+        "sha256": "add59f4086b71fba82ccc8d0019a32bd2872c943a29358d53ae2d799e56ae6c3"
       },
       "evaluate": {
         "title": "Run your agent against a case",
-        "sha256": "f2913a0e897a795c841a044a74a78c1ab78746b38aacb6e6557e1f69d44db09f"
+        "sha256": "136675abe9908e6ee90660b26fc6a15ea63061e47aefa6b3c2c758e72e0db315"
       }
     },
     "toolsets": {
@@ -1824,11 +1836,9 @@
           "get_span_content",
           "search_spans",
           "aggregate",
-          "list_trace_checks",
-          "get_trace_check_results",
-          "get_trace_check_summary",
           "get_intent_summary",
           "list_intent_traces",
+          "get_request_answer",
           "search_hue_docs",
           "load_hue_guide"
         ],
@@ -1930,8 +1940,8 @@
     "installSnippets": {
       "oauthServerUrl": "https://mcp.hue.run/mcp",
       "oauthServerUrlAll": "https://mcp.hue.run/mcp?toolsets=all",
-      "oauthClaudeCodeCli": "claude mcp add --transport http hue 'https://mcp.hue.run/mcp?toolsets=all'",
-      "oauthCodexCli": "codex mcp add hue --url 'https://mcp.hue.run/mcp?toolsets=all'\ncodex mcp login hue",
+      "oauthClaudeCodeCli": "claude mcp add --transport http --scope user hue 'https://mcp.hue.run/mcp?toolsets=all'",
+      "oauthCodexCli": "codex mcp add hue --url 'https://mcp.hue.run/mcp?toolsets=all'",
       "oauthCodexToml": "[mcp_servers.hue]\nurl = \"https://mcp.hue.run/mcp\"\nhttp_headers = { \"X-Hue-MCP-Toolsets\" = \"all\" }\nsupports_parallel_tool_calls = true",
       "claudeCodeProjectJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp?toolsets=all\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "claudeCodeCli": "claude mcp add --transport http --scope user hue 'https://mcp.hue.run/mcp?toolsets=all' \\\n  --header 'Authorization: Bearer ${HUE_MCP_KEY}'",
@@ -1940,13 +1950,14 @@
       "codexCli": "codex mcp add hue --url 'https://mcp.hue.run/mcp?toolsets=all' --bearer-token-env-var HUE_MCP_KEY",
       "codexToml": "[mcp_servers.hue]\nurl = \"https://mcp.hue.run/mcp?toolsets=all\"\nbearer_token_env_var = \"HUE_MCP_KEY\"\nsupports_parallel_tool_calls = true",
       "vscodeJson": "{\n  \"servers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${input:hue-mcp-key}\"\n      }\n    }\n  },\n  \"inputs\": [\n    {\n      \"type\": \"promptString\",\n      \"id\": \"hue-mcp-key\",\n      \"description\": \"Hue Read or Read and write API key\",\n      \"password\": true\n    }\n  ]\n}",
-      "copilotCloudJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp?read_only=true&toolsets=observe\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $COPILOT_MCP_HUE_MCP_KEY\"\n      },\n      \"tools\": [\n        \"list_projects\",\n        \"get_project_context\",\n        \"search_traces\",\n        \"get_trace\",\n        \"get_span\",\n        \"list_sessions\",\n        \"verify_trace\",\n        \"get_span_content\",\n        \"search_spans\",\n        \"aggregate\",\n        \"list_trace_checks\",\n        \"get_trace_check_results\",\n        \"get_trace_check_summary\",\n        \"get_intent_summary\",\n        \"list_intent_traces\",\n        \"search_hue_docs\",\n        \"load_hue_guide\",\n        \"search_hue_tools\",\n        \"execute_hue_tool\"\n      ]\n    }\n  }\n}",
+      "copilotCloudJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.hue.run/mcp?read_only=true&toolsets=observe\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $COPILOT_MCP_HUE_MCP_KEY\"\n      },\n      \"tools\": [\n        \"list_projects\",\n        \"get_project_context\",\n        \"search_traces\",\n        \"get_trace\",\n        \"get_span\",\n        \"list_sessions\",\n        \"verify_trace\",\n        \"get_span_content\",\n        \"search_spans\",\n        \"aggregate\",\n        \"get_intent_summary\",\n        \"list_intent_traces\",\n        \"get_request_answer\",\n        \"search_hue_docs\",\n        \"load_hue_guide\",\n        \"search_hue_tools\",\n        \"execute_hue_tool\"\n      ]\n    }\n  }\n}",
       "windsurfJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"serverUrl\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${env:HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "geminiCli": "gemini mcp add --scope user --transport http hue https://mcp.hue.run/mcp \\\n  --header 'Authorization: Bearer ${HUE_MCP_KEY}'",
       "geminiJson": "{\n  \"mcpServers\": {\n    \"hue\": {\n      \"httpUrl\": \"https://mcp.hue.run/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
       "opencodeJson": "{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"mcp\": {\n    \"hue\": {\n      \"type\": \"remote\",\n      \"url\": \"https://mcp.hue.run/mcp\",\n      \"enabled\": true,\n      \"headers\": {\n        \"Authorization\": \"Bearer {env:HUE_MCP_KEY}\"\n      }\n    }\n  }\n}",
-      "connectPrompt": "Connect me to the Hue MCP server.\n\nIt is a remote MCP server (Streamable HTTP) at https://mcp.hue.run/mcp. Authenticate with a bearer token read from the HUE_MCP_KEY environment variable — reference the variable, do not write the key into a config file.\n\nRegister it under the name \"hue\" using whatever MCP configuration my client uses, then call get_project_context and tell me which Hue project it reached.",
-      "verifyPrompt": "Use the Hue MCP: call list_projects and confirm which project to inspect. Then call get_project_context and show its 5 most recent error traces with links. For an organization connection, pass the project's id or slug as project_id on each call after list_projects."
+      "oauthConnectPrompt": "Connect this coding agent to Hue MCP at https://mcp.hue.run/mcp using browser sign-in, with no API key. Use curl to read https://docs.hue.run/agents/mcp-server.md and follow it.",
+      "connectPrompt": "Connect me to Hue MCP.\n\nIt is a remote MCP server (Streamable HTTP) at https://mcp.hue.run/mcp. Authenticate with a bearer token read from the HUE_MCP_KEY environment variable — reference the variable, do not write the key into a config file.\n\nRegister it under the name \"hue\" using whatever MCP configuration my client uses, then call get_project_context and tell me which Hue project it reached.",
+      "verifyPrompt": "Use Hue MCP: call list_projects and confirm which project to inspect. Then call get_project_context and show its 5 most recent error traces with links. For an organization connection, pass the project's id or slug as project_id on each call after list_projects."
     }
   },
   "simulationGateway": {
@@ -1976,6 +1987,6 @@
       }
     },
     "aliasRule": "{alias} is the real host with every dot replaced by a dash, one DNS label",
-    "releaseBoundary": "The route is mounted and registers the Gmail MCP, Gmail REST, Slack Web API and Slack MCP mirrors, but SIM_GATEWAY_ENABLED is off in production; staging serves them for verification. Production sim hosts are not configured. Customer documentation must not name a mirror host until docs/simulation-hosts.md records it as proven."
+    "releaseBoundary": "The route is mounted and registers the Gmail MCP, Gmail REST, Slack Web API and Slack MCP mirrors. SIM_GATEWAY_ENABLED is on in staging and production; staging serves them for verification, and production answers on the application form. The gateway is not a released customer capability, so its status stays deployed_inactive. Production sim hosts are not configured. Customer documentation must not name a mirror host until docs/simulation-hosts.md records it as proven."
   }
 }
