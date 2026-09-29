@@ -205,3 +205,50 @@ test("the agent setup page cannot be hidden again", () => {
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /guides\/agent-setup\.mdx must stay visible in navigation/);
 });
+
+function changeContract(directory, change) {
+  const path = resolve(directory, "contracts/fern-public-docs.json");
+  const contract = JSON.parse(readFileSync(path, "utf8"));
+  change(contract);
+  writeFileSync(path, `${JSON.stringify(contract, null, 2)}\n`);
+}
+
+test("a profile the MCP guide does not list fails", () => {
+  const result = checkSnapshot((directory) => changeContract(directory, (contract) => {
+    contract.mcp.toolsets.profiles.triage = ["list_projects", "search_traces"];
+  }));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /does not list the generated triage profile/);
+});
+
+test("the default listing sentence must name every default tool", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
+    text.replace("`get_request_answer`, `search_hue_docs` and `load_hue_guide`. Beside them", "`search_hue_docs` and `load_hue_guide`. Beside them"),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /must name exactly the default observe profile's tools/);
+});
+
+test("the tool reference must list every tool", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-tools.mdx", (text) =>
+    text.replace(/^\| `get_case_divergence` \|.*\n/m, ""),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /MCP tool reference is missing get_case_divergence/);
+});
+
+test("the tool reference access must match the contract", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-tools.mdx", (text) =>
+    text.replace("| `delete_eval_set_case` | Destructive |", "| `delete_eval_set_case` | Write |"),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /gives delete_eval_set_case Write access; the contract makes it Destructive/);
+});
+
+test("the tool reference keeps each tool under its toolset", () => {
+  const result = checkSnapshot((directory) => changeContract(directory, (contract) => {
+    contract.mcp.tools.find(({ name }) => name === "get_request_answer").toolset = "traces";
+  }));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /lists get_request_answer under intents; the contract puts it in traces/);
+});

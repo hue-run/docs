@@ -1,0 +1,27 @@
+name: Platform pin
+
+# Reports whether contracts/fern-public-docs.json is pinned to the platform commit production
+# serves. It reads only the public health endpoint, so it needs no token, and it never runs on a
+# pull request: a production release would otherwise block unrelated docs changes, and a pull
+# request held with an --undeployed pin is expected to trail production until its release deploys.
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pin:
+    name: Platform snapshot matches production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+      - run: node scripts/sync-platform-contract.mjs --check

@@ -81,7 +81,7 @@ Check which outcome failed: the original application execution, the scorer's exe
 
 The [Hue MCP server](/agents/mcp-server) accepts a **Read** or **Read and write** project key, or a connection made by signing in with Hue. An unauthenticated `401` starts browser sign-in for an OAuth connection; for an existing connection, it can mean a missing, expired or revoked credential. Follow the [MCP troubleshooting guide](/agents/mcp-server#troubleshooting) for the remedy that matches your authentication method, then [verify the connection](/agents/mcp-server#verify-the-connection).
 
-An unknown-tool error means the connection does not list the tool. By default it lists the production reads: find any other tool with `search_hue_tools` and call it through `execute_hue_tool` or `execute_hue_write_tool`, or add `?toolsets=all` to the server URL. Write tools are hidden for a **Read** key and a URL with `?read_only=true`.
+An unknown-tool error, or `forbidden_capability` saying the tool `is not listed on this connection`, means the connection does not list the tool. By default it lists the production reads: find any other tool with `search_hue_tools` and call it through `execute_hue_tool` or `execute_hue_write_tool`, as the `forbidden_capability` hint says, or add `?toolsets=all` to the server URL. Write tools are hidden for a **Read** key and a URL with `?read_only=true`.
 
 Results marked `truncated: true` were cut to the `max_chars` budget; lower `limit` or `max_spans`, raise `max_chars`, or fetch one object at a time. Recorded prompts and outputs are absent unless a tool is called with `include_content: true` and the application captured content. An empty search does not prove nothing happened; widen `since` or drop filters.
 
