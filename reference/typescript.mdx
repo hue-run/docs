@@ -811,7 +811,7 @@ Each `EnvironmentTool` has `name`, `description?`, `inputSchema` (the action's `
 
 ### World handoff
 
-Where Hue's simulation gateway serves a world, `createRun` also returns its handoff: a world token and one mirror URL per pinned provider surface, such as a Gmail MCP or REST mirror. Point the agent's own provider client at the mirror and pass the world token where the provider credential would go; the project key stays with the runner. Hue Cloud does not serve gateway worlds yet, so today `worldHandoff` returns `null`, callbacks receive `tools` and the `hue_sim_` MCP capability, and `getEvidence` answers `404`.
+Where Hue's simulation gateway serves a world, `createRun` also returns its handoff: a world token and one mirror URL per pinned provider surface, such as a Gmail MCP or REST mirror. Point the agent's own provider client at the mirror and pass the world token where the provider credential would go; the project key stays with the runner. `worldHandoff` returns `null` for a world created while a deployment's gateway is off. The simulation gateway is not a released Hue Cloud capability yet, so don't rely on the handoff or `getEvidence` there.
 
 `runSimulation`, `runLocalAgent` and `hue eval` do this for you. They create each world with the execution, a stable idempotency key, the case span's trace context and the agent revision, pass the handoff as `context.world`, and finish the world before completing the execution. To drive a world yourself:
 
@@ -866,7 +866,7 @@ try {
 
 Finishing a gateway world answers `lifecycle: "completing"` with `sealedAt: null`; the seal follows a 5-second grace so in-flight calls land. A later finish answers `409`, which the runners treat as the seal they can no longer change. `getEvidence` needs the project key; a world token can never read evidence, and an open world answers `409` until it is sealed. Nothing in these helpers logs the token. Keep the handoff out of your own logs and checkpoints.
 
-Hue-native `tools` and the `hue_sim_` capability are deprecated. When a case runs on a world without a handoff, `runSimulation` and `runLocalAgent` emit a one-time `DeprecationWarning` with code `HUE_NATIVE_SIMULATION_TOOLS`, and provider-profile preflight emits `HUE_PROVIDER_FACADE`; for a gateway world, provider-profile options are ignored with `HUE_PROVIDER_FACADE_IGNORED`. Because Hue Cloud does not serve gateway worlds yet, you see the first warning today; pass `deprecationWarnings: false` to silence it. `hue eval` never emits these warnings.
+Hue-native `tools` and the `hue_sim_` capability are deprecated. When a case runs on a world without a handoff, `runSimulation` and `runLocalAgent` emit a one-time `DeprecationWarning` with code `HUE_NATIVE_SIMULATION_TOOLS`, and provider-profile preflight emits `HUE_PROVIDER_FACADE`; for a gateway world, provider-profile options are ignored with `HUE_PROVIDER_FACADE_IGNORED`. Pass `deprecationWarnings: false` to silence them. `hue eval` never emits these warnings.
 
 ## Local setup session
 

@@ -364,7 +364,7 @@ Unlike `EvaluationClient`, this client retries every call, including mutations, 
 
 ### World handoff
 
-Where Hue's simulation gateway serves a world, `create_run` also returns its handoff: a world token, one mirror URL per pinned provider surface, environment variables and an MCP configuration. Hand these to the agent instead of the project key. Hue Cloud does not serve gateway worlds yet, so today `world_handoff` returns `None` and `get_evidence` fails with `HueEnvironmentError` status `404`.
+Where Hue's simulation gateway serves a world, `create_run` also returns its handoff: a world token, one mirror URL per pinned provider surface, environment variables and an MCP configuration. Hand these to the agent instead of the project key. `world_handoff` returns `None` for a world created while a deployment's gateway is off. The simulation gateway is not a released Hue Cloud capability yet, so don't rely on the handoff or `get_evidence` there.
 
 ```python
 import subprocess

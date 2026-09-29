@@ -11,7 +11,7 @@ sidebarTitle: "Agent setup"
   Set up Hue in this project. Use curl to read https://docs.hue.run/guides/agent-setup.md and follow it, and show me the plan before you change anything.
   ```
 
-  Your agent shows you its plan and asks you to create a **Read and write** API key in Hue and store it yourself, so the key never goes into the chat. The key sends traces and runs evaluations. The agent then adds tracing, verifies a real request and connects the Hue MCP server. After you restart the agent, you sign in to Hue to approve that connection; Cursor, VS Code, Windsurf and Gemini CLI use the same key instead.
+  Your agent shows you its plan and asks you to create a **Read and write** API key in Hue and store it yourself, so the key never goes into the chat. The key sends traces and runs evaluations. The agent then adds tracing, verifies a real request and connects the Hue MCP server. You sign in to Hue to approve that connection after you restart the agent, or in Codex and Conductor when you run the command the agent gives you; Cursor, VS Code, Windsurf and Gemini CLI use the same key instead.
 
   Don't have a Hue account yet? The Hue team sets up accounts: email [founders@hue.run](mailto:founders@hue.run) or book a time at [https://calendar.notion.so/meet/akethini/hue](https://calendar.notion.so/meet/akethini/hue).
 
@@ -76,13 +76,15 @@ Keep the **Read and write** key on development machines. Before the application 
 
 ## 4. Connect the Hue MCP server
 
-This is the last step because most clients load a new MCP server only when they start. From the repository root, run the command for the user's client.
+This is the last step because most clients load a new MCP server only when they start. From the repository root, run the command for the user's client; for a Codex or Conductor sign-in, the user runs it.
 
-Claude Code, Codex and Conductor sign in with Hue. Run this, where `<client>` is `claude-code`, `codex` or `conductor`:
+Claude Code, Codex and Conductor sign in with Hue. The command is this, where `<client>` is `claude-code`, `codex` or `conductor`:
 
 ```sh
 npx --yes --package @hue-run/sdk@0.11.3 hue mcp install --client <client> --auth oauth
 ```
+
+Run it yourself for `claude-code`. Don't run it yourself for `codex` or `conductor`: it runs `codex mcp add`, which opens the Hue sign-in in the browser at once and waits for the user to approve it. Give the user the command in your final message instead, to run from the repository root in their own terminal.
 
 Cursor, VS Code, Windsurf and Gemini CLI connect with the key as `HUE_MCP_KEY`. Run this, where `<client>` is `cursor`, `vscode`, `windsurf` or `gemini`:
 
@@ -100,7 +102,7 @@ The user restarts the client to load the server, so finish with one message that
 
 1. Your summary, in the form of the skill's **Handoff**. You have just configured the MCP server, so leave out the handoff's offer to connect it.
 2. How to restart the client and finish connecting:
-   - With `--auth oauth`, there is no key to load. The user restarts the client and completes sign-in with its authentication action. In Claude Code: `claude --continue`, approving the `hue` server when asked, then `/mcp`, select `hue` and choose **Authenticate**. In Codex: finish the sign-in that `codex mcp add` opened in the browser, or run `codex mcp login hue` in a terminal if it didn't open or didn't finish, then `codex resume --last`. In Conductor: open **MCP status** from the plug icon or `/mcp-status`, refresh and use **hue**'s authentication action, then start a new agent session if the Hue tools don't appear. On Hue's consent page, the user checks the organization and chooses **Allow**. Add that if sign-in doesn't complete or the Hue tools don't load, you can connect with the key instead; then run the key command for the client and give the user the key restart below. For Codex, run `codex mcp remove hue` first; for Conductor, run `claude mcp remove hue -s user` and `codex mcp remove hue` first, then the command with `--auth key`.
+   - With `--auth oauth`, there is no key to load. The user restarts the client and completes sign-in with its authentication action. In Claude Code: `claude --continue`, approving the `hue` server when asked, then `/mcp`, select `hue` and choose **Authenticate**. In Codex: the user first runs the install command you gave them, in a terminal where they can use a browser, and approves the sign-in it opens. If that sign-in did not finish, even when the command then reports that `codex` exited with an error, they run `codex mcp login hue` once rather than `codex mcp add` again. Then `codex resume --last`. In Conductor: the user first runs the install command the same way, then opens **MCP status** from the plug icon or `/mcp-status`, refreshes and uses **hue**'s authentication action, then starts a new agent session if the Hue tools don't appear. On Hue's consent page, the user checks the organization and chooses **Allow**. Add that if sign-in doesn't complete or the Hue tools don't load, you can connect with the key instead; then run the key command for the client and give the user the key restart below. For Codex, run `codex mcp remove hue` first; for Conductor, run `claude mcp remove hue -s user` and `codex mcp remove hue` first, then the command with `--auth key`.
    - With a key, load the key into the shell that starts the client, for example with `set -a; . ./.env.hue; set +a` for the env file the key is in, or start the client through the secret manager's runner. Then restart it from that shell: `claude --continue` for Claude Code, approving the `hue` server when asked; `codex resume --last` for Codex; or quit Cursor, reopen it with `cursor .` and turn on **hue** in its MCP settings. Restart any other client from that shell.
 3. The prompt to send after the restart: `Use Hue MCP: call list_projects and confirm which project to inspect. Then call get_project_context and show its 5 most recent error traces with links. For an organization connection, pass the project's id or slug as project_id on each call after list_projects.`
 4. What they can ask next, for example "What needs attention in the last 24 hours, and why?". [Investigate production](/agents/investigate-production) has the tool sequences for those questions.
