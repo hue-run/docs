@@ -190,6 +190,21 @@ test("langfuse.environment cannot be called a raw attribute", () => {
   assert.match(result.stderr, /agents\/investigate-production\.mdx calls langfuse\.environment a raw attribute/);
 });
 
+test("langfuse.environment cannot be called a raw attribute unquoted", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "integrations/opentelemetry.mdx", (text) =>
+    `${text}\nHue keeps langfuse.environment as a raw attribute.\n`,
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /integrations\/opentelemetry\.mdx calls langfuse\.environment a raw attribute/);
+});
+
+test("a sentence denying that langfuse.environment is a raw attribute passes", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "integrations/opentelemetry.mdx", (text) =>
+    `${text}\n\`langfuse.environment\` is not stored as a raw attribute.\n`,
+  ));
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test("a bare npx hue command in a code block fails", () => {
   const result = checkSnapshot((directory) => changePage(directory, "sdks/cli.mdx", (text) =>
     text.replace(/npx --yes --package @hue-run\/sdk@\d+\.\d+\.\d+ hue login --gitignore/, "npx hue login --gitignore"),
