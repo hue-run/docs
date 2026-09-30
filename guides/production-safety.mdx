@@ -113,13 +113,15 @@ Telemetry retention is configured per project with Hue. Projects with a retentio
 
 ## What Hue computes from your traces
 
-Hue assesses the traces it stores. Some of that work sends recorded conversation text to a model, so agree these settings with your capture policy. Owners and admins change the first three in **Settings → Projects → Edit project** and trace-check consent in **Settings → Trace checks**. Over MCP, `update_project` changes the first three and `set_trace_checks_consent` the last, both with **Read and write** access.
+Hue assesses the traces it stores. Some of that work sends recorded conversation text to a model, so agree these settings with your capture policy. Owners and admins change every setting except trace-check consent in **Settings → Projects → Edit project**, and trace-check consent in **Settings → Trace checks**. Over MCP, `update_project` changes the project settings (`trace_findings`, `ai_trace_findings`, `ai_intent_classification`, `ai_case_conversion_suggestions` and `ai_request_classifiers`) and `set_trace_checks_consent` the trace-check consent. Both need **Read and write** access, and Hue checks that the key's creator, or the member who signed in, is currently an owner or admin.
 
 | Setting | Default | What it does and sends |
 | --- | --- | --- |
 | **Trace findings** | On | Reads each ended trace's recorded spans inside Hue for rule findings, such as a tool error with no later success, and sets the trace's attention state. Nothing leaves Hue. |
 | **AI trace findings** | On | Once a trace has ended or stalled, sends its latest user request, up to eight earlier conversation turns and the final reply to TypeSafe's decision model for typed judgments about the reply. It never sends tool arguments, results, files or metadata. Turning it off stops new judgments. |
 | **AI intent classification** | On | Once the project publishes an intent taxonomy, sends excerpts of each trace's conversation to TypeSafe to sort traces by task type. |
+| **AI case suggestions** | On | Only when a person builds or reviews a case from a trace, sends that trace's recorded content, with credential-like values removed and long values capped, to OpenAI and Anthropic models through the Vercel AI Gateway to draft the case and calibrate its judges. Traces no one builds a case from are not sent. Turning it off stops those model calls. |
+| **AI request judges** | Off | A separate consent to send a request's text, earlier dialogue, handoffs to sub-agents, tool inputs and outputs and replies to TypeSafe to judge delegation, scope and answers. Consent alone sends nothing: judging starts only when Hue runs it for the project. Every judging call re-reads this setting, so turning it off stops the next call. |
 | Trace-check consent | Off | Trace checks run only after a project gives this separate consent and activates a version. They then send bounded recorded requests, replies, delegation instructions, tool outputs and reduced context to the trace-check model through the Vercel AI Gateway. Withdrawing consent stops new model work. |
 
 Traces from evaluation runs are not assessed. The [production investigation guide](/agents/investigate-production#data-model) describes the attention states, findings, trace checks and intents that these settings produce.

@@ -1762,6 +1762,18 @@
         }
       },
       {
+        "name": "cancel_judge_jobs",
+        "title": "Hue: cancel judge jobs",
+        "toolset": "judges",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
         "name": "search_hue_docs",
         "title": "Hue: search documentation",
         "toolset": "docs",
@@ -1787,7 +1799,7 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "b9e21e2021ede2befcb5a1bf34ecec17a47462af8294def6de4abbda20925d64",
+    "catalogSha256": "92b7c2ed7e7cce56a0879c3fef8e10bf150ca79487af6fbdbb43062e658ebfff",
     "serverInstructionsSha256": "a57ca5d20b45f22f4e1edcb1935b3555d47afeb0601f7bef597bef4e45d7a2ce",
     "guides": {
       "data-model": {
@@ -1804,11 +1816,11 @@
       },
       "author": {
         "title": "Author evaluations with Hue",
-        "sha256": "add59f4086b71fba82ccc8d0019a32bd2872c943a29358d53ae2d799e56ae6c3"
+        "sha256": "5019ea4d08f059723c28aebea5cbb4bf37ca7850e8ea7d28d2de8b17df88c2d6"
       },
       "evaluate": {
         "title": "Run your agent against a case",
-        "sha256": "136675abe9908e6ee90660b26fc6a15ea63061e47aefa6b3c2c758e72e0db315"
+        "sha256": "6fd1f5bb08ce572e8c9d08c6ee99e123385577d0f5101936ae058170669ec1aa"
       }
     },
     "toolsets": {
