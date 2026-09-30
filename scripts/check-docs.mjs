@@ -501,6 +501,7 @@ for (const phrase of [
   "founders@hue.run",
   "hue login",
   "hue mcp install",
+  "Other MCP client",
   "https://docs.hue.run/skill.md",
 ]) {
   if (!agentSetup.includes(phrase)) fail(`guides/agent-setup.mdx must contain ${phrase}`);

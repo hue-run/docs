@@ -198,6 +198,14 @@ test("the agent setup page keeps the account contact line", () => {
   assert.match(result.stderr, /guides\/agent-setup\.mdx must contain founders@hue\.run/);
 });
 
+test("the agent setup page keeps the other MCP client option", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "guides/agent-setup.mdx", (text) =>
+    text.replace("**Other MCP client**", "**Choose a listed client**"),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /guides\/agent-setup\.mdx must contain Other MCP client/);
+});
+
 test("the agent setup page cannot be hidden again", () => {
   const result = checkSnapshot((directory) => changePage(directory, "guides/agent-setup.mdx", (text) =>
     text.replace('sidebarTitle: "Agent setup"\n', 'sidebarTitle: "Agent setup"\nhidden: true\n'),
