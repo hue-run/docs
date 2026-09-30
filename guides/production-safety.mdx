@@ -113,7 +113,7 @@ Telemetry retention is configured per project with Hue. Projects with a retentio
 
 ## What Hue computes from your traces
 
-Hue assesses the traces it stores. Some of that work sends recorded conversation text to a model, so agree these settings with your capture policy. Owners and admins change every setting except trace-check consent in **Settings → Projects → Edit project**, and trace-check consent in **Settings → Trace checks**. Over MCP, `update_project` changes the project settings (`trace_findings`, `ai_trace_findings`, `ai_intent_classification`, `ai_case_conversion_suggestions` and `ai_request_classifiers`) and `set_trace_checks_consent` the trace-check consent, both with **Read and write** access.
+Hue assesses the traces it stores. Some of that work sends recorded conversation text to a model, so agree these settings with your capture policy. Owners and admins change every setting except trace-check consent in **Settings → Projects → Edit project**, and trace-check consent in **Settings → Trace checks**. Over MCP, `update_project` changes the project settings (`trace_findings`, `ai_trace_findings`, `ai_intent_classification`, `ai_case_conversion_suggestions` and `ai_request_classifiers`) and `set_trace_checks_consent` the trace-check consent. Both need **Read and write** access, and Hue checks that the key's creator, or the member who signed in, is currently an owner or admin.
 
 | Setting | Default | What it does and sends |
 | --- | --- | --- |
