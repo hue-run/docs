@@ -203,7 +203,18 @@ test("the agent setup page keeps the other MCP client option", () => {
     text.replace("**Other MCP client**", "**Choose a listed client**"),
   ));
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /guides\/agent-setup\.mdx must contain Other MCP client/);
+  assert.match(result.stderr, /guides\/agent-setup\.mdx must contain If you ask the user to choose a client/);
+});
+
+test("the agent setup page must offer the other MCP client option, not only name it", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "guides/agent-setup.mdx", (text) =>
+    text.replace(
+      "If you ask the user to choose a client, always include **Other MCP client**.",
+      "**Other MCP client** uses the generic connection settings.",
+    ),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /guides\/agent-setup\.mdx must contain If you ask the user to choose a client/);
 });
 
 test("the agent setup page cannot be hidden again", () => {
