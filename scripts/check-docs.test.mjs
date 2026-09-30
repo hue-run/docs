@@ -166,6 +166,30 @@ test("the retired key-only MCP statement cannot return", () => {
   assert.match(result.stderr, /retired text: does not offer an OAuth authorization flow/);
 });
 
+test("the retired OTLP size limit cannot return", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "integrations/opentelemetry.mdx", (text) =>
+    `${text}\nThe request limit is 1 MiB on the wire and after decompression.\n`,
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /retired text: 1 MiB on the wire and after decompression/);
+});
+
+test("the retired raw Langfuse environment statement cannot return", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "integrations/opentelemetry.mdx", (text) =>
+    `${text}\nLangfuse metadata, environment, tags and levels stay raw attributes.\n`,
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /retired text: environment, tags and levels stay raw/);
+});
+
+test("langfuse.environment cannot be called a raw attribute", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "agents/investigate-production.mdx", (text) =>
+    `${text}\nLangfuse metadata, \`langfuse.environment\`, tags and levels are kept as raw attributes.\n`,
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /agents\/investigate-production\.mdx calls langfuse\.environment a raw attribute/);
+});
+
 test("a bare npx hue command in a code block fails", () => {
   const result = checkSnapshot((directory) => changePage(directory, "sdks/cli.mdx", (text) =>
     text.replace(/npx --yes --package @hue-run\/sdk@\d+\.\d+\.\d+ hue login --gitignore/, "npx hue login --gitignore"),

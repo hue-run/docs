@@ -4,9 +4,9 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "2cad943cc9a22f2012b21f124dc37735a5afcbf4",
+      "commit": "5d9b63f7f1abdac0abe6f4e1cd690ad8702a163d",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:3d8203a8c2fd812e84b39c08698285125b7bd3d80a5004ea2c7bf1da545530b0"
+      "sha256": "sha256:7f99b7c9d48fb5d2223bc47ae7e9c9d0020ff05b0e4eafc564bd4ab4893e986d"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
@@ -176,10 +176,11 @@
       "get_artifact",
       "get_judge_budget",
       "add_judge_jobs",
+      "cancel_judge_jobs",
       "search_hue_docs",
       "load_hue_guide"
     ],
-    "catalogSha256": "b9e21e2021ede2befcb5a1bf34ecec17a47462af8294def6de4abbda20925d64"
+    "catalogSha256": "92b7c2ed7e7cce56a0879c3fef8e10bf150ca79487af6fbdbb43062e658ebfff"
   },
   "pages": [
     "index",

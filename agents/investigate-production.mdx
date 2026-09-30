@@ -128,7 +128,7 @@ Replace `delegation` with `action_scope`, `delegation_scope` or `output_omission
 
 A **trace** is one tree of spans with one root. A **span** is one timed operation in it, such as a model call, a tool call or an agent step. In a multi-agent application, a trace is often one agent activation rather than one user turn: a sub-agent or background agent that starts its own root produces its own trace. **Sessions** group traces under the session id your application records.
 
-`search_traces` filters a window by `status`, `attention`, `finding`, `check_key`, `user`, `user_prefix`, `release`, `trace_name`, `model`, a root-span `attribute`, `session_id`, `min_duration_ms` and `query` (title, root span name or trace id), and sorts by `started_at` (newest first) or `duration` (longest first). It returns these fields per trace:
+`search_traces` filters a window by `status`, `attention`, `finding`, `check_key`, `user`, `user_prefix`, `deployment_environment` (an empty string matches traces without a deployment label), `release`, `trace_name`, `model`, a root-span `attribute`, `session_id`, `min_duration_ms` and `query` (title, root span name or trace id), and sorts by `started_at` (newest first) or `duration` (longest first). It returns these fields per trace:
 
 | Field | Meaning |
 | --- | --- |
@@ -141,6 +141,7 @@ A **trace** is one tree of spans with one root. A **span** is one timed operatio
 | `tokens`, `span_count` | Input and output token totals and the number of stored spans. |
 | `session_id`, `session_key` | Hue's session id, for `search_traces`, and your application's session key. |
 | `user_id`, `release`, `trace_name` | The user id, release and trace name your application recorded, each up to 200 characters and returned whole, so each works as a filter. See the [field glossary](#field-glossary). |
+| `deployment_environment` | The trace's deployment label, such as `staging` or `production`, exactly as recorded, or `null` when none was recorded. See the [field glossary](#field-glossary). |
 | `attention_state`, `finding_ids`, `check_state` | The attention state, the ids of the findings present, and the trace-check state. See [attention states and findings](#attention-states-and-findings) and [trace checks](#trace-checks). |
 | `first_useful_answer_ms`, `useful_answer_timing_source`, `request_start_source` | Request timing, for projects set up for it; otherwise `null`. |
 
@@ -199,7 +200,7 @@ Intents classify traces into the project's taxonomy of task types. `get_intent_s
 
 ## Field glossary
 
-Hue reads these span attributes into its fields. When several are present, the first one listed wins, so the OpenTelemetry GenAI attribute wins over a Langfuse one. Only span attributes are read, apart from `service.version`, which a trace's `release` also takes from the resource; `get_span` returns `service.name` as `service`.
+Hue reads these span attributes into its fields. When several are present, the first one listed wins, so the OpenTelemetry GenAI attribute wins over a Langfuse one. Only span attributes are read, apart from `service.version`, which a trace's `release` also takes from the resource, and the deployment label, which is read from the span first and then from its resource; `get_span` returns `service.name` as `service`.
 
 A trace's `user_id`, `release` and `trace_name` are its root span's, else those of the earliest span that has one. Each is stored whole up to 200 characters. `search_traces`, `search_spans` and `aggregate` filter by them exactly with `user`, `release` and `trace_name`, `user_prefix` matches the start of `user_id`, and `aggregate` groups by `user`, `release` and `trace_name`.
 
@@ -208,6 +209,7 @@ A trace's `user_id`, `release` and `trace_name` are its root span's, else those 
 | User id (`user_id` on trace rows, `gen_ai.user_id` on spans) | `user.id`, `enduser.id`, `hue.user.id`, `ai.telemetry.metadata.userId`, `langfuse.user.id` |
 | Release (`release`) | `service.version` on the span, then on its resource, then `langfuse.release`, then `hue.agent.release` |
 | Trace name (`trace_name`) | `hue.trace.name`, `langfuse.trace.name` |
+| Deployment label (`deployment_environment`) | `deployment.environment.name`, `deployment.environment`, `langfuse.environment` on the trace's root span, then the same keys on its resource. Stored as recorded, case included, up to 128 characters; `search_traces` and `aggregate` filter by it exactly with `deployment_environment`. The label alone does not mark production traffic: a trace counts as production only when its resource records `deployment.environment.name` or `deployment.environment` as exactly `production`, so `langfuse.environment` never does. |
 | Session | `gen_ai.conversation.id`, `session.id`, `hue.session.id`, `ai.telemetry.metadata.sessionId`, `langfuse.session.id`. The trace's session is its root span's, else the earliest span that has one. |
 | Agent name (`gen_ai.agent_name`) | `gen_ai.agent.name`, `ai.telemetry.functionId`, `traceloop.entity.name` |
 | Operation, which sets the span `kind` | `gen_ai.operation.name`, `openinference.span.kind`, `traceloop.span.kind`, `ai.operationId`, `operation.name`, `langfuse.observation.type` |
@@ -220,7 +222,7 @@ A trace's `user_id`, `release` and `trace_name` are its root span's, else those 
 | Error type (`error_type`) | `error.type` |
 | Trace title | Derived from recorded request text first; the trace name is the fallback |
 
-Langfuse metadata (`langfuse.observation.metadata.*`, `langfuse.trace.metadata.*`), `langfuse.environment`, tags and levels are kept as raw attributes. `get_span` lists their names in `attribute_keys`; `get_span_content` with `attribute_keys` reads their values, and the `attribute` filter matches the ones that are not content or free text. The [OpenTelemetry guide](/integrations/opentelemetry#make-traces-useful-to-a-coding-agent) lists the attributes worth recording so these fields are filled.
+Langfuse metadata (`langfuse.observation.metadata.*`, `langfuse.trace.metadata.*`), tags and levels are kept as raw attributes. `get_span` lists their names in `attribute_keys`; `get_span_content` with `attribute_keys` reads their values, and the `attribute` filter matches the ones that are not content or free text. The [OpenTelemetry guide](/integrations/opentelemetry#make-traces-useful-to-a-coding-agent) lists the attributes worth recording so these fields are filled.
 
 ## Limits and errors
 

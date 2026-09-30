@@ -146,8 +146,17 @@ for (const legacy of [
   "does not provide an OAuth authorization flow",
   "does not offer an OAuth authorization flow",
   "Cursor limits the number of tools",
+  // The receiver accepts 4 MiB after gzip and stores an oversized value truncated instead of rejecting it.
+  "1 MiB on the wire and after decompression",
+  // `langfuse.environment` sets the trace's deployment label; it is not kept as a raw attribute.
+  "environment, tags and levels stay raw",
 ]) {
   if (allPublicText.includes(legacy)) fail(`public content contains retired text: ${legacy}`);
+}
+for (const [path, text] of Object.entries(publicText)) {
+  if (/`langfuse\.environment`[^.\n]*raw attribute/.test(text)) {
+    fail(`${path} calls langfuse.environment a raw attribute; it sets the trace's deployment label`);
+  }
 }
 
 const mcpVocabularyText = [
