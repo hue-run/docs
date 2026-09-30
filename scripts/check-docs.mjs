@@ -82,9 +82,10 @@ if (JSON.stringify(mdxFiles) !== JSON.stringify(expectedMdxFiles)) {
   fail(`docs.json must contain every MDX page exactly once; found ${mdxFiles.length} files and ${pages.length} navigation entries`);
 }
 // A new page is a deliberate change: guides/redaction centralizes the cross-language
-// redaction recipes linked by the SDK guides and coding-agent skill.
-if (pages.length !== 23 || pages.length + 1 !== 24) {
-  fail(`expected 23 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
+// redaction recipes linked by the SDK guides and coding-agent skill, and agents/mcp-tools keeps
+// the per-tool reference off the connection guide that agents read whole during setup.
+if (pages.length !== 24 || pages.length + 1 !== 25) {
+  fail(`expected 24 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
 }
 
 for (const page of expectedMdxFiles) {
@@ -152,6 +153,7 @@ for (const legacy of [
 
 const mcpVocabularyText = [
   publicText["agents/mcp-server.mdx"],
+  publicText["agents/mcp-tools.mdx"],
   publicText["agents/investigate-production.mdx"],
 ].join("\n");
 for (const legacy of [
@@ -200,10 +202,63 @@ for (const group of toolsets.groups ?? []) {
   const row = `| \`${group}\` | ${names.join(", ")}. |`;
   if (!compactMcpGuide.includes(compact(row))) fail(`MCP guide does not list the generated ${group} toolset`);
 }
-for (const profile of ["author", "evaluate"]) {
-  const names = (toolsets.profiles?.[profile] ?? []).map((name) => `\`${name}\``);
-  const row = `| \`${profile}\` | ${names.join(", ")}. |`;
-  if (!compactMcpGuide.includes(compact(row))) fail(`MCP guide does not list the generated ${profile} profile`);
+// Every profile the contract defines is documented. A default profile is described in prose: the
+// "Without a selection" sentence names exactly its tools and its row states their number. Every
+// other profile has its generated row.
+const defaultProfiles = new Set(toolsets.default ?? []);
+for (const [profile, tools] of Object.entries(toolsets.profiles ?? {})) {
+  const names = tools.map((name) => `\`${name}\``);
+  if (!defaultProfiles.has(profile)) {
+    const row = `| \`${profile}\` | ${names.join(", ")}. |`;
+    if (!compactMcpGuide.includes(compact(row))) fail(`MCP guide does not list the generated ${profile} profile`);
+    continue;
+  }
+  const opening = `Without a selection, a connection lists the \`${profile}\` toolset`;
+  // The list is the run of code-formatted names right after the sentence's colon, joined by commas
+  // or "and", so an abbreviation or other punctuation in the sentence cannot cut it short.
+  const start = compactMcpGuide.indexOf(opening);
+  const colon = start === -1 ? -1 : compactMcpGuide.indexOf(":", start + opening.length);
+  const run =
+    colon === -1
+      ? ""
+      : (/^\s*(`[a-z_]+`(?:(?:,\s*(?:and\s+)?|\s+and\s+)`[a-z_]+`)*)/.exec(compactMcpGuide.slice(colon + 1))?.[1] ?? "");
+  const listed = [...run.matchAll(/`([a-z_]+)`/g)].map(([, name]) => name);
+  if (JSON.stringify([...listed].sort()) !== JSON.stringify([...tools].sort())) {
+    fail(`MCP guide's "Without a selection" sentence must name exactly the default ${profile} profile's tools`);
+  }
+  if (!compactMcpGuide.includes(`| \`${profile}\` | The ${tools.length} `)) {
+    fail(`MCP guide does not list the default ${profile} profile with its ${tools.length} tools`);
+  }
+}
+// The tool reference gives every tool, catalog tools included, one row under its toolset's heading,
+// with an access level that matches the contract: Read, Destructive (a write with destructiveHint)
+// or Write. Role requirements follow a comma and are not in the contract.
+const referenceRows = new Map();
+let referenceGroup = null;
+for (const line of publicText["agents/mcp-tools.mdx"].split("\n")) {
+  const heading = /^### (?:`([a-z_]+)`|(Catalog tools))$/.exec(line);
+  if (heading) referenceGroup = heading[1] ?? "catalog";
+  const row = /^\| `([a-z_]+)` \| ([^|]+?) \|/.exec(line);
+  if (!row) continue;
+  if (referenceRows.has(row[1])) fail(`MCP tool reference lists ${row[1]} twice`);
+  referenceRows.set(row[1], { group: referenceGroup, access: row[2].split(",")[0].trim() });
+}
+const referenceTools = [
+  ...platform.mcp.tools,
+  ...catalogTools.map((tool) => ({ ...tool, toolset: "catalog" })),
+];
+for (const { name, toolset, access, annotations } of referenceTools) {
+  const row = referenceRows.get(name);
+  if (!row) {
+    fail(`MCP tool reference is missing ${name}`);
+    continue;
+  }
+  if (row.group !== toolset) fail(`MCP tool reference lists ${name} under ${row.group}; the contract puts it in ${toolset}`);
+  const expected = access === "read" ? "Read" : annotations?.destructiveHint ? "Destructive" : "Write";
+  if (row.access !== expected) fail(`MCP tool reference gives ${name} ${row.access} access; the contract makes it ${expected}`);
+}
+for (const name of referenceRows.keys()) {
+  if (!referenceTools.some((tool) => tool.name === name)) fail(`MCP tool reference lists ${name}, which the contract does not`);
 }
 // Match the snippets for the clients documented in this guide. The producer snapshot also
 // includes other clients; its complete contents and source digest remain checked below.
@@ -302,6 +357,7 @@ const requirements = {
   "reference/python.mdx": ["Tracing only", "Read and write"],
   "agents/overview.mdx": ["Tracing only", "**Read**", "Read and write"],
   "agents/mcp-server.mdx": ["**Read**", "Read and write", "**Settings → Connected apps**"],
+  "agents/mcp-tools.mdx": ["**Read**", "Read and write", "Tracing only"],
   "guides/troubleshooting.mdx": ["Tracing only", "**Read**", "Read and write"],
   "guides/project-keys.mdx": expectedPresetNames.map((name) => `**${name}**`),
   "skill.md": ["Tracing only", "Read and write"],

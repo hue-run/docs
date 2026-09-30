@@ -1,0 +1,214 @@
+---
+title: "Hue MCP tool reference"
+sidebarTitle: "Tool reference"
+description: "Every tool on the Hue MCP server by toolset, with the access and role each one needs and the permissions behind them."
+---
+
+This page lists every tool the [Hue MCP server](/agents/mcp-server) serves, grouped by the toolsets you name in `?toolsets=`. A default connection lists the production reads and the catalog tools; call any other tool through [`search_hue_tools` and the executors](/agents/mcp-server#choose-toolsets), or list it with its toolset. For the prompts and sequences that use these tools, see [what you can do](/agents/mcp-server#what-you-can-do) and [Investigate production](/agents/investigate-production).
+
+The connection itself is the authority on the exact arguments: `search_hue_tools` returns each tool's input schema as your connection publishes it, including `project_id` on an organization connection.
+
+## Access levels
+
+The **Access** column of each table uses these levels. A level can add a role requirement after a comma.
+
+| Access | Needs | Before calling |
+| --- | --- | --- |
+| **Read** | A **Read** or **Read and write** key, or a sign-in connection | Nothing, though recorded content (`include_content: true`, `get_span_content`) is audited and is untrusted data. |
+| **Write** | A **Read and write** key or a sign-in connection, with no `?read_only=true` on the URL or `X-Hue-MCP-Read-Only: true` header | Ask the user. |
+| **Destructive** | The same as **Write**. The tool changes or removes existing data, or stops work: it updates, sets, activates or deactivates, archives, cancels, revokes or deletes, and carries `destructiveHint: true` | Ask the user, naming the object. Never auto-approve it. |
+| owner or admin | The member who created the key, still a verified member, or the member who signed in must currently be an owner or admin of the organization | Ask an owner or admin when you are not one. |
+| owner or admin through sign-in | A **Read and write** key can call it; a sign-in connection needs an owner or admin | The same. |
+| key only | A **Read and write** key whose creator is an owner or admin. A sign-in connection never lists it | Create keys in **Settings → Integrations & API keys** instead. |
+
+## Permissions
+
+| To | You need |
+| --- | --- |
+| Read traces, spans, sessions, findings, trace checks, intents, request answers, eval sets, evaluators, runs, cases, environments, judges, members and keys | Any MCP credential: a **Read** or **Read and write** key, or sign-in. A **Tracing only** key cannot connect. |
+| Read recorded content | The same, and the application must have captured it. Each read is recorded in the project's audit log. |
+| Create and change eval sets, evaluators, runs, cases, environments, judge labels and promotions, and launch managed or local runs | **Read and write** access: a **Read and write** key or sign-in, without `?read_only=true`. |
+| Revoke keys, change project settings, AI-processing consent or trace-check consent, register managed targets, publish the intent taxonomy, or change the judge alignment bar | **Read and write** access, and an owner or admin: the key's creator, or the signed-in member. |
+| Change trace checks, or archive eval sets and evaluators | **Read and write** access; through sign-in, an owner or admin. |
+| Create a project key | A **Read and write** key created by an owner or admin. Never through sign-in. |
+| Change billing or the plan, invite members or change roles | Settings in Hue. No MCP tool does this. |
+
+## Tools by toolset
+
+### `project`
+
+`list_projects` and `get_project_context` are listed under every selection.
+
+| Tool | Access | What it does |
+| --- | --- | --- |
+| `list_projects` | Read | Lists the active projects the connection reaches, with ids, slugs and links, and reports the connection's credential, access and toolsets. |
+| `get_project_context` | Read | Reports the selected project, the credential's access (`can_write`, `read_only`, `can_manage` for sign-in), limits, content policy, listed toolsets and which `features` are on. |
+| `list_api_keys` | Read | Lists the project's keys with name, preset and dates. Never returns a secret. |
+| `add_api_key` | Write, key only | Creates a project key and returns its token once. |
+| `revoke_api_key` | Destructive, owner or admin | Revokes a project key. A key cannot revoke itself, and revoking a revoked key changes nothing. |
+| `list_members` | Read | Lists the organization members who can open the project, with their roles. |
+| `update_project` | Destructive, owner or admin | Changes the project's name and description and its trace findings, AI trace findings, AI intent classification, AI request judges and AI case suggestions settings. |
+
+### `traces`
+
+Listed by default: `search_traces`, `get_trace`, `get_span`, `list_sessions`, `verify_trace`, `get_span_content`, `search_spans` and `aggregate`. The trace-check tools produce results only for projects [set up for trace checks](/agents/investigate-production#trace-checks).
+
+| Tool | Access | What it does |
+| --- | --- | --- |
+| `search_traces` | Read | Finds traces in a window by status, attention, finding, trace check, user, release, trace name, model, root attribute, deployment environment, session, duration or text, newest or longest first. |
+| `get_trace` | Read | Returns one trace with its stored findings and trace-check results and a page of its span tree; recorded content with `include_content: true`. |
+| `get_span` | Read | Returns one span's status and error message, timing, model, usage, tool and attribute names; recorded values with `include_content: true` and correlated logs with `include_logs: true`. |
+| `list_sessions` | Read | Lists sessions by last activity, with status, trace count and token and span totals. |
+| `verify_trace` | Read | Checks a receipt: whether a trace and its expected spans are stored and which fields are present, never content. |
+| `get_span_content` | Read | Reads exact recorded values from up to 20 spans of one trace, by JSON path or attribute key, in slices. |
+| `search_spans` | Read | Finds spans across traces in a window of up to 7 days, by name, kind, status, model, duration, attribute or their trace's fields. |
+| `aggregate` | Read | Counts, error counts, percentiles and token sums over a window's traces or spans, grouped by up to two dimensions. |
+| `list_trace_checks` | Read | Reports the active trace-check version, trace-check consent and which checks are enabled. |
+| `get_trace_checks` | Read | Returns one trace-check version's criteria, examples, thresholds and calibration, with the revision writes need. |
+| `save_trace_checks` | Write, owner or admin through sign-in | Saves a new draft version of the four checks without activating it. |
+| `set_trace_checks_consent` | Destructive, owner or admin | Turns consent to send bounded recorded content to the trace-check model on or off. |
+| `test_trace_checks` | Write, owner or admin through sign-in | Queues a test of a saved version on up to ten recorded traces, without activating it. |
+| `activate_trace_checks` | Destructive, owner or admin through sign-in | Activates a version whose enabled checks reach 90% precision and 80% recall on held-out labels. |
+| `deactivate_trace_checks` | Destructive, owner or admin through sign-in | Stops automatic checks, keeping versions, calibration and past results. |
+| `reassess_trace_checks` | Write, owner or admin through sign-in | Queues up to 100 traces from a window of up to 7 days for the active version. |
+| `get_trace_check_results` | Read | Pages trace-check results with their criteria and source links; bounded excerpts with `include_content: true`. |
+| `get_trace_check_summary` | Read | Summarizes trace-check coverage and request timing over a window, by intent and request start source. |
+
+### `eval_sets`
+
+Eval sets and evaluators.
+
+| Tool | Access | What it does |
+| --- | --- | --- |
+| `list_eval_sets` | Read | Lists eval sets with names, descriptions and links. |
+| `get_eval_set` | Read | Returns an eval set's versions, one page of cases (values with `include_content: true`) and a run block with the `hue eval --set` command. |
+| `list_evaluators` | Read | Lists evaluators with ownership and links. |
+| `get_evaluator` | Read | Returns an evaluator's published versions with kind, digest and definition. |
+| `add_eval_set` | Write | Creates an eval set with an empty draft version. |
+| `update_eval_set` | Destructive | Renames an eval set or changes its slug or description. |
+| `add_eval_set_draft` | Write | Opens the eval set's one draft version, optionally cloned from a frozen version. |
+| `add_eval_set_cases` | Write | Appends 1 to 25 cases to a draft version. |
+| `update_eval_set_case` | Destructive | Replaces a draft case, which clears its link to a source trace. |
+| `delete_eval_set_case` | Destructive | Removes one case from a draft version. |
+| `freeze_eval_set_version` | Write | Freezes a draft version so its cases never change and runs can pin it. |
+| `add_evaluator` | Write | Creates a code-owned evaluator, which any key or sign-in connection can publish versions of. |
+| `publish_evaluator` | Write | Publishes an immutable version of a code-owned evaluator, such as one using the built-in `hue.exact_match.v1`. |
+| `copy_evaluator` | Write | Copies an evaluator version, such as one made in Hue, into a new code-owned evaluator. |
+| `archive_eval_set` | Destructive, owner or admin through sign-in | Hides an eval set from the active list; frozen versions and the runs that pin them stay readable. |
+| `archive_evaluator` | Destructive, owner or admin through sign-in | Hides an evaluator from the active list; versions pinned on runs stay readable. |
+
+### `runs`
+
+Runs execute an eval set version's cases; scoring runs score outputs that already exist.
+
+| Tool | Access | What it does |
+| --- | --- | --- |
+| `list_runs` | Read | Lists runs, newest first, by eval set or creation window. |
+| `get_run` | Read | Returns per-evaluator aggregates, execution states and durations, with up to 25 failing cases first, optionally compared with a baseline run. |
+| `add_run` | Write | Creates a run on a frozen eval set version with 1 to 32 pinned evaluator versions. |
+| `list_run_items` | Read | Lists a run's cases with their latest execution state. |
+| `get_run_item` | Read | Returns one case of a run; inputs and expected values with `include_content: true`. |
+| `get_run_execution` | Read | Returns one execution attempt's state, times, error, the trace it declared, its output files and each pinned evaluator's result; the recorded output and evidence with `include_content: true`. |
+| `start_run_case` | Write | Starts or retries one case of a run. |
+| `complete_run_case` | Write | Marks a started execution succeeded, errored or cancelled; a success carries its output. |
+| `finish_run` | Write | Seals a run once every case's latest execution has ended. |
+| `list_scoring_runs` | Read | Lists scoring runs, newest first. |
+| `get_scoring_run` | Read | Returns one scoring run's pinned evaluator versions, seal time and a page of its items: each `scoring_item_id`, which `add_scoring_results` and `add_judge_jobs` take, with every evaluator's result or `pending`; hosted judge jobs with `include_judge_jobs: true`. |
+| `add_scoring_run` | Write | Creates a sealed scoring run with pinned evaluator versions over existing outputs or a run's completed cases, without running the agent, and returns its items. Hue scores the evaluator kinds it runs itself; record the rest with `add_scoring_results`. |
+| `add_scoring_results` | Write | Records evaluator results on a scoring run. |
+
+### `judges`
+
+World judges and hosted judge jobs.
+
+| Tool | Access | What it does |
+| --- | --- | --- |
+| `list_judge_results` | Read | Lists a world judge's scored results with verdicts, reasons, promotion state and label counts. |
+| `get_judge_alignment` | Read | Reports how a judge version agrees with people's labels against the project's bar, and compares two versions. |
+| `label_judge_result` | Write | Agrees or disagrees with one verdict, with an optional note; your latest label counts. |
+| `set_judge_promotion` | Destructive | Promotes a judge version that meets the bar, so its verdict decides cases, or demotes it to advisory. |
+| `check_judge_regression` | Write | Rescores a judge version on labeled executions, without running the agent, and compares it with an earlier version. |
+| `set_judge_alignment_bar` | Destructive, owner or admin | Changes the bar a judge version must meet to be promoted. |
+| `get_judge_budget` | Read | Reports the project's hosted-judge allowance and usage. |
+| `add_judge_jobs` | Write | Queues hosted judge jobs for scoring-run items. |
+| `cancel_judge_jobs` | Destructive | Cancels hosted judge jobs: a queued job stops without charge, a running one may still finish and be charged, and a finished one is unchanged. |
+
+### `cases`
+
+Cases reviewed from traces, from a single trace or in bulk from Suggested cases.
+
+| Tool | Access | What it does |
+| --- | --- | --- |
+| `list_cases` | Read | Lists cases reviewed from traces, drafts and published, with links. |
+| `get_case` | Read | Returns one reviewed case with its eval set, saved version, pinned evaluators, environment and a run block; task text with `include_content: true`. |
+| `add_case_conversion` | Write | Pins a trace revision into a draft case. |
+| `get_case_conversion` | Read | Returns a draft's readiness, findings, evidence and criteria summary; its task, starting world and criteria with `include_content: true`. |
+| `update_case_conversion` | Destructive | Edits a draft: its JSON fields, facts and acknowledgements, and for a case built from a trace, the review actions. |
+| `publish_case_conversion` | Write | Publishes a ready draft into a new eval set or an existing draft version. |
+| `archive_case_conversion` | Destructive | Abandons a draft; a published case cannot be archived. |
+| `get_case_divergence` | Read | Shows where a run of a case built from a trace first went differently from its source trace. |
+| `list_suggested_cases` | Read | Ranks groups of production requests by what a case would add. |
+| `add_case_conversion_batch` | Write | Starts one draft per trace revision of a Suggested-case group, and publishes nothing. |
+| `get_case_conversion_batch` | Read | Reports a bulk conversion's status and every item's draft and build state. |
+| `update_case_conversion_batch` | Destructive | Retries failed items, cancels a bulk conversion or resumes one that stalled. |
+
+### `runners`
+
+Managed and local runs, and artifacts.
+
+| Tool | Access | What it does |
+| --- | --- | --- |
+| `list_managed_targets` | Read | Lists registered managed targets with name, endpoint, capabilities and timeout, never credentials. |
+| `add_managed_target` | Write, owner or admin | Registers a managed target; its credential is stored encrypted and never returned. |
+| `preflight_managed_run` | Read | Checks that a frozen eval set version suits a managed target before launch. |
+| `launch_managed_run` | Write | Creates a run and dispatches it to a managed target, which Hue's worker calls. |
+| `get_managed_run` | Read | Reports a managed dispatch's status, target and case counts for the whole run, and a page of its cases; case names and previews with `include_content: true`. |
+| `cancel_managed_run` | Destructive | Cancels a managed dispatch; cases in flight may still finish. |
+| `list_local_agents` | Read | Lists registered local agents and whether each is online. |
+| `launch_local_run` | Write | Creates a run for an online local agent that can run every case. |
+| `get_local_run` | Read | Reports a local run's status. |
+| `list_artifacts` | Read | Lists artifacts and the storage allowance; bytes stay on HTTP. |
+| `get_artifact` | Read | Returns one artifact's metadata. |
+
+### `environments`
+
+Simulated worlds a case can pin.
+
+| Tool | Access | What it does |
+| --- | --- | --- |
+| `list_environments` | Read | Lists simulated environments. |
+| `get_environment` | Read | Returns an environment's versions, and one version's definition and actions with `environment_version_id`. A world built from a trace returns its definition only with `include_content: true`, and a definition too large for one result pages by `definition_offset`. |
+| `add_environment` | Write | Creates an environment. |
+| `publish_environment_version` | Write | Publishes an immutable environment version from a definition. |
+| `archive_environment` | Destructive | Stops an environment being attached to new cases; versions already pinned stay readable. |
+
+### `intents`
+
+Listed by default: `get_intent_summary`, `list_intent_traces` and `get_request_answer`.
+
+| Tool | Access | What it does |
+| --- | --- | --- |
+| `get_intent_taxonomy` | Read | Returns the project's intent categories, empty when no taxonomy is saved. |
+| `save_intent_taxonomy` | Write, owner or admin | Publishes a new version of the intent taxonomy. |
+| `get_intent_summary` | Read | Counts a window's traces per intent bucket and reports whether classification is on; with request answers, it also carries the `task_types` answer. |
+| `list_intent_traces` | Read | Lists one intent bucket's traces as `search_traces` rows. |
+| `get_request_answer` | Read | Answers one question about the agent's behavior across requests, or returns every finding with `overview`. |
+
+### `docs`
+
+Listed by default: both tools. Each guide is also an MCP resource, `hue://guides/<topic>`, and the prompts `triage_production`, `investigate_trace`, `case_from_trace` (write access only) and `evaluate` start a workflow over one.
+
+| Tool | Access | What it does |
+| --- | --- | --- |
+| `search_hue_docs` | Read | Searches docs.hue.run and returns titles, links and excerpts. Ask a product question; never paste recorded content. |
+| `load_hue_guide` | Read | Returns one of Hue's workflow guides as markdown: `data-model`, `production`, `investigate`, `author` or `evaluate`. |
+
+### Catalog tools
+
+Listed beside every selection except `all`, which lists every tool directly instead.
+
+| Tool | Access | What it does |
+| --- | --- | --- |
+| `search_hue_tools` | Read | Finds the tools your access allows by keywords or toolset, 10 per page, with each tool's access, input schema and how to call it. |
+| `execute_hue_tool` | Read | Calls a read tool by name, with the same checks, audit and result as a direct call. |
+| `execute_hue_write_tool` | Destructive | Calls a write tool by name. It is annotated destructive because it can call any write; approve each call as you would the write itself. |
