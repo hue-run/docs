@@ -677,7 +677,7 @@
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": true,
-          "idempotentHint": false,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -700,7 +700,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": false,
           "openWorldHint": false
         }
@@ -833,7 +833,7 @@
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
-          "idempotentHint": false,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -844,7 +844,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false
         }
@@ -868,8 +868,8 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -880,8 +880,8 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -988,8 +988,8 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -1013,7 +1013,7 @@
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
-          "idempotentHint": false,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -1024,8 +1024,8 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -1037,7 +1037,7 @@
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": true,
-          "idempotentHint": false,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -1049,7 +1049,7 @@
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
-          "idempotentHint": false,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -1097,7 +1097,7 @@
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": true,
-          "idempotentHint": false,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -1109,7 +1109,7 @@
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": true,
-          "idempotentHint": false,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -1156,7 +1156,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false
         }
@@ -1180,7 +1180,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false
         }
@@ -1396,7 +1396,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": false,
           "openWorldHint": false
         }
@@ -1421,7 +1421,7 @@
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": true,
-          "idempotentHint": false,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -1480,7 +1480,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": false,
           "openWorldHint": false
         }
@@ -1541,7 +1541,7 @@
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": true,
-          "idempotentHint": false,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -1673,7 +1673,7 @@
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": true,
-          "idempotentHint": false,
+          "idempotentHint": true,
           "openWorldHint": false
         }
       },
@@ -1762,6 +1762,18 @@
         }
       },
       {
+        "name": "cancel_judge_jobs",
+        "title": "Hue: cancel judge jobs",
+        "toolset": "judges",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
         "name": "search_hue_docs",
         "title": "Hue: search documentation",
         "toolset": "docs",
@@ -1787,7 +1799,7 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "b9e21e2021ede2befcb5a1bf34ecec17a47462af8294def6de4abbda20925d64",
+    "catalogSha256": "a050a38370809b97ee1425acdeb3987cb279f8844003de007b17179556cb1af2",
     "serverInstructionsSha256": "a57ca5d20b45f22f4e1edcb1935b3555d47afeb0601f7bef597bef4e45d7a2ce",
     "guides": {
       "data-model": {
@@ -1804,11 +1816,11 @@
       },
       "author": {
         "title": "Author evaluations with Hue",
-        "sha256": "add59f4086b71fba82ccc8d0019a32bd2872c943a29358d53ae2d799e56ae6c3"
+        "sha256": "8e89ba64af7984c5be93ac8a538e9d782bf5bef4bf1e2bdb6e50989a0d555d34"
       },
       "evaluate": {
         "title": "Run your agent against a case",
-        "sha256": "136675abe9908e6ee90660b26fc6a15ea63061e47aefa6b3c2c758e72e0db315"
+        "sha256": "6fd1f5bb08ce572e8c9d08c6ee99e123385577d0f5101936ae058170669ec1aa"
       }
     },
     "toolsets": {
