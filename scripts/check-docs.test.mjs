@@ -205,6 +205,14 @@ test("a sentence denying that langfuse.environment is a raw attribute passes", (
   assert.equal(result.status, 0, result.stderr);
 });
 
+test("an unrelated negation does not excuse a raw langfuse.environment claim", () => {
+  const result = checkSnapshot((directory) => changePage(directory, "integrations/opentelemetry.mdx", (text) =>
+    `${text}\n\`langfuse.environment\` is not normalized and remains a raw attribute.\n`,
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /integrations\/opentelemetry\.mdx calls langfuse\.environment a raw attribute/);
+});
+
 test("a bare npx hue command in a code block fails", () => {
   const result = checkSnapshot((directory) => changePage(directory, "sdks/cli.mdx", (text) =>
     text.replace(/npx --yes --package @hue-run\/sdk@\d+\.\d+\.\d+ hue login --gitignore/, "npx hue login --gitignore"),

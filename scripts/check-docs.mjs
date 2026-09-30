@@ -153,10 +153,11 @@ for (const legacy of [
 ]) {
   if (allPublicText.includes(legacy)) fail(`public content contains retired text: ${legacy}`);
 }
-// Quoted or not; a sentence that denies the claim ("is not a raw attribute") is correct.
+// Quoted or not. A denial ("is not stored as a raw attribute") is correct only when the negation
+// governs the phrase itself: at most three words may separate them.
 for (const [path, text] of Object.entries(publicText)) {
   for (const [, between] of text.matchAll(/`?langfuse\.environment`?([^.\n]*?)raw attribute/g)) {
-    if (!/\b(?:not|never|no longer)\b|n't\b/.test(between)) {
+    if (!/(?:\b(?:not|never|no longer)|n't)\s+(?:[\w-]+\s+){0,3}$/.test(between)) {
       fail(`${path} calls langfuse.environment a raw attribute; it sets the trace's deployment label`);
     }
   }
