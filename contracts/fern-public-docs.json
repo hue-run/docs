@@ -584,7 +584,7 @@
     },
     "python": {
       "name": "hue-run",
-      "version": "0.6.2"
+      "version": "0.6.3"
     }
   },
   "mcp": {
@@ -1799,12 +1799,12 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "a050a38370809b97ee1425acdeb3987cb279f8844003de007b17179556cb1af2",
+    "catalogSha256": "1b582d4f3675e2b6f1bb20f44f66a4e92c109383ab726516a5ac9281fd353b99",
     "serverInstructionsSha256": "a57ca5d20b45f22f4e1edcb1935b3555d47afeb0601f7bef597bef4e45d7a2ce",
     "guides": {
       "data-model": {
         "title": "Hue data model",
-        "sha256": "3d4e2d678082324788a0db16514851447c54f7714dbb085efe8b69b794ccdaae"
+        "sha256": "105265e9f2f6830c6b7f62ba2c2a83e7c714d38d13de990ccd4f958b47eb7211"
       },
       "production": {
         "title": "Read production traces with Hue",
@@ -1820,7 +1820,7 @@
       },
       "evaluate": {
         "title": "Run your agent against a case",
-        "sha256": "6fd1f5bb08ce572e8c9d08c6ee99e123385577d0f5101936ae058170669ec1aa"
+        "sha256": "fc4b239bb7c4441f91937d2f9a64b56446c8e5bd39b9c0b6fd786540cfb33117"
       }
     },
     "toolsets": {
