@@ -46,7 +46,7 @@
       "App-launched local agents",
       "Scorer forward compatibility"
     ],
-    "sha256": "sha256:aaf1f2ebbffa0e85813d0f664af4b7ab1ea371e21170acea6b2da958c26d9284",
+    "sha256": "sha256:87cacc8b21b55cbd24535d2ea38710bcbe91604fb738568e0035e517a40a0622",
     "source": "COMPATIBILITY.md"
   },
   "packages": {
@@ -282,6 +282,7 @@
             "LocalAgentRegistration",
             "LocalAgentTargetContext",
             "LocalFile",
+            "LocalRunFailure",
             "LocalScorer",
             "Metric",
             "MetricDefinition",
@@ -346,9 +347,11 @@
             "TargetCancelledError",
             "TargetOutcomeUncertainError",
             "TargetResult",
+            "TargetTimeoutError",
             "TelemetryIssueCount",
             "TelemetryNotAccepted",
             "TerminalState",
+            "TraceExportUnacknowledgedError",
             "TypedError",
             "UncertainExecutionError",
             "VerdictClient",
@@ -373,6 +376,7 @@
             "executionManifestDigestV2",
             "expectedAgentManifestV2",
             "getScenario",
+            "isTransientApiError",
             "listScenarios",
             "localAgentCapabilities",
             "matchByName",
@@ -494,7 +498,7 @@
           "source": "packages/sdk-typescript/setup-events.schema.json"
         }
       },
-      "version": "0.11.4"
+      "version": "0.12.0"
     }
   },
   "repository": "https://github.com/hue-run/hue-sdk",
