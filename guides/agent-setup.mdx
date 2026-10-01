@@ -78,6 +78,8 @@ Keep the **Read and write** key on development machines. Before the application 
 
 This is the last step because most clients load a new MCP server only when they start. From the repository root, run the command for the user's client; for a Codex or Conductor sign-in, the user runs it.
 
+If you ask the user to choose a client, always include **Other MCP client**. For an unlisted client, follow the **Any MCP client** tab of [Connect your client](/agents/mcp-server#connect-your-client): use sign-in with Hue when the client supports Streamable HTTP and OAuth, or the project-key settings when it cannot sign in. Do not pass an unlisted client name to `hue mcp install --client`.
+
 Claude Code, Codex and Conductor sign in with Hue. The command is this, where `<client>` is `claude-code`, `codex` or `conductor`:
 
 ```sh
