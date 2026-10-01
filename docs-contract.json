@@ -10,9 +10,9 @@
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "37e21b8bd2f78f2c7137f9b70247c588eead06b6",
+      "commit": "164e1261e2193c012384d80fec8760bc6334608d",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:965fe1ae85efca3047edc0a660caae320d1de5d2e5283362776468b988f0c593"
+      "sha256": "sha256:943a9e884abd9b528ab8e6d8515f61c8d83af8c867d76d85440dd68129ed9d33"
     }
   },
   "site": {
@@ -64,7 +64,7 @@
     },
     "python": {
       "name": "hue-run",
-      "version": "0.6.2",
+      "version": "0.6.3",
       "modules": [
         "hue_sdk",
         "hue_sdk.evals",
