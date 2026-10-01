@@ -1,16 +1,16 @@
 ---
 title: "Python API reference"
-description: "Configuration, tracing, delivery, evaluation and environment APIs in hue-run 0.6.2."
+description: "Configuration, tracing, delivery, evaluation and environment APIs in hue-run 0.6.3."
 ---
 
-This reference covers `hue-run` **0.6.2** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
+This reference covers `hue-run` **0.6.3** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
 | Module | Public exports |
 | --- | --- |
 | `hue_sdk` | `Hue`, `create_hue_safe`, `HueSpan`, `Project`, `ProjectValidationError`, `Redactor`, `ExportStatus`, `TraceReceipt`, `TraceReceiptField`, `TraceReceiptFields`, `TraceVerificationError`, `TraceVerificationResult`. |
-| `hue_sdk.evals` | `EvaluationClient`, `HueApiError`, `run_experiment`, `rescore`, `builtin_scorers` (with `builtins` as an alias), `define_local_scorer`, `score_locally`, `MISSING`, `TraceEvidence`, `TargetContext`, `ScoreContext`, `Score`, `LocalScorer`, `RunnerReport` and the recovery errors. |
+| `hue_sdk.evals` | `EvaluationClient`, `HueApiError`, `is_transient_api_error`, `run_experiment`, `rescore`, `builtin_scorers` (with `builtins` as an alias), `define_local_scorer`, `score_locally`, `MISSING`, `TraceEvidence`, `TargetContext`, `ScoreContext`, `Score`, `LocalScorer`, `RunnerReport` and the recovery errors. |
 | `hue_sdk.environment` | `EnvironmentClient`, `HueEnvironmentError`, the [world handoff](#world-handoff) helpers and the simulated-environment types. |
 | `hue_sdk.managed` | `ManagedTargetHandler`, `ManagedTargetContext`, `ManagedInputFile`, `ManagedOutputFile`, `ManagedTargetResult`, `ManagedResponse`. |
 
@@ -188,7 +188,7 @@ client = EvaluationClient(
 )
 ```
 
-`EvaluationClient(base_url: str = "https://app.hue.run", api_key: str | None = None, *, timeout_seconds: float = 10)` requires a valid **Read and write** project service key. Use `api_key=` for Hue Cloud or retain `EvaluationClient(base_url, api_key)` for an explicit origin; a bare key in the first position raises `TypeError` naming `api_key=`. Timeouts must be positive and finite.
+`EvaluationClient(base_url: str = "https://app.hue.run", api_key: str | None = None, *, timeout_seconds: float = 10, max_attempts: int = 4)` requires a valid **Read and write** project service key. Use `api_key=` for Hue Cloud or retain `EvaluationClient(base_url, api_key)` for an explicit origin; a bare key in the first position raises `TypeError` naming `api_key=`. Timeouts must be positive and finite.
 
 Client methods are synchronous and return dictionaries. **Arguments use snake_case; response fields and low-level completion payloads use HTTP camelCase.** `check_connection()` returns the current project. List methods accept keyword-only `after=None, limit=100`; limits are 1–100. Responses contain `items` and `nextCursor`.
 
@@ -267,7 +267,7 @@ Hosted `config` requires `model`, `provider`, `rubric`, `bindings` (a list of di
 
 Each submitted result requires `evaluationItemId`, `scorerVersionId` and the `Score` fields described below; a local-code result also carries `sourceDigest`. A scored result has `metrics` entries with `name`, `value` and optional `passed`, plus a nonempty `explanation` or an `evidence` value. Error results contain `error` with `type` and optional `message`; skipped results contain an `explanation`.
 
-Mutations do not retry implicitly. Preserve idempotency keys and returned IDs across retries after a lost response. `HueApiError.status` is the HTTP status when available; errors do not echo server bodies. The client rejects invalid JSON before writes, does not follow redirects, and limits request/response bodies to 1 MiB/4 MiB.
+A read, or a mutation the server deduplicates by the `idempotencyKey` in its body, is sent again after a connection failure, a timeout or a 408 or 5xx without `Retry-After`, up to `max_attempts` (default 4, range 1–10) times with a jittered backoff; `is_transient_api_error(error)` names those failures. A mutation without a key is sent once: preserve idempotency keys and returned IDs across retries after a lost response. `HueApiError.status` is the HTTP status when available, `HueApiError.diagnostic` Hue's `X-Hue-Diagnostic` code when it sent one, and `HueApiError.reason` is `malformed_response` for a body the client refused; errors do not echo server bodies. The client rejects invalid JSON before writes, does not follow redirects, and limits request/response bodies to 1 MiB/4 MiB.
 
 Runner target outputs and built-in JSON Schema declarations are limited to 200,000 serialized bytes. JSON validation also enforces nesting depth 32 and 20,000 nodes; for an HTTP write, those structural limits apply to the complete request body. Values must use finite JSON numbers, valid Unicode without NUL, string dictionary keys, lists and dictionaries without cycles. Python integers outside `-(2**53 - 1)` through `2**53 - 1` are rejected; use strings for larger exact integers. The server can apply additional field-specific limits.
 
