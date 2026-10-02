@@ -1,9 +1,9 @@
 ---
 title: "TypeScript API reference"
-description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.12.1."
+description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.13.0."
 ---
 
-This reference covers `@hue-run/sdk` **0.12.1** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+This reference covers `@hue-run/sdk` **0.13.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -233,7 +233,7 @@ AI SDK per-call integrations replace the global integrations for that call. If y
 
 See [redact sensitive trace content](/guides/redaction) for runnable email-masking examples and the correct attachment point for each integration.
 
-- `captureContent: false` disables Hue helper content and removes recognized GenAI, Vercel AI SDK, OpenInference and OpenLLMetry content, legacy GenAI content events, log bodies, status messages and exception text before Hue exports records, including records from other instrumentations on a shared provider. The exported `contentPrefixes` array lists the attribute keys, and their dotted children, that are removed; the [compatibility matrix](/sdks/compatibility) reproduces it. It does not classify every custom attribute name.
+- `captureContent: false` disables Hue helper content and removes recognized GenAI, Vercel AI SDK, OpenInference, OpenLLMetry and Langfuse content, legacy GenAI content events, log bodies, status messages and exception text before Hue exports records, including records from other instrumentations on a shared provider. The exported `contentPrefixes` array lists the attribute keys, and their dotted children, that are removed; the [compatibility matrix](/sdks/compatibility) reproduces it. It does not classify every custom attribute name.
 - `captureContent: true` permits supplied content. Received content is stored by Hue; the SDK does not set a retention timer. Helpers still omit exception messages and stack traces.
 - With `captureContent: false`, a record whose tool definitions are removed keeps a summary of them: `hue.tool.names` lists each definition's `name` (Chat Completions `function.name`, or the `type` of an unnamed built-in tool such as `mcp`) in order, and `hue.tool.definitions.sha256` is the lowercase hex SHA-256 of the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical JSON of the credential-scrubbed definition list. The digest does not change when a credential rotates. Only definitions another integration recorded can be summarized: `hueTelemetry(hue)` with `captureContent: false` records none.
 - Hosted tools carry credentials in their definitions, such as the `authorization` and `headers` of an OpenAI hosted MCP tool. Before export, and before `redact`, Hue replaces the values of credential-like fields (`authorization`, `authorization_token`, `headers`, `api_key`, `access_token`, `x-api-key`, and keys ending in `token`, `secret`, `password`, `apikey` or `credential`, case-insensitively and ignoring `-` and `_`) with `"[redacted]"` in `gen_ai.tool.definitions`, `ai.prompt.tools` and `llm.tools.*.tool.json_schema`, and in the `tools` and `mcp_servers` entries of a raw provider request or response recorded as `input.value`, `output.value` or `llm.invocation_parameters`. Parameters named in a JSON Schema `properties` object keep their schemas, so a tool that takes a `headers` argument is still described. A definition nested more than 256 levels deep rejects its record.
@@ -275,7 +275,7 @@ A placeholder usually reaches Hue about 1.5 s after its span starts: up to 500 m
 - Placeholder attributes follow `captureContent` and `redact` like the finished span. Tool definitions, system instructions and any value over 64 KiB are left out.
 - A span processor that scrubs, renames or drops spans in `onEnd` never sees placeholders: the transport builds each one from the running span's current name and attributes. If a wrapper forwards `onStart` to Hue and the span is still open when its placeholder is exported, Hue receives the span's original name and its attributes after `redact`, even when the wrapper later edits, renames or drops the finished span. Remove sensitive attribute values with `redact` or where you record them. `redact` does not change span names, so keep a sensitive value out of the name where you create the span, or turn live spans off with `liveSpans: false`.
 - Placeholders are advisory. They are queued only while the queue is under a quarter of its record and byte budgets, and skipped silently otherwise. While queued they count in `pendingSpans` and `pendingBytes`, but never as accepted, rejected, failed or dropped records. Losing only placeholders records a `warning` issue and does not make `flush()` throw.
-- A receiver that does not accept placeholders, such as a generic collector, rejects them only in the first export that carries them. The transport then records one `warning` issue and stops sending placeholders for that client.
+- Completed spans are exported in separate requests before placeholders, so their rejections stay visible. If the first trace acknowledgement lacks `Hue-Pending-Spans: 1`, the transport records one `warning` issue and stops sending placeholders for that client; the receiver gets at most one placeholder request.
 - Opt out with `liveSpans: false`.
 - With an [existing provider](/integrations/opentelemetry), announcements start in `spanProcessor.onStart`. A wrapping processor that forwards `onStart` should forward `onEnd` for the same spans; a placeholder already sent for a span that never reaches Hue keeps it showing as running until Hue marks the trace stalled.
 
@@ -855,6 +855,7 @@ try {
 | Function | Behavior |
 | --- | --- |
 | `worldHandoff(run)` | The `WorldHandoff` of a create or replay response, or `null` for a world without one. |
+| `worldNow(source?)` | The world's clock as a `Date`, read from a `WorldHandoff` or `HUE_WORLD_NOW` in an environment map (default `process.env`); `null` when absent or invalid. |
 | `agentEnvironment(world, options?: AgentEnvironmentOptions)` | Environment variables for the agent's child process: `parent` (default `process.env`) without Hue control-plane credentials or world variables (`HUE_WORLD_*`, `HUE_SIM_*_URL`, `HUE_SIM_*_ALIAS`, `HUE_MCP_CONFIG`, `HUE_MCP_URL`, `HUE_MCP_TOKEN` and `HUE_MCP_EXPIRES_AT`), then the world's `env`, which wins. Also sets `HUE_MCP_URL`, `HUE_MCP_TOKEN` and `HUE_MCP_EXPIRES_AT` from the first MCP mirror unless `legacyMcpVariables: false`. Pass `includeHueCredentials: true` only for an agent that must call Hue's own API. |
 | `writeMcpConfig(world, { directory? }?)` | Writes `mcpConfig` to an owner-only `mcp.json` in a private directory → `McpConfigFile`, `{ path, dispose() }`. Call `dispose` after the run; it removes the file and directory. |
 | `legacyMcpCapability(world)` | `LegacyMcpCapability`, `{ url, token, expiresAt }` for the first MCP mirror, the shape adapters written for `hue_sim_` read; `undefined` without an MCP surface. |
