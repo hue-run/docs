@@ -170,6 +170,11 @@ for (const legacy of [
   "does not provide an OAuth authorization flow",
   "does not offer an OAuth authorization flow",
   "Cursor limits the number of tools",
+  // The receiver accepts 4 MiB after gzip and indexes 10,000 spans per trace; a Hue SDK posts to
+  // /api/v1/otlp/v1/{traces,logs}, so a generic receiver needs those paths, not just an origin.
+  "1 MiB on the wire and after decompression",
+  "at most 2,000 distinct spans",
+  "any OTLP receiver when you set",
 ]) {
   if (allPublicText.includes(legacy)) fail(`public content contains retired text: ${legacy}`);
 }

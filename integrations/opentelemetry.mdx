@@ -5,6 +5,15 @@ description: "Send standard OTLP traces and correlated logs to Hue without chang
 
 If your application already emits OpenTelemetry, send those records to Hue through an OTLP HTTP exporter or collector. You do not need a Hue-specific model wrapper.
 
+## Ownership and boundaries
+
+Your instrumentation owns the trace; Hue stores what it sends.
+
+- **Your provider owns the resource, sampling and propagation.** Hue never registers a global tracer provider, logger provider, propagator or context manager, and its SDK clients never replace yours. Set `service.name`, `service.version` and `deployment.environment.name` on your resource, and keep your sampler and W3C trace-context setup.
+- **Hue observes only instrumented calls.** It does not proxy your model provider, patch libraries or infer spans. A call without a span never appears.
+- **Capture is decided before export.** With a Hue SDK, `captureContent: false` / `capture_content=False` strips the [recognized content attributes](/reference/typescript#content-policy) from every record on Hue's export path, including spans a third-party instrumentor records on a borrowed provider; unrecognized custom keys pass through. The Python `redactor` rewrites only values set through Hue helpers, and the TypeScript `redact` hook runs on Hue's export path only. With a standard exporter or a Collector, configure capture and redaction in the instrumentation or the Collector.
+- **Other exporters are unaffected.** A Hue processor on a shared provider sends its own copy; your existing exporters, filters and masking keep sending theirs. Check each destination with synthetic content.
+
 ## Configure the destination
 
 Use a **Tracing only** project service key from **Settings → Integrations & API keys**. The key determines the destination project; a project ID inside an attribute does not grant access. Use **Read and write** only when this process also calls evaluation APIs.
@@ -20,6 +29,160 @@ Use a **Tracing only** project service key from **Settings → Integrations & AP
 Set the complete signal-specific endpoints in your exporter's configuration. Do not accidentally append another `/v1/traces` or `/v1/logs` to them. Store the authorization value in your server environment or secret manager.
 
 These routes accept the OpenTelemetry wire format, not arbitrary application JSON. Metrics ingestion and OTLP gRPC are not currently supported. Logs support trace-correlated evidence; this is not a general log-search service.
+
+## Send from any language
+
+Any OpenTelemetry SDK or Collector that speaks OTLP/HTTP can send to the endpoints above. The examples below use only standard OpenTelemetry packages, read a **Tracing only** key from `HUE_API_KEY` and send one trace with a root span and a child tool span.
+
+<Tabs>
+  <Tab title="Node.js">
+    Install the pinned packages:
+
+    ```sh
+    npm install @opentelemetry/api@1.9.1 @opentelemetry/sdk-trace-node@2.11.0 @opentelemetry/exporter-trace-otlp-http@0.222.0 @opentelemetry/resources@2.11.0
+    ```
+
+    Save this as `send.mjs` and run `node send.mjs`:
+
+    ```js
+    import { diag, DiagConsoleLogger, DiagLogLevel, trace } from "@opentelemetry/api";
+    import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+    import { resourceFromAttributes } from "@opentelemetry/resources";
+    import { BatchSpanProcessor, NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
+
+    const apiKey = process.env.HUE_API_KEY;
+    if (!apiKey) throw new Error("Set HUE_API_KEY in your server environment.");
+    diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.WARN); // Export failures print instead of staying silent.
+
+    const provider = new NodeTracerProvider({
+      resource: resourceFromAttributes({ "service.name": "any-language-demo", "service.version": "1.0.0" }),
+      spanProcessors: [
+        new BatchSpanProcessor(
+          new OTLPTraceExporter({
+            url: "https://app.hue.run/api/v1/otlp/v1/traces", // The complete signal endpoint.
+            headers: { Authorization: `Bearer ${apiKey}` },
+          }),
+        ),
+      ],
+    });
+    provider.register(); // Your global tracer and W3C context propagation, as before.
+
+    const tracer = trace.getTracer("example.instrumentation");
+    await tracer.startActiveSpan("agent.request", async (root) => {
+      const tool = tracer.startSpan("lookup");
+      tool.setAttribute("gen_ai.tool.name", "lookup");
+      tool.end();
+      console.log("Trace ID:", root.spanContext().traceId);
+      root.end();
+    });
+    await provider.shutdown(); // Flushes the batch processor and the exporter.
+    ```
+  </Tab>
+  <Tab title="Python">
+    Install the pinned packages:
+
+    ```sh
+    pip install opentelemetry-sdk==1.44.0 opentelemetry-exporter-otlp-proto-http==1.44.0
+    ```
+
+    Save this as `send.py` and run `python send.py`:
+
+    ```python
+    import os
+
+    from opentelemetry import trace
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+    api_key = os.environ["HUE_API_KEY"]  # Raises when unset; keep the key in the server environment.
+
+    provider = TracerProvider(
+        resource=Resource.create({"service.name": "any-language-demo", "service.version": "1.0.0"})
+    )
+    provider.add_span_processor(
+        BatchSpanProcessor(
+            OTLPSpanExporter(
+                endpoint="https://app.hue.run/api/v1/otlp/v1/traces",  # The complete signal endpoint.
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+        )
+    )
+    trace.set_tracer_provider(provider)  # Your global tracer, as before.
+
+    tracer = trace.get_tracer("example.instrumentation")
+    with tracer.start_as_current_span("agent.request") as root:
+        with tracer.start_as_current_span("lookup") as tool:
+            tool.set_attribute("gen_ai.tool.name", "lookup")
+        print("Trace ID:", format(root.get_span_context().trace_id, "032x"))
+    provider.shutdown()  # Flushes the batch processor and the exporter; a failure is logged.
+    ```
+  </Tab>
+  <Tab title="Collector">
+    Run an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) (tested with `otelcol-contrib` 0.162.0) with this configuration and point your application's exporters at it. The Collector holds the Hue key, so application processes never do, and the same pipeline keeps sending to your existing backend.
+
+    ```yaml collector.yaml
+    receivers:
+      otlp:
+        protocols:
+          http:
+            endpoint: 127.0.0.1:4318
+
+    exporters:
+      otlp_http/hue:
+        # Complete signal endpoints: a bare `endpoint` would append its own /v1/traces.
+        traces_endpoint: https://app.hue.run/api/v1/otlp/v1/traces
+        logs_endpoint: https://app.hue.run/api/v1/otlp/v1/logs
+        headers:
+          Authorization: "Bearer ${env:HUE_API_KEY}"
+        compression: gzip
+      # Replace with your existing backend's exporter; `debug` prints to the Collector's log.
+      debug:
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          exporters: [otlp_http/hue, debug]
+        logs:
+          receivers: [otlp]
+          exporters: [otlp_http/hue]
+    ```
+
+    ```sh
+    HUE_API_KEY=your_tracing_only_key otelcol-contrib --config collector.yaml
+    ```
+
+    The exporter retries HTTP 429, 502, 503 and 504 through its sending queue and logs an OTLP partial success, so watch the Collector's log for rejected spans. Collector releases before the rename know this exporter as `otlphttp`. Nothing on this path imports a Hue package.
+  </Tab>
+</Tabs>
+
+The Node.js exporter sends OTLP/JSON and the Python exporter protobuf; Hue accepts both, and a Collector forwards gzip-compressed protobuf. Each example records `gen_ai.tool.name` so the child shows as a tool span; [make traces useful to a coding agent](#make-traces-useful-to-a-coding-agent) lists the other attributes Hue reads. Confirm delivery by opening the printed trace ID in Hue or with the [trace receipt](/sdks/typescript#verify-stored-trace-evidence).
+
+### Point a Hue SDK at a Collector
+
+The Hue SDKs post to `<origin>/api/v1/otlp/v1/traces` and `<origin>/api/v1/otlp/v1/logs`, so a Collector's OTLP receiver needs those paths. Hue's [live-span placeholders](/reference/typescript#live-spans) are Hue-specific records that a generic receiver would forward to your other backends, so turn live spans off on this path.
+
+```yaml
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 127.0.0.1:4318
+        traces_url_path: /api/v1/otlp/v1/traces
+        logs_url_path: /api/v1/otlp/v1/logs
+```
+
+```ts
+const hue = createHue({ apiKey, serviceName: "my-agent", captureContent: true, baseUrl: "http://127.0.0.1:4318", liveSpans: false });
+```
+
+```python
+hue = Hue(api_key=api_key, base_url="http://127.0.0.1:4318", service_name="my-agent", capture_content=True, live_spans=False)
+```
+
+The Collector ignores the key the SDK sends and adds the real one in its `otlp_http/hue` exporter, so `apiKey` / `api_key` can be any non-empty placeholder such as `local-collector`. Skip `checkConnection()` / `check_connection()` and the trace receipt, which the Collector cannot answer. Without `liveSpans: false`, the SDK sends placeholders in its first export to a receiver that answers without `Hue-Pending-Spans: 1`, then records one warning and stops.
 
 ## Attach Hue transport to JavaScript providers
 
