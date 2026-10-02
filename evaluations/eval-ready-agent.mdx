@@ -1,0 +1,419 @@
+---
+title: "Make your agent eval-ready"
+sidebarTitle: "Eval-ready agent"
+description: "Commit one helper that points your agent's own app clients at Hue's mirrors during an evaluation and leaves production unchanged, then run published cases with hue eval."
+---
+
+In a Hue evaluation your agent runs unchanged, in your process, against a fresh simulated world per case. Hue never executes the agent, never intercepts its network traffic and never adds tools. The one thing that changes is where the agent's own app clients point, and a helper you commit once decides that.
+
+This guide is for any agent that talks to apps such as Gmail, Slack or Notion over MCP or REST, in any language. It describes `@hue-run/sdk` 0.12.1 and `hue-run` 0.6.4 or later; the agent itself needs no Hue SDK. For the TypeScript callback path and what a world is, see [simulations](/evaluations/simulations); for the command reference, see [`hue eval`](/sdks/cli#run-an-evaluation).
+
+## How a mirror works
+
+Each app the agent uses has a mirror at a stable Hue URL:
+
+```text
+https://app.hue.run/api/sim/<real host>/<real path>
+```
+
+A Gmail REST mirror is `https://app.hue.run/api/sim/gmail.googleapis.com/gmail/v1`, and a Gmail MCP mirror is `https://app.hue.run/api/sim/gmailmcp.googleapis.com/mcp/v1`. The agent calls the mirror exactly as it calls the real app, with a per-run **world token** in place of the real credential. Hue answers from that run's private world in the real app's format, records every call in the world's ledger, then seals the world when the case ends and scores it.
+
+The mirrors serve the real app's captured catalog, or the tool list the trace the case was built from recorded, so the agent sees what production sees. Hue adds no tool of its own. An eval-ready agent therefore never receives Hue-native tools: not the deprecated `context.tools` or `context.mcp` of a world without a handoff, not the Hue MCP server, not a tool added for the evaluation.
+
+## The one-time change
+
+Read each app's URL and credential through a helper that detects an evaluation and falls back to the production values otherwise. `hue eval` sets `HUE_WORLD_TOKEN` only in the process it starts, so its presence means an evaluation. During one, the helper reads the mirror URL from the app's `HUE_SIM_<SURFACE>_URL` variable and uses `HUE_WORLD_TOKEN` as the bearer. It **fails closed**: a missing variable for an app the agent needs throws before any request, and never falls back to the real app inside an evaluation. It also refuses a case without a world: `hue eval --command` always sets `HUE_EXECUTION_ID`, so that variable without `HUE_WORLD_TOKEN` throws instead of running the agent against the real app. Without either variable it returns the production URL and credential unchanged, so production behavior is identical.
+
+Commit the helper and its call sites. Nothing else changes: not the prompts, the model, the tools or the dependencies.
+
+<Tabs>
+<Tab title="TypeScript">
+
+```ts title="hue-eval.ts"
+// Commit once. No Hue SDK is needed.
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+/**
+ * True only in the process `hue eval` started for a case with a world. `hue eval --command`
+ * always sets HUE_EXECUTION_ID; a case it started without HUE_WORLD_TOKEN has no world (the
+ * simulation gateway does not serve it), so running the agent would reach the real app: refuse.
+ */
+export function inHueEval(): boolean {
+  if (process.env.HUE_WORLD_TOKEN) return true;
+  if (process.env.HUE_EXECUTION_ID) {
+    throw new Error("Hue eval: this case has no world handoff (HUE_WORLD_TOKEN is not set); refusing to run the agent against the real app");
+  }
+  return false;
+}
+
+/**
+ * One app's URL and bearer: the Hue mirror during an evaluation, production otherwise.
+ * `production` is a function so the real credential is never read during an evaluation.
+ */
+export function appEndpoint(
+  variable: string,
+  production: () => { url: string; token: string },
+): { url: string; token: string } {
+  if (!inHueEval()) return production();
+  const url = process.env[variable];
+  if (!url) {
+    throw new Error(`Hue eval: ${variable} is not set, so this world has no mirror for the app; refusing to call the real one`);
+  }
+  return { url, token: process.env.HUE_WORLD_TOKEN! };
+}
+
+/**
+ * An `mcpServers` file for a framework that loads one. Production: your file, untouched.
+ * Evaluation: a private copy that keeps your server names, so tool names stay what production
+ * has, and replaces each server's url and headers with its mirror's. `mirrors` maps every
+ * server name to its `HUE_SIM_<SURFACE>_URL` variable; an unmapped server fails closed.
+ * Call `dispose()` when the agent exits: it removes the copy and the world token in it.
+ */
+export function mcpServersFile(
+  production: string,
+  mirrors: Record<string, string>,
+): { path: string; dispose(): void } {
+  if (!inHueEval()) return { path: production, dispose() {} };
+  const config = JSON.parse(readFileSync(production, "utf8")) as {
+    mcpServers: Record<string, Record<string, unknown>>;
+  };
+  // Only the common shape (`url` or `command`) is rewritten. A client-specific field such as
+  // `serverUrl` or `httpUrl` would keep pointing at the real app, so any other key fails closed.
+  const known = new Set(["type", "url", "headers", "command", "args", "env"]);
+  for (const [name, server] of Object.entries(config.mcpServers)) {
+    const variable = mirrors[name];
+    if (!variable) throw new Error(`Hue eval: MCP server ${name} has no mirror variable; refusing to reach the real one`);
+    const unknown = Object.keys(server).filter((key) => !known.has(key));
+    if (unknown.length) throw new Error(`Hue eval: MCP server ${name} uses ${unknown.join(", ")}; rewrite that field for your client`);
+    const mirror = appEndpoint(variable, () => ({ url: "", token: "" }));
+    config.mcpServers[name] = { type: "http", url: mirror.url, headers: { Authorization: `Bearer ${mirror.token}` } };
+  }
+  const directory = mkdtempSync(join(tmpdir(), "hue-mcp-"));
+  const path = join(directory, "mcp.json");
+  writeFileSync(path, JSON.stringify(config), { mode: 0o600 });
+  return { path, dispose: () => rmSync(directory, { recursive: true, force: true }) };
+}
+```
+
+</Tab>
+<Tab title="Python">
+
+```python title="hue_eval.py"
+# Commit once. No Hue SDK is needed.
+import json
+import os
+import shutil
+import tempfile
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+
+
+def in_hue_eval() -> bool:
+    """True only in the process `hue eval` started for a case with a world.
+
+    `hue eval --command` always sets HUE_EXECUTION_ID; a case it started without HUE_WORLD_TOKEN
+    has no world (the simulation gateway does not serve it), so running the agent would reach
+    the real app: refuse.
+    """
+    if os.environ.get("HUE_WORLD_TOKEN"):
+        return True
+    if os.environ.get("HUE_EXECUTION_ID"):
+        raise RuntimeError(
+            "Hue eval: this case has no world handoff (HUE_WORLD_TOKEN is not set); "
+            "refusing to run the agent against the real app"
+        )
+    return False
+
+
+def app_endpoint(variable: str, production: Callable[[], tuple[str, str]]) -> tuple[str, str]:
+    """One app's (url, bearer): the Hue mirror during an evaluation, production otherwise.
+
+    `production` is a function so the real credential is never read during an evaluation.
+    """
+    if not in_hue_eval():
+        return production()
+    url = os.environ.get(variable)
+    if not url:
+        raise RuntimeError(
+            f"Hue eval: {variable} is not set, so this world has no mirror for the app; "
+            "refusing to call the real one"
+        )
+    return url, os.environ["HUE_WORLD_TOKEN"]
+
+
+@contextmanager
+def mcp_servers_file(production: str, mirrors: dict[str, str]) -> Iterator[str]:
+    """An `mcpServers` file for a framework that loads one, as a context manager.
+
+    Production: yields your file, untouched. Evaluation: yields a private copy that keeps your
+    server names, so tool names stay what production has, and replaces each server's url and
+    headers with its mirror's, then removes the copy and the world token in it when the block
+    ends. `mirrors` maps every server name to its `HUE_SIM_<SURFACE>_URL` variable; an unmapped
+    server fails closed.
+    """
+    if not in_hue_eval():
+        yield production
+        return
+    with open(production, encoding="utf-8") as file:
+        config = json.load(file)
+    # Only the common shape (`url` or `command`) is rewritten. A client-specific field such as
+    # `serverUrl` or `httpUrl` would keep pointing at the real app, so any other key fails closed.
+    known = {"type", "url", "headers", "command", "args", "env"}
+    for name, server in config["mcpServers"].items():
+        variable = mirrors.get(name)
+        if not variable:
+            raise RuntimeError(f"Hue eval: MCP server {name} has no mirror variable; refusing to reach the real one")
+        unknown = sorted(set(server) - known)
+        if unknown:
+            raise RuntimeError(f"Hue eval: MCP server {name} uses {', '.join(unknown)}; rewrite that field for your client")
+        url, token = app_endpoint(variable, lambda: ("", ""))
+        config["mcpServers"][name] = {"type": "http", "url": url, "headers": {"Authorization": f"Bearer {token}"}}
+    directory = tempfile.mkdtemp(prefix="hue-mcp-")
+    try:
+        path = os.path.join(directory, "mcp.json")
+        with open(os.open(path, os.O_WRONLY | os.O_CREAT, 0o600), "w", encoding="utf-8") as file:
+            json.dump(config, file)
+        yield path
+    finally:
+        shutil.rmtree(directory, ignore_errors=True)
+```
+
+</Tab>
+</Tabs>
+
+### Variable names
+
+Each mirror's variable is `HUE_SIM_<SURFACE>_URL`, where the surface is the app's provider surface id in upper case with every other character replaced by `_`: Gmail's MCP mirror is `HUE_SIM_GOOGLE_GMAIL_MCP_URL` and its REST mirror is `HUE_SIM_GOOGLE_GMAIL_REST_URL`. `HUE_MCP_CONFIG` names an owner-only `mcpServers` file for every MCP mirror of the world, keyed by Hue's provider instance (such as `gmail-primary`) rather than by your server names, with `HUE_WORLD_TOKEN` as the bearer; it fits as-is only when those keys are the names your production configuration uses, since a framework derives tool names from them. `HUE_MCP_URL`, `HUE_MCP_TOKEN` and `HUE_MCP_EXPIRES_AT` carry the first MCP mirror under the names older adapters read. `hue eval` prints `world created` per case, not the variable names; to learn a case's exact names, have the agent log the `HUE_SIM_` variable names, never their values, to stderr once.
+
+## Call sites
+
+Point each app client at the helper's result. First find how the codebase reaches each app: an `mcpServers` file, an MCP client in code, a hosted connector, a REST SDK with a base URL option, or raw HTTP calls. Each is a call site. The snippets use a Gmail MCP mirror and a placeholder `readGoogleAccessToken()` for the production credential; replace the variable and the production values with your app's.
+
+### An MCP configuration file
+
+For a framework that loads an `mcpServers` file, keep your production file and its server names, and let the helper write the evaluation copy with each server's URL and credential replaced by its mirror's. Tool names stay what production has, a server without a mirror or with a client-specific URL field (such as `serverUrl` or `httpUrl`) fails closed, and the copy is removed when the agent exits (`dispose()` in TypeScript, the end of the `with` block in Python). Claude Code reads the result with `--mcp-config`:
+
+```sh title="claude-code.sh"
+#!/usr/bin/env bash
+# The agent's start command. Reads the case from stdin, answers on stdout.
+set -euo pipefail
+# Fail closed: when the helper throws, this assignment fails and the script stops before Claude starts.
+CONFIG="$(node -e 'import("./hue-eval.js").then((m) => console.log(m.mcpServersFile("./mcp.production.json", { gmail: "HUE_SIM_GOOGLE_GMAIL_MCP_URL" }).path))')"
+# During an evaluation the copy holds the world token: remove it when the agent exits.
+if [ -n "${HUE_WORLD_TOKEN:-}" ]; then trap 'rm -rf "$(dirname "$CONFIG")"' EXIT; fi
+claude -p "$(cat)" --mcp-config "$CONFIG" --strict-mcp-config
+```
+
+Hue's own file at `HUE_MCP_CONFIG` has the same common shape, one Streamable HTTP server per provider instance; pass it directly only when its keys are your server names:
+
+```json title="mcp.json"
+{
+  "mcpServers": {
+    "gmail-primary": {
+      "type": "http",
+      "url": "https://app.hue.run/api/sim/gmailmcp.googleapis.com/mcp/v1",
+      "headers": { "Authorization": "Bearer <world token>" }
+    }
+  }
+}
+```
+
+### OpenAI Agents SDK
+
+<Tabs>
+<Tab title="TypeScript">
+
+```ts title="openai-agents.ts"
+import { Agent, MCPServerStreamableHttp } from "@openai/agents";
+import { appEndpoint } from "./hue-eval";
+
+const gmail = appEndpoint("HUE_SIM_GOOGLE_GMAIL_MCP_URL", () => ({
+  url: "https://gmailmcp.googleapis.com/mcp/v1",
+  token: readGoogleAccessToken(),
+}));
+const server = new MCPServerStreamableHttp({
+  name: "gmail",
+  url: gmail.url,
+  requestInit: { headers: { Authorization: `Bearer ${gmail.token}` } },
+});
+await server.connect();
+const agent = new Agent({ name: "Inbox agent", instructions, mcpServers: [server] });
+```
+
+</Tab>
+<Tab title="Python">
+
+```python title="openai_agents.py"
+from agents import Agent
+from agents.mcp import MCPServerStreamableHttp
+from hue_eval import app_endpoint
+
+url, token = app_endpoint(
+    "HUE_SIM_GOOGLE_GMAIL_MCP_URL",
+    lambda: ("https://gmailmcp.googleapis.com/mcp/v1", read_google_access_token()),
+)
+async with MCPServerStreamableHttp(
+    name="gmail",
+    params={"url": url, "headers": {"Authorization": f"Bearer {token}"}},
+) as server:
+    agent = Agent(name="Inbox agent", instructions=instructions, mcp_servers=[server])
+```
+
+</Tab>
+</Tabs>
+
+### Vercel AI SDK
+
+```ts title="vercel-ai-sdk.ts"
+import { createMCPClient } from "@ai-sdk/mcp";
+import { appEndpoint } from "./hue-eval";
+
+const gmail = appEndpoint("HUE_SIM_GOOGLE_GMAIL_MCP_URL", () => ({
+  url: "https://gmailmcp.googleapis.com/mcp/v1",
+  token: readGoogleAccessToken(),
+}));
+const mcpClient = await createMCPClient({
+  transport: { type: "http", url: gmail.url, headers: { Authorization: `Bearer ${gmail.token}` } },
+});
+const tools = await mcpClient.tools();
+```
+
+### LangChain
+
+```python title="langchain_agent.py"
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from hue_eval import app_endpoint
+
+url, token = app_endpoint(
+    "HUE_SIM_GOOGLE_GMAIL_MCP_URL",
+    lambda: ("https://gmailmcp.googleapis.com/mcp/v1", read_google_access_token()),
+)
+client = MultiServerMCPClient(
+    {"gmail": {"transport": "http", "url": url, "headers": {"Authorization": f"Bearer {token}"}}}
+)
+tools = await client.get_tools()
+```
+
+### Hosted MCP connectors
+
+When the model provider connects to the MCP server itself, pass it the mirror URL and the world token. The mirror is reachable from the provider's servers, and the token reaches only this run's world.
+
+<Tabs>
+<Tab title="OpenAI Responses API">
+
+```ts title="openai-responses.ts"
+import OpenAI from "openai";
+import { appEndpoint } from "./hue-eval";
+
+const gmail = appEndpoint("HUE_SIM_GOOGLE_GMAIL_MCP_URL", () => ({
+  url: "https://gmailmcp.googleapis.com/mcp/v1",
+  token: readGoogleAccessToken(),
+}));
+const response = await new OpenAI().responses.create({
+  model: "gpt-5.2",
+  input: task,
+  tools: [
+    {
+      type: "mcp",
+      server_label: "gmail",
+      server_url: gmail.url,
+      authorization: gmail.token,
+      require_approval: "never",
+    },
+  ],
+});
+```
+
+</Tab>
+<Tab title="Anthropic MCP connector">
+
+```ts title="anthropic-connector.ts"
+import Anthropic from "@anthropic-ai/sdk";
+import { appEndpoint } from "./hue-eval";
+
+const gmail = appEndpoint("HUE_SIM_GOOGLE_GMAIL_MCP_URL", () => ({
+  url: "https://gmailmcp.googleapis.com/mcp/v1",
+  token: readGoogleAccessToken(),
+}));
+const response = await new Anthropic().beta.messages.create({
+  model: "claude-opus-5-5",
+  max_tokens: 16000,
+  betas: ["mcp-client-2025-11-20"],
+  mcp_servers: [{ type: "url", url: gmail.url, name: "gmail", authorization_token: gmail.token }],
+  tools: [{ type: "mcp_toolset", mcp_server_name: "gmail" }],
+  messages: [{ role: "user", content: task }],
+});
+```
+
+</Tab>
+</Tabs>
+
+### Direct REST clients
+
+A REST mirror takes the same paths as the real API under its base URL. Give an SDK the mirror as its base URL option, or build requests on it:
+
+```ts title="direct-rest.ts"
+import { appEndpoint } from "./hue-eval";
+
+const gmail = appEndpoint("HUE_SIM_GOOGLE_GMAIL_REST_URL", () => ({
+  url: "https://gmail.googleapis.com/gmail/v1",
+  token: readGoogleAccessToken(),
+}));
+const response = await fetch(`${gmail.url}/users/me/messages?q=is:unread`, {
+  headers: { Authorization: `Bearer ${gmail.token}` },
+});
+```
+
+### Date-relative tasks
+
+A world's clock is the recorded start of the trace it was built from, not the wall clock, so "today", "tomorrow" or `newer_than:7d` should be computed from the world's date. The SDK release after TypeScript 0.12.1 and Python 0.6.4 passes that date to the agent as `HUE_WORLD_NOW`, an RFC 3339 timestamp. Read it when present and fall back to the wall clock, so the agent is ready for it without a further change.
+
+## Run it
+
+`hue eval` starts your agent's own command once per case, in a fresh world, with the world's variables set. Nothing is edited per run. The command contract is small: read `{"inputs","config"}` as JSON from stdin, run the unchanged production agent once, print the answer on stdout and exit. When your production entry point is a server or takes another input shape, add a thin entry point and commit it with the helper:
+
+```js title="agent.js"
+import { text } from "node:stream/consumers";
+import { runMyAgent } from "./agent-core.js"; // your unchanged production agent
+
+const { inputs } = JSON.parse(await text(process.stdin));
+process.stdout.write(JSON.stringify(await runMyAgent(inputs)));
+```
+
+Install the CLI's optional `zod` peer and run with a **Read and write** key that `hue login` stored in an ignored env file:
+
+```sh
+npm install zod
+npx --yes --package @hue-run/sdk hue eval --case "<name>" --command "node agent.js" --env-file .env.hue
+```
+
+The command receives `HUE_WORLD_ID`, `HUE_WORLD_TOKEN`, one `HUE_SIM_<SURFACE>_URL` per mirror, `HUE_MCP_CONFIG`, and `HUE_MCP_URL`, `HUE_MCP_TOKEN` and `HUE_MCP_EXPIRES_AT` for the first MCP mirror, plus `HUE_EXECUTION_ID`, `HUE_CASE_ID` and `HUE_CASE_KEY`. It reads `{"inputs","config"}` as JSON on stdin and prints its answer on stdout, which Hue stores with the credentials `hue eval` handed it redacted; keep logs on stderr. `HUE_API_KEY` and other Hue credentials are removed from the command's environment, and only the current case's world sets world variables. Exit code 0 means every case passed; 1 means a case failed, errored or a check was still pending; 2 is a usage error. Rerun with `--baseline <previous experimentId>` to compare.
+
+To let the **Run** button in Hue and the `launch_local_run` MCP tool use the same agent, start a worker instead. It claims runs Hue queues and executes them on your machine with the same handoff:
+
+```sh
+npx --yes --package @hue-run/sdk hue eval --worker --command "node agent.js" --env-file .env.hue
+```
+
+A TypeScript adapter that runs in `hue eval`'s own process receives the same handoff as `context.world`: `surfaces`, `token`, `env` and `mcpConfig`. Pass those to the agent the same way, or spawn it with [`agentEnvironment`](/reference/typescript#world-handoff) and `writeMcpConfig`; do not hand it `context.tools` or `context.mcp`. Python drives worlds with the [`hue_sdk.environment`](/reference/python#world-handoff) helpers `agent_environment` and `mcp_config_file`. A world the simulation gateway does not serve has no handoff and sets no `HUE_WORLD_TOKEN`; it offers only the deprecated Hue-native capability, which an eval-ready agent does not use. The helper refuses such a case, because `HUE_EXECUTION_ID` is set without `HUE_WORLD_TOKEN`, rather than running the agent against the real app. See [worlds with a handoff](/evaluations/simulations#worlds-with-a-handoff).
+
+## Verify before you finish
+
+- **Production unchanged.** With `HUE_WORLD_TOKEN` unset, the helper returns the production URL and credential for every call site, and the application's existing tests pass.
+- **Fail closed.** With `HUE_WORLD_TOKEN` set and one `HUE_SIM_<SURFACE>_URL` unset, and with `HUE_EXECUTION_ID` set but `HUE_WORLD_TOKEN` unset, the helper throws before any request is sent.
+- **Same tools.** The agent's tool list is the one production has. Nothing was added or removed, and nothing Hue-native was handed to the agent.
+- **Clean diff.** The change is the helper plus its call sites, and no Hue variable or value is in production configuration, secrets or a committed file.
+- **A real run.** You have the run URL, the printed verdicts, the world's recorded calls on the cases that needed them, and stdout that carried no credential.
+
+## Production safety
+
+- The world variables exist only in the process `hue eval` starts, and `hue eval` removes the `HUE_MCP_CONFIG` file after each case. Production never sets `HUE_WORLD_TOKEN` or `HUE_EXECUTION_ID`, so the helper takes the production branch there and reads your real credential exactly as before.
+- Never copy `HUE_WORLD_TOKEN`, `HUE_SIM_*` or `HUE_MCP_*` values into production secrets or a committed file. They belong to one case and are useless and misleading anywhere else.
+- A world token reaches only one simulated world in one project and expires with it. It is never a credential for the real app, and the real app never sees it.
+- Keep the project key out of the agent: `hue eval` strips `HUE_API_KEY` from the command's environment by default. Pass `--allow-hue-credentials` only for an agent that must call Hue's own API.
+
+## If the agent hard-codes real URLs
+
+An agent that keeps a real URL calls the real app during the evaluation, outside the world. Hue records none of those calls, so the world seals with nothing to score, while the real app receives the writes. Make every app URL and credential configurable through the helper above. The world's `no_calls` flag is advisory: an agent can also stop before its first request or invent an answer without using an app. On a case that needed app calls, a `no_calls` world together with an answer that claims the agent acted has two possible causes, a call site that still points at production or an agent that made no request. Check where the agent's requests went, from its own logs, before changing a call site.
