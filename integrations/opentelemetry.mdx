@@ -147,7 +147,7 @@ Any OpenTelemetry SDK or Collector that speaks OTLP/HTTP can send to the endpoin
           exporters: [otlp_http/hue, debug]
         logs:
           receivers: [otlp]
-          exporters: [otlp_http/hue]
+          exporters: [otlp_http/hue, debug]
     ```
 
     ```sh
@@ -162,27 +162,31 @@ The Node.js exporter sends OTLP/JSON and the Python exporter protobuf; Hue accep
 
 ### Point a Hue SDK at a Collector
 
-The Hue SDKs post to `<origin>/api/v1/otlp/v1/traces` and `<origin>/api/v1/otlp/v1/logs`, so a Collector's OTLP receiver needs those paths. Hue's [live-span placeholders](/reference/typescript#live-spans) are Hue-specific records that a generic receiver would forward to your other backends, so turn live spans off on this path.
+The Hue SDKs post to `<origin>/api/v1/otlp/v1/traces` and `<origin>/api/v1/otlp/v1/logs`, so they need an OTLP receiver that serves those paths. Setting the paths on the receiver above would take the default `/v1/traces` and `/v1/logs` away from your standard exporters, so give the SDKs their own receiver and add it to each pipeline's `receivers` list. Hue's [live-span placeholders](/reference/typescript#live-spans) are Hue-specific records that a generic receiver would forward to your other backends, so turn live spans off on this path.
 
 ```yaml
 receivers:
-  otlp:
+  otlp: # Standard exporters keep the default paths.
     protocols:
       http:
         endpoint: 127.0.0.1:4318
+  otlp/hue-sdk: # The Hue SDKs post to their own paths.
+    protocols:
+      http:
+        endpoint: 127.0.0.1:4319
         traces_url_path: /api/v1/otlp/v1/traces
         logs_url_path: /api/v1/otlp/v1/logs
 ```
 
 ```ts
-const hue = createHue({ apiKey, serviceName: "my-agent", captureContent: true, baseUrl: "http://127.0.0.1:4318", liveSpans: false });
+const hue = createHue({ apiKey, serviceName: "my-agent", captureContent: true, baseUrl: "http://127.0.0.1:4319", liveSpans: false });
 ```
 
 ```python
-hue = Hue(api_key=api_key, base_url="http://127.0.0.1:4318", service_name="my-agent", capture_content=True, live_spans=False)
+hue = Hue(api_key=api_key, base_url="http://127.0.0.1:4319", service_name="my-agent", capture_content=True, live_spans=False)
 ```
 
-The Collector ignores the key the SDK sends and adds the real one in its `otlp_http/hue` exporter, so `apiKey` / `api_key` can be any non-empty placeholder such as `local-collector`. Skip `checkConnection()` / `check_connection()` and the trace receipt, which the Collector cannot answer. Without `liveSpans: false`, the SDK sends placeholders in its first export to a receiver that answers without `Hue-Pending-Spans: 1`, then records one warning and stops.
+The Collector ignores the key the SDK sends and adds the real one in its `otlp_http/hue` exporter, so `apiKey` / `api_key` can be any non-empty placeholder such as `local-collector`. Skip `checkConnection()` / `check_connection()` and the trace receipt, which the Collector cannot answer. Without `liveSpans: false`, the SDK sends placeholders in its first export to a receiver that answers without `Hue-Pending-Spans: 1`, then records one warning (TypeScript) or sets `export_status.live_spans_rejected` (Python) and stops.
 
 ## Attach Hue transport to JavaScript providers
 
