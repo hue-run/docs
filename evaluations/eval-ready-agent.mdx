@@ -601,7 +601,7 @@ export async function runModelCode(code: string) {
 
 ### Date-relative tasks
 
-A world's clock is the recorded start of the trace it was built from, not the wall clock, so "today", "tomorrow" or `newer_than:7d` should be computed from the world's date. `hue eval` passes that date to the agent as `HUE_WORLD_NOW`, an RFC 3339 timestamp, when Hue sends it with the world. Replace the agent's own clock reads with `worldNow()` from `@hue-run/sdk/environment` or `world_now()` from `hue_sdk.environment`, which return `HUE_WORLD_NOW` during an evaluation and the wall clock otherwise, or with a copy of that logic gated on `inHueEval()` so a stray value can't change production. If production already puts today's date in the prompt, take it from the same function. If the model infers dates and the agent never reads the clock, change nothing.
+A world's clock is the recorded start of the trace it was built from, not the wall clock, so "today", "tomorrow" or `newer_than:7d` should be computed from the world's date. `hue eval` passes that date to the agent as `HUE_WORLD_NOW`, an RFC 3339 timestamp, when Hue sends it with the world. Replace the agent's own clock reads with `worldNow() ?? new Date()` from `@hue-run/sdk/environment` or `world_now() or datetime.now(UTC)` from `hue_sdk.environment`; both return the world's date during an evaluation and `null` or `None` without `HUE_WORLD_NOW`, so the fallback to the wall clock is explicit. A copy of that logic gated on `inHueEval()` works the same and keeps a stray value from changing production. If production already puts today's date in the prompt, take it from the same function. If the model infers dates and the agent never reads the clock, change nothing.
 
 ## Run it
 
