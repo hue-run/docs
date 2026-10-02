@@ -47,7 +47,7 @@ async function inCopy(callback) {
   try {
     cpSync(root, directory, {
       recursive: true,
-      filter: (path) => ![".git", "node_modules", ".mintlify"].includes(basename(path)),
+      filter: (path) => ![".git", "node_modules", ".mintlify", ".context", ".hue", ".conductor"].includes(basename(path)),
     });
     const module = await import(pathToFileURL(join(directory, "scripts/sync-platform-contract.mjs")).href);
     const files = () =>

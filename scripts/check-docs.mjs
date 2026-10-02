@@ -11,7 +11,7 @@ const digest = (value) => `sha256:${createHash("sha256").update(value).digest("h
 function filesBelow(directory) {
   const found = [];
   for (const entry of readdirSync(directory)) {
-    if ([".git", ".mintlify", "node_modules"].includes(entry)) continue;
+    if ([".git", ".mintlify", "node_modules", ".context", ".hue", ".conductor"].includes(entry)) continue;
     const path = resolve(directory, entry);
     if (statSync(path).isDirectory()) found.push(...filesBelow(path));
     else found.push(relative(root, path).replaceAll("\\", "/"));
@@ -69,6 +69,9 @@ for (const repositoryOnlyPath of [
   "docs-contract.json",
   "package.json",
   "bun.lock",
+  ".context/",
+  ".hue/",
+  ".conductor/",
 ]) {
   if (!mintIgnore.has(repositoryOnlyPath))
     fail(`.mintignore must exclude repository-only ${repositoryOnlyPath}`);

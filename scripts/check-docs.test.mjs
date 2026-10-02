@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -11,7 +11,7 @@ function checkSnapshot(change) {
   try {
     cpSync(root, directory, {
       recursive: true,
-      filter: (path) => ![".git", "node_modules", ".mintlify"].includes(basename(path)),
+      filter: (path) => ![".git", "node_modules", ".mintlify", ".context", ".hue", ".conductor"].includes(basename(path)),
     });
     change?.(directory);
     return spawnSync(process.execPath, ["scripts/check-docs.mjs"], {
@@ -53,6 +53,17 @@ function changePage(directory, page, change) {
 
 test("the exact later skill can coexist with the released package snapshot", () => {
   const result = checkSnapshot();
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test("private workspace files stay outside documentation snapshots and navigation", () => {
+  const result = checkSnapshot((directory) => {
+    for (const name of [".context", ".hue", ".conductor"]) {
+      assert.equal(existsSync(join(directory, name)), false);
+      mkdirSync(join(directory, name));
+      writeFileSync(join(directory, name, "private.mdx"), "# Private workspace page\n");
+    }
+  });
   assert.equal(result.status, 0, result.stderr);
 });
 
