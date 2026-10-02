@@ -20,7 +20,7 @@
     "projectMcpUrl": "https://mcp.hue.run/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
     "skillUrl": "https://docs.hue.run/skill.md",
-    "pageCount": 25
+    "pageCount": 26
   },
   "serviceKeyPresets": [
     {
@@ -73,9 +73,15 @@
     }
   },
   "skill": {
-    "version": "0.5.10",
-    "sha256": "sha256:bc13c2ab0144b3648382fca1dd4ae239fcddb694509bf88e2e3a1f6da1b07301",
-    "sdkSourceSha256": "sha256:e0317f5856c4b3d49467a7741ffa2f76e43abbc13ce9ed6ac6b7b431340f57d5"
+    "version": "0.5.11",
+    "sha256": "sha256:fff4f51ffb845e06718a68637bb7930ca5cc102cecf1a623141f2b7cb092bd1e",
+    "sdkSourceSha256": "sha256:e0317f5856c4b3d49467a7741ffa2f76e43abbc13ce9ed6ac6b7b431340f57d5",
+    "override": {
+      "baseCommit": "b318194200e95aefa28c58b533e417d8629df2af",
+      "sourceCommit": "2da67efa107357f8746ece0479307cee2eeb4a76",
+      "source": "skills/hue/SKILL.md",
+      "sourceSha256": "sha256:ec766b55caecf252e9db244e89586701341fe51cf3741390ea746cd9cc5e8d3f"
+    }
   },
   "mcp": {
     "transport": "Streamable HTTP",
@@ -199,6 +205,7 @@
     "integrations/opentelemetry",
     "integrations/reference-chatbot",
     "evaluations/first-evaluation",
+    "evaluations/eval-ready-agent",
     "evaluations/simulations",
     "evaluations/managed-runs",
     "guides/project-keys",

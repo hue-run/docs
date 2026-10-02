@@ -49,6 +49,7 @@
         "group": "Evaluations",
         "pages": [
           "evaluations/first-evaluation",
+          "evaluations/eval-ready-agent",
           "evaluations/simulations",
           "evaluations/managed-runs"
         ]

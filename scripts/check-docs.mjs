@@ -106,9 +106,11 @@ if (JSON.stringify(mdxFiles) !== JSON.stringify(expectedMdxFiles)) {
 }
 // A new page is a deliberate change: guides/redaction centralizes the cross-language
 // redaction recipes linked by the SDK guides and coding-agent skill, and agents/mcp-tools keeps
-// the per-tool reference off the connection guide that agents read whole during setup.
-if (pages.length !== 24 || pages.length + 1 !== 25) {
-  fail(`expected 24 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
+// the per-tool reference off the connection guide that agents read whole during setup, and
+// evaluations/eval-ready-agent is the one committed change that points an agent's own app clients
+// at Hue's mirrors during an evaluation.
+if (pages.length !== 25 || pages.length + 1 !== 26) {
+  fail(`expected 25 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
 }
 
 for (const page of expectedMdxFiles) {
