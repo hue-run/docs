@@ -70,18 +70,49 @@ With a key, export `HUE_MCP_KEY` in the shell that starts your client; an app st
 
 ## Run an evaluation
 
-`hue eval` runs your agent locally against a saved eval set or a published case and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It uses `HUE_API_KEY` from `--env-file` (or its alias `--env-path`) and needs the optional `zod` peer dependency:
+`hue eval` runs your agent locally against a published case or a saved eval set and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It uses `HUE_API_KEY` from `--env-file` (or its alias `--env-path`). Start the agent's own command with `--command`, after the one-time change in [Make your agent eval-ready](/evaluations/eval-ready-agent):
 
 ```sh
+<<<<<<< HEAD
 npm install zod
 npx --yes --package @hue-run/sdk@0.13.0 hue eval --set "Billing regressions" --scorer <evaluator-slug> ./hue-agent.ts --env-file .env.hue
 npx --yes --package @hue-run/sdk@0.13.0 hue eval --worker ./hue-agent.ts --env-file .env.hue
+=======
+npx --yes --package @hue-run/sdk@0.12.1 --package "zod@^4.6.5" hue eval --case "<name|id|url>" --command "<start command>" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.12.1 --package "zod@^4.6.5" hue eval --worker --command "<start command>" --env-file .env.hue
+>>>>>>> 3908d5f (Eval-ready guide after the dogfood: pinned two-package hue eval, an injectable helper that fails closed, meta-tool and code-execution agents, and the --command contract)
 ```
 
-To run an agent that is not a TypeScript module, pass `--command "<shell command>"` instead of an adapter file. `hue eval` starts the command once per case with the case inputs and configuration as JSON on stdin and reads the answer from stdout. For a direct case, which has no simulated world, the command runs in a private case directory: `HUE_CASE_INPUTS` names the inputs file, the case's input files are under `files/<role>/`, and every file the command writes to `HUE_CASE_OUTPUT_DIR` is uploaded as a generated file for grading. The command inherits your environment except Hue's own credentials: `HUE_API_KEY`, `HUE_MCP_KEY` and any other variable holding a Hue key are removed unless you pass `--allow-hue-credentials`, so your model keys and settings still reach the agent but the project key does not. For a case with a simulated world, the command also receives a world-scoped MCP URL and token in `HUE_MCP_URL` and `HUE_MCP_TOKEN`; the token is never logged. Only the current case's world sets these and its other world variables (`HUE_WORLD_*`, `HUE_SIM_*_URL`): a value inherited from your environment never reaches the command. [Make your agent eval-ready](/evaluations/eval-ready-agent) shows how the command reads them. `--revision` names the agent revision under test, and `--concurrency` runs up to 64 cases at once (default 1).
+The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the agent's repository gains no package.json or dependency; without the second, `hue eval` exits with `hue eval needs zod`, even for `--help`, and installing zod in the project does not help when the SDK itself is not installed there. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `--package @hue-run/sdk` runs that local, possibly older, copy. `hue eval` needs Node.js 22 or 24, even for a Python agent.
 
-`--worker` registers your agent so runs started from Hue execute on your machine. See [simulations](/evaluations/simulations) for the agent adapter that receives each case's inputs and tools, and the [TypeScript reference](/reference/typescript) for the underlying `runSimulation`, `runLocalAgent` and `runExperiment` APIs.
+`--command` starts the command once per case with `{"inputs","config"}` as JSON on stdin and reads the answer from stdout. For a case with a simulated world, the command receives the world's variables; the eval-ready guide lists them under [Run it](/evaluations/eval-ready-agent#run-it) and shows the one committed helper that reads them, so the agent reaches each app through Hue's mirror with its own production client and never receives Hue-native tools. Only the current case's world sets those variables: a value inherited from your environment never reaches the command. For a direct case, which has no simulated world, the command runs in a private case directory: `HUE_CASE_INPUTS` names the inputs file, the case's input files are under `files/<role>/`, and every file the command writes to `HUE_CASE_OUTPUT_DIR` is uploaded as a generated file for grading. The command inherits your environment except Hue's own credentials: `HUE_API_KEY`, `HUE_MCP_KEY` and any other variable holding a Hue key are removed unless you pass `--allow-hue-credentials`, so your model keys and settings still reach the agent but the project key does not.
+
+`--worker` registers your agent so runs started from Hue, from the **Run** button or the `launch_local_run` MCP tool, execute on your machine with the same handoff.
+
+| Flag | Meaning |
+| --- | --- |
+| `--case <name\|id\|url>` | Run one published case. |
+| `--set <name\|id\|url>` | Run a saved eval set; needs `--scorer` or `--scorer-version`. |
+| `--save-version` | Freeze an unsaved eval-set version before running. |
+| `--command "<shell command>"` | Start the agent's own command per case. |
+| `--worker` | Register the agent and execute runs launched from Hue. |
+| `--json` | Print one JSON document on stdout; progress goes to stderr. |
+| `--wait <seconds>` | Verdict wait after the run finishes (default 300). |
+| `--timeout <seconds>` | Per-case `--command` timeout (default 600). |
+| `--concurrency <n>` | Cases in flight, 1 to 64 (default 1). |
+| `--baseline <experiment id\|url>` | Compare verdicts with a previous experiment. |
+| `--trace-not-accepted fail_case\|pending` | What to do with a case whose telemetry Hue did not accept in time (default `fail_case`). |
+| `--checkpoint-dir <path>` | Private checkpoint directory (default `.hue/eval/<agent-key>`; add `.hue/` to `.gitignore`). |
+| `--capability <value>` | Extra worker capability, repeatable, such as `environment-files:v1` and `input:pdf`. |
+| `--no-output` | One-shot: do not store case outputs, error messages and explanations. |
+| `--content` | Capture telemetry content on the run's spans. |
+| `--allow-hue-credentials` | Keep `HUE_API_KEY` and other Hue credentials in the `--command` child. |
+| `--revision <id>` | The agent revision under test (default `AGENT_REVISION`, git `HEAD` or `dev`). |
+
+Exit codes: 0 every case passed; 1 a case failed, errored, is inconclusive or is incomplete; 2 usage error; 130 interrupted. `hue eval --help` lists every flag.
 
 Since TypeScript 0.10.0, one-shot runs store case outputs, target error messages and explanations by default, as workers already do. `--content` separately enables trace content capture; it is off by default. Use `--no-output` to omit result content from a one-shot run. A command's stdout becomes its stored answer, with credentials handed to it by `hue eval` redacted; keep credentials and debug logs out of stdout. Generated files are uploaded regardless of `--no-output` and are not fully redacted, so never write credentials into them.
 
 An evaluator that does not apply to a case shows `n/a` and neither passes nor fails it. A case with no applicable pinned evaluator is an error.
+
+A TypeScript adapter file (`./hue-agent.ts` exporting `runMyAgent(inputs, context)`) is the in-process alternative. It runs inside `hue eval`'s own process, where `HUE_WORLD_TOKEN` and `HUE_EXECUTION_ID` are not set, so the eval-ready helper would return production values: throw when `context.world` is missing, then pass `context.world.env` as the helper's environment argument or spawn the agent with `agentEnvironment(context.world)`, and never set `process.env` yourself, which with `--concurrency` above 1 leaks one case's world into another. See [simulations](/evaluations/simulations) for what the adapter receives and the [TypeScript reference](/reference/typescript) for the underlying `runSimulation`, `runLocalAgent` and `runExperiment` APIs.
