@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { cpSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { readJson, root, sha256 } from "./docs-contract.mjs";
 import { pinnedSources, productionCommit } from "./sync-platform-contract.mjs";
+import { copyDocsFixture } from "./test-fixture.mjs";
 
 const commit = "7f3cce7fbcda160e39bcac6c0b72b0f2aa82d163";
 const later = "b".repeat(40);
@@ -45,10 +46,7 @@ test("pinning refuses another repository's contract or an abbreviated commit", (
 async function inCopy(callback) {
   const directory = mkdtempSync(join(tmpdir(), "hue-docs-platform-"));
   try {
-    cpSync(root, directory, {
-      recursive: true,
-      filter: (path) => ![".git", "node_modules", ".mintlify", ".context", ".hue", ".conductor"].includes(basename(path)),
-    });
+    copyDocsFixture(root, directory);
     const module = await import(pathToFileURL(join(directory, "scripts/sync-platform-contract.mjs")).href);
     const files = () =>
       Object.fromEntries(

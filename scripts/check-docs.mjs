@@ -56,6 +56,26 @@ function canonicalCompatibility(publicCompatibility) {
 const config = readJson("docs.json");
 const platform = readJson("contracts/fern-public-docs.json");
 const sdk = readJson("contracts/sdk-docs.json");
+const telemetryLimits = platform.telemetryLimits;
+const limitNames = ["requestWireBytes", "requestDecodedBytes", "valueBytes", "indexedSpansPerTrace", "indexedLogsPerTrace"];
+if (!telemetryLimits || !limitNames.every((name) => Number.isSafeInteger(telemetryLimits[name]) && telemetryLimits[name] > 0)) {
+  fail("the pinned platform contract must declare positive telemetryLimits");
+} else {
+  const byteLimit = (bytes) => {
+    for (const [size, unit] of [[1048576, "MiB"], [1024, "KiB"]]) {
+      if (bytes % size === 0) return `${bytes / size} ${unit}`;
+    }
+    return `${bytes} bytes`;
+  };
+  const guide = read("integrations/opentelemetry.mdx");
+  if (!guide.includes(`at or below ${byteLimit(telemetryLimits.requestWireBytes)} on the wire and ${byteLimit(telemetryLimits.requestDecodedBytes)} after decompression`))
+    fail("OTLP request limits differ from the pinned platform contract");
+  if (!guide.includes(`An individual OTLP value can contain up to ${byteLimit(telemetryLimits.valueBytes)}.`))
+    fail("OTLP per-value limit differs from the pinned platform contract");
+  const count = (value) => value.toLocaleString("en-US");
+  if (!guide.includes(`Hue indexes up to ${count(telemetryLimits.indexedSpansPerTrace)} spans and ${count(telemetryLimits.indexedLogsPerTrace)} correlated logs per trace.`))
+    fail("OTLP trace index limits differ from the pinned platform contract");
+}
 const mintIgnore = new Set(
   read(".mintignore")
     .split("\n")
