@@ -368,7 +368,7 @@ const response = await fetch(`${gmail.url}/users/me/messages?q=is:unread`, {
 
 ### Date-relative tasks
 
-A world's clock is the recorded start of the trace it was built from, not the wall clock, so "today", "tomorrow" or `newer_than:7d` should be computed from the world's date. The SDK release after TypeScript 0.12.1 and Python 0.6.4 passes that date to the agent as `HUE_WORLD_NOW`, an RFC 3339 timestamp. Read it when present and fall back to the wall clock, so the agent is ready for it without a further change.
+A world's clock is the recorded start of the trace it was built from, not the wall clock, so "today", "tomorrow" or `newer_than:7d` should be computed from the world's date. `@hue-run/sdk` 0.13.0 and `hue-run` 0.7.0 pass that date to the agent as `HUE_WORLD_NOW`, an RFC 3339 timestamp, when Hue sends it with the world. Read it when present and fall back to the wall clock, so the agent is ready for it without a further change.
 
 ## Run it
 
