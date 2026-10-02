@@ -795,7 +795,7 @@ Publishing generates one `ActionDefinition` per action: `name`, `description?` a
 
 | Type | Meaning |
 | --- | --- |
-| `EnvironmentRun` | Newly created isolated world: `id`, `environmentVersionId`, `clockNs`, `stateDigest`, `maxSteps`, `expiresAt` and the closed generated `actions` catalog. A world the simulation gateway serves also carries `worldId`, `token`, `lifecycle`, `completingUntil`, `baggage`, `traceparent`, `surfaces`, `env` and `mcpConfig`; read them with `worldHandoff`. |
+| `EnvironmentRun` | Newly created isolated world: `id`, `environmentVersionId`, `clockNs`, `now` (the world's clock at creation as an RFC 3339 timestamp, a trace-built world's recorded start), `stateDigest`, `maxSteps`, `expiresAt` and the closed generated `actions` catalog. A world the simulation gateway serves also carries `worldId`, `token`, `lifecycle`, `completingUntil`, `baggage`, `traceparent`, `surfaces`, `env` and `mcpConfig`; read them with `worldHandoff`. |
 | `ActionResult` | `runId`, zero-based `stepOrdinal`, the `observation`, normalized `effects`, `stateDigest` and `clockNs` after the action, `replayed` and `stepsRemaining`. |
 | `Observation` | The recorded answer returned by the simulated world: `status` `"ok"` or `"error"` plus additional bounded fields. An error observation is a world answer, not a transport exception. |
 | `Effect` | One normalized world-state effect: `kind` (`created`, `updated` or `deleted`), `collection`, `entityId` and changed `fields`. |
@@ -855,6 +855,7 @@ try {
 | Function | Behavior |
 | --- | --- |
 | `worldHandoff(run)` | The `WorldHandoff` of a create or replay response, or `null` for a world without one. |
+| `worldNow(source?)` | The world's date as a `Date`: from a handoff's `now`, or from `HUE_WORLD_NOW` in the given environment (this process's by default, where `agentEnvironment` and `hue eval --command` set it). `null` when neither names it. Compute "today", "tomorrow" or `newer_than:7d` from it, not from the wall clock: a trace-built world's clock is frozen at the recorded start, so a run that begins long after the recording still lands on the recorded dates. |
 | `agentEnvironment(world, options?: AgentEnvironmentOptions)` | Environment variables for the agent's child process: `parent` (default `process.env`) without Hue control-plane credentials or world variables (`HUE_WORLD_*`, `HUE_SIM_*_URL`, `HUE_SIM_*_ALIAS`, `HUE_MCP_CONFIG`, `HUE_MCP_URL`, `HUE_MCP_TOKEN` and `HUE_MCP_EXPIRES_AT`), then the world's `env`, which wins. Also sets `HUE_MCP_URL`, `HUE_MCP_TOKEN` and `HUE_MCP_EXPIRES_AT` from the first MCP mirror unless `legacyMcpVariables: false`. Pass `includeHueCredentials: true` only for an agent that must call Hue's own API. |
 | `writeMcpConfig(world, { directory? }?)` | Writes `mcpConfig` to an owner-only `mcp.json` in a private directory → `McpConfigFile`, `{ path, dispose() }`. Call `dispose` after the run; it removes the file and directory. |
 | `legacyMcpCapability(world)` | `LegacyMcpCapability`, `{ url, token, expiresAt }` for the first MCP mirror, the shape adapters written for `hue_sim_` read; `undefined` without an MCP surface. |
@@ -863,7 +864,7 @@ try {
 
 | Type | Meaning |
 | --- | --- |
-| `WorldHandoff` | `id`, `token` (a `hue_world_` credential that lives as long as the world), `expiresAt`, `lifecycle`, `completingUntil`, `traceparent` (`null` when none was sent), `baggage` (`hue-world=<id>`), `surfaces`, `env` and `mcpConfig`. `env` holds `HUE_WORLD_ID`, `HUE_WORLD_TOKEN`, `BAGGAGE`, `TRACEPARENT` and one `HUE_SIM_<SURFACE ID>_URL` per surface. |
+| `WorldHandoff` | `id`, `token` (a `hue_world_` credential that lives as long as the world), `expiresAt`, `lifecycle`, `completingUntil`, `traceparent` (`null` when none was sent), `baggage` (`hue-world=<id>`), `now` (the world's clock at creation, RFC 3339; `null` for a Hue that names none), `surfaces`, `env` and `mcpConfig`. `env` holds `HUE_WORLD_ID`, `HUE_WORLD_TOKEN`, `HUE_WORLD_NOW`, `BAGGAGE`, `TRACEPARENT` and one `HUE_SIM_<SURFACE ID>_URL` per surface. |
 | `WorldLifecycle` / `WorldFlag` | `pending`, `live`, `completing` or `sealed` / advisory status flags, `no_calls` or `fingerprint_differs`. |
 | `WorldSurface` | `provider` (such as `google.gmail`), `surface` (such as `google.gmail/mcp`), `providerInstanceKey`, the mirror `url` and `alias` (`null` while unavailable). |
 | `WorldMcpConfig` / `WorldMcpServer` / `WorldMcpHeaders` | The common `mcpServers` shape, keyed by provider instance / one Streamable HTTP server, `{ type: "http", url, headers }` / `{ Authorization }`, the world token as a bearer. |
