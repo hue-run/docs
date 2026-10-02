@@ -318,7 +318,9 @@ Both Hue SDKs strip recognized content attributes from every record on their exp
 
 ## Observe collector acknowledgements
 
-The request limit is 1 MiB on the wire and after decompression. An individual OTLP value is limited to 256 KiB, and a trace can contain at most 2,000 distinct spans. Oversized requests return HTTP 413.
+Keep requests at or below 1 MiB on the wire and 4 MiB after decompression. An individual OTLP value can contain up to 1 MiB. Hue cuts oversized text values at a UTF-8 character boundary and replaces oversized structured values with a truncation marker. The `hue.truncated` attribute lists the affected keys. Oversized requests return HTTP 413.
+
+Hue indexes up to 10,000 spans and 20,000 correlated logs per trace. Records beyond those index limits remain stored in the trace's evidence segments and counted on the trace.
 
 An otherwise valid batch can receive an OTLP partial-success response containing rejected-record counts. Configure your exporter monitoring to inspect that response; HTTP 200 alone does not prove that every record was accepted. Hue SDKs surface those failures through their flush APIs. Partial rejection must not trigger a blind replay of the whole batch.
 

@@ -9,7 +9,9 @@
     "apps/web/src/server/mcp/toolsets.ts",
     "apps/web/src/server/mcp/catalog-tools.ts",
     "apps/web/src/server/mcp/install-snippets.ts",
-    "tests/fixtures/sdk-compat.json"
+    "tests/fixtures/sdk-compat.json",
+    "packages/telemetry/src/decoder.ts",
+    "packages/telemetry/src/evidence-index.ts"
   ],
   "endpoints": {
     "application": {
@@ -40,6 +42,13 @@
         "applicationMount": "https://staging.hue.run/api/sim"
       }
     }
+  },
+  "telemetryLimits": {
+    "requestWireBytes": 1048576,
+    "requestDecodedBytes": 4194304,
+    "valueBytes": 1048576,
+    "indexedSpansPerTrace": 10000,
+    "indexedLogsPerTrace": 20000
   },
   "setup": {
     "protocolVersion": 1,
@@ -1799,7 +1808,7 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "1b582d4f3675e2b6f1bb20f44f66a4e92c109383ab726516a5ac9281fd353b99",
+    "catalogSha256": "8a26ed987acf57f955e82ddcfc81314caa5546b9351bc7d26ebfc150e78b53e3",
     "serverInstructionsSha256": "a57ca5d20b45f22f4e1edcb1935b3555d47afeb0601f7bef597bef4e45d7a2ce",
     "guides": {
       "data-model": {
@@ -1816,7 +1825,7 @@
       },
       "author": {
         "title": "Author evaluations with Hue",
-        "sha256": "8e89ba64af7984c5be93ac8a538e9d782bf5bef4bf1e2bdb6e50989a0d555d34"
+        "sha256": "bc45ff3abb232a8c5c66cc7641ab4d92ae15965ce6e4377e32213dfedf87f51d"
       },
       "evaluate": {
         "title": "Run your agent against a case",

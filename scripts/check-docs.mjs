@@ -11,7 +11,7 @@ const digest = (value) => `sha256:${createHash("sha256").update(value).digest("h
 function filesBelow(directory) {
   const found = [];
   for (const entry of readdirSync(directory)) {
-    if ([".git", ".mintlify", "node_modules"].includes(entry)) continue;
+    if ([".git", ".mintlify", "node_modules", ".context", ".hue", ".conductor"].includes(entry)) continue;
     const path = resolve(directory, entry);
     if (statSync(path).isDirectory()) found.push(...filesBelow(path));
     else found.push(relative(root, path).replaceAll("\\", "/"));
@@ -56,6 +56,26 @@ function canonicalCompatibility(publicCompatibility) {
 const config = readJson("docs.json");
 const platform = readJson("contracts/fern-public-docs.json");
 const sdk = readJson("contracts/sdk-docs.json");
+const telemetryLimits = platform.telemetryLimits;
+const limitNames = ["requestWireBytes", "requestDecodedBytes", "valueBytes", "indexedSpansPerTrace", "indexedLogsPerTrace"];
+if (!telemetryLimits || !limitNames.every((name) => Number.isSafeInteger(telemetryLimits[name]) && telemetryLimits[name] > 0)) {
+  fail("the pinned platform contract must declare positive telemetryLimits");
+} else {
+  const byteLimit = (bytes) => {
+    for (const [size, unit] of [[1048576, "MiB"], [1024, "KiB"]]) {
+      if (bytes % size === 0) return `${bytes / size} ${unit}`;
+    }
+    return `${bytes} bytes`;
+  };
+  const guide = read("integrations/opentelemetry.mdx");
+  if (!guide.includes(`at or below ${byteLimit(telemetryLimits.requestWireBytes)} on the wire and ${byteLimit(telemetryLimits.requestDecodedBytes)} after decompression`))
+    fail("OTLP request limits differ from the pinned platform contract");
+  if (!guide.includes(`An individual OTLP value can contain up to ${byteLimit(telemetryLimits.valueBytes)}.`))
+    fail("OTLP per-value limit differs from the pinned platform contract");
+  const count = (value) => value.toLocaleString("en-US");
+  if (!guide.includes(`Hue indexes up to ${count(telemetryLimits.indexedSpansPerTrace)} spans and ${count(telemetryLimits.indexedLogsPerTrace)} correlated logs per trace.`))
+    fail("OTLP trace index limits differ from the pinned platform contract");
+}
 const mintIgnore = new Set(
   read(".mintignore")
     .split("\n")
@@ -69,6 +89,9 @@ for (const repositoryOnlyPath of [
   "docs-contract.json",
   "package.json",
   "bun.lock",
+  ".context/",
+  ".hue/",
+  ".conductor/",
 ]) {
   if (!mintIgnore.has(repositoryOnlyPath))
     fail(`.mintignore must exclude repository-only ${repositoryOnlyPath}`);

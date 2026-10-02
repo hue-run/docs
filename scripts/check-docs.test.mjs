@@ -1,18 +1,16 @@
 import assert from "node:assert/strict";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { root } from "./docs-contract.mjs";
+import { copyDocsFixture } from "./test-fixture.mjs";
 
 function checkSnapshot(change) {
   const directory = mkdtempSync(join(tmpdir(), "hue-docs-contract-"));
   try {
-    cpSync(root, directory, {
-      recursive: true,
-      filter: (path) => ![".git", "node_modules", ".mintlify"].includes(basename(path)),
-    });
+    copyDocsFixture(root, directory);
     change?.(directory);
     return spawnSync(process.execPath, ["scripts/check-docs.mjs"], {
       cwd: directory,
@@ -55,6 +53,55 @@ test("the exact later skill can coexist with the released package snapshot", () 
   const result = checkSnapshot();
   assert.equal(result.status, 0, result.stderr);
 });
+
+test("fixture copies exclude private source directories", () => {
+  const directory = mkdtempSync(join(tmpdir(), "hue-docs-copy-"));
+  try {
+    const source = join(directory, "source");
+    const destination = join(directory, "destination");
+    for (const prefix of ["", "nested"]) {
+      mkdirSync(join(source, prefix), { recursive: true });
+      writeFileSync(join(source, prefix, "public.mdx"), "# Public page\n");
+      for (const name of [".context", ".hue", ".conductor"]) {
+        mkdirSync(join(source, prefix, name));
+        writeFileSync(join(source, prefix, name, "private.json"), '{"private":true}\n');
+      }
+    }
+    copyDocsFixture(source, destination);
+    for (const prefix of ["", "nested"]) {
+      assert.equal(readFileSync(join(destination, prefix, "public.mdx"), "utf8"), "# Public page\n");
+      for (const name of [".context", ".hue", ".conductor"])
+        assert.equal(existsSync(join(destination, prefix, name)), false);
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("private workspace pages stay outside documentation navigation", () => {
+  const result = checkSnapshot((directory) => {
+    for (const name of [".context", ".hue", ".conductor"]) {
+      assert.equal(existsSync(join(directory, name)), false);
+      mkdirSync(join(directory, name));
+      writeFileSync(join(directory, name, "private.mdx"), "# Private workspace page\n");
+    }
+  });
+  assert.equal(result.status, 0, result.stderr);
+});
+
+for (const [name, before, after] of [
+  ["wire", "at or below 1 MiB on the wire", "at or below 2 MiB on the wire"],
+  ["decompressed", "4 MiB after decompression", "1 MiB after decompression"],
+  ["per-value", "An individual OTLP value can contain up to 1 MiB.", "An individual OTLP value can contain up to 256 KiB."],
+  ["span index", "10,000 spans and", "2,000 spans and"],
+  ["log index", "20,000 correlated logs per trace", "10,000 correlated logs per trace"],
+]) {
+  test(`the OTLP ${name} limit must match the pinned producer`, () => {
+    const result = checkSnapshot((directory) => changePage(directory, "integrations/opentelemetry.mdx", (text) => text.replace(before, after)));
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /OTLP .*limit.*differ.*pinned platform contract/);
+  });
+}
 
 test("a modified skill body cannot reuse the producer digest", () => {
   const result = checkSnapshot((directory) => {

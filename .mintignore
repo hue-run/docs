@@ -13,3 +13,8 @@ scripts/
 docs-contract.json
 package.json
 bun.lock
+
+# Private local workspaces
+.context/
+.hue/
+.conductor/
