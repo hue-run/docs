@@ -1,11 +1,28 @@
 ---
 title: "Set up Hue with your coding agent"
-description: "Copy one prompt into your coding agent. You create and store a Hue API key for traces and evaluations; the agent adds tracing, verifies a real request and connects the Hue MCP server."
+description: "Install the Hue skill and start setup with your coding agent. You store a Hue API key; the agent adds tracing, verifies a real request and connects the Hue MCP server."
 sidebarTitle: "Agent setup"
 ---
 
 <Visibility for="humans">
-  **Setting up Hue yourself?** Copy this prompt into your coding agent, such as Claude Code, Cursor or Codex, from your application's repository. The rest of this page is written for the agent.
+  **Setting up Hue yourself?** Install the Hue skill from your application's repository, then send the setup prompt to your coding agent. The rest of this page is written for the agent.
+
+  <Tabs>
+    <Tab title="Install the skill">
+      Run this in your terminal and select your coding agent, such as Claude Code, Cursor or Codex:
+
+      ```sh
+      npx skills add hue-run/hue-sdk --skill hue
+      ```
+
+      This adds the Hue skill to your project for later sessions. It does not install the SDK or connect your Hue account. Open your coding agent in the same repository, then send the prompt below to start setup.
+    </Tab>
+    <Tab title="Prompt only">
+      You can start setup without installing the skill. Open your coding agent in your application's repository and send the same prompt below. Use this path if you don't have Node.js or prefer not to add skill files to your project.
+    </Tab>
+  </Tabs>
+
+  **Send this to your agent:**
 
   ```text Prompt wrap
   Set up Hue in this project. Use curl to read https://docs.hue.run/guides/agent-setup.md and follow it, and show me the plan before you change anything.
@@ -108,4 +125,4 @@ The user restarts the client to load the server, so finish with one message that
    - With a key, load the key into the shell that starts the client, for example with `set -a; . ./.env.hue; set +a` for the env file the key is in, or start the client through the secret manager's runner. Then restart it from that shell: `claude --continue` for Claude Code, approving the `hue` server when asked; `codex resume --last` for Codex; or quit Cursor, reopen it with `cursor .` and turn on **hue** in its MCP settings. Restart any other client from that shell.
 3. The prompt to send after the restart: `Use Hue MCP: call list_projects and confirm which project to inspect. Then call get_project_context and show its 5 most recent error traces with links. For an organization connection, pass the project's id or slug as project_id on each call after list_projects.`
 4. What they can ask next, for example "What needs attention in the last 24 hours, and why?". [Investigate production](/agents/investigate-production) has the tool sequences for those questions.
-5. Optionally, that they can keep the Hue skill in the project with `npx skills add hue-run/hue-sdk --skill hue`.
+5. If they haven't installed it yet, that they can keep the Hue skill in the project with `npx skills add hue-run/hue-sdk --skill hue`.
