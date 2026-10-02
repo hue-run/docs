@@ -260,10 +260,13 @@ For a framework that loads an `mcpServers` file, keep your production file and i
 # The agent's start command. Reads the case from stdin, answers on stdout.
 set -euo pipefail
 # Fail closed: when the helper throws, this assignment fails and the script stops before Claude starts.
-CONFIG="$(node -e 'import("./hue-eval.ts").then((m) => console.log(m.mcpServersFile("./mcp.production.json", { gmail: "HUE_SIM_GOOGLE_GMAIL_MCP_URL" }).path))')"
+# Node 22.6 or later with the flag; Node 24 strips types without it.
+CONFIG="$(node --experimental-strip-types -e 'import("./hue-eval.ts").then((m) => console.log(m.mcpServersFile("./mcp.production.json", { gmail: "HUE_SIM_GOOGLE_GMAIL_MCP_URL" }).path))')"
 # During an evaluation the copy holds the world token: remove it when the agent exits.
 if [ -n "${HUE_WORLD_TOKEN:-}" ]; then trap 'rm -rf "$(dirname "$CONFIG")"' EXIT; fi
-claude -p "$(jq -r '.inputs.task // .inputs')" --mcp-config "$CONFIG" --strict-mcp-config
+# The prompt is the task, preceded by the earlier turns when the case includes them.
+PROMPT="$(jq -r '.inputs | if type == "object" and has("task") then ((.priorContext // []) | map(tostring) | join("\n\n")) + "\n\n" + (.task | tostring) else tostring end')"
+claude -p "$PROMPT" --mcp-config "$CONFIG" --strict-mcp-config
 ```
 
 Hue's own file at `HUE_MCP_CONFIG` has the same common shape, one Streamable HTTP server per provider instance; pass it directly only when its keys are your server names:
@@ -601,7 +604,7 @@ export async function runModelCode(code: string) {
 
 ### Date-relative tasks
 
-A world's clock is the recorded start of the trace it was built from, not the wall clock, so "today", "tomorrow" or `newer_than:7d` should be computed from the world's date. `hue eval` passes that date to the agent as `HUE_WORLD_NOW`, an RFC 3339 timestamp, when Hue sends it with the world. Replace the agent's own clock reads with `worldNow() ?? new Date()` from `@hue-run/sdk/environment` or `world_now() or datetime.now(UTC)` from `hue_sdk.environment`; both return the world's date during an evaluation and `null` or `None` without `HUE_WORLD_NOW`, so the fallback to the wall clock is explicit. A copy of that logic gated on `inHueEval()` works the same and keeps a stray value from changing production. If production already puts today's date in the prompt, take it from the same function. If the model infers dates and the agent never reads the clock, change nothing.
+A world's clock is the recorded start of the trace it was built from, not the wall clock, so "today", "tomorrow" or `newer_than:7d` should be computed from the world's date. `hue eval` passes that date to the agent as `HUE_WORLD_NOW`, an RFC 3339 timestamp, when Hue sends it with the world. Replace the agent's own clock reads with a read that prefers the world's date: without any Hue package, `inHueEval() && process.env.HUE_WORLD_NOW ? new Date(process.env.HUE_WORLD_NOW) : new Date()` in TypeScript, or `datetime.fromisoformat(os.environ["HUE_WORLD_NOW"]) if in_hue_eval() and os.environ.get("HUE_WORLD_NOW") else datetime.now(UTC)` in Python; the `inHueEval()` gate keeps a stray value from changing production. An agent that already depends on the SDK can use `worldNow() ?? new Date()` from `@hue-run/sdk/environment` (requires TypeScript 0.13.0) or `world_now() or datetime.now(UTC)` from `hue_sdk.environment` (requires Python 0.7.0); both return `null` or `None` without `HUE_WORLD_NOW`, so the fallback to the wall clock stays explicit. If production already puts today's date in the prompt, take it from the same function. If the model infers dates and the agent never reads the clock, change nothing.
 
 ## Run it
 
@@ -643,7 +646,7 @@ print(json.dumps(answer))  # logs go to stderr, never stdout
 Run with a **Read and write** key that `hue login` stored in an ignored env file:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.12.1 --package "zod@^4.6.5" hue eval --case "<name>" --command "node agent.js" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.13.0 --package "zod@^4.6.5" hue eval --case "<name>" --command "node agent.js" --env-file .env.hue
 ```
 
 `hue eval` needs Node.js 22 or 24, even for a Python agent. The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the agent's repository gains no package.json or dependency. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `--package @hue-run/sdk` runs that local, possibly older, copy. Installing zod in the project does not help when the SDK itself is not installed there: the CLI exits with `hue eval needs zod`, even for `--help`.
@@ -666,7 +669,7 @@ The command receives this environment, and only the current case's world sets it
 To let the **Run** button in Hue and the `launch_local_run` MCP tool use the same agent, start a worker instead. It claims runs Hue queues and executes them on your machine with the same handoff:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.12.1 --package "zod@^4.6.5" hue eval --worker --command "node agent.js" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.13.0 --package "zod@^4.6.5" hue eval --worker --command "node agent.js" --env-file .env.hue
 ```
 
 A TypeScript adapter runs inside `hue eval`'s own process, where `HUE_WORLD_TOKEN` and `HUE_EXECUTION_ID` are not set, so the helper would return production values. An adapter must throw when `context.world` is missing, then either pass `context.world.env` as `env` to every helper call or spawn the agent with [`agentEnvironment(context.world)`](/reference/typescript#world-handoff). Never set `process.env` yourself: with `--concurrency` above 1 that leaks one case's world into another. Prefer `--command`, which the helper protects without changes. Python drives worlds with the [`hue_sdk.environment`](/reference/python#world-handoff) helpers `agent_environment` and `mcp_config_file`. A world the simulation gateway does not serve has no handoff and sets no `HUE_WORLD_TOKEN`; it offers only the deprecated Hue-native capability, which an eval-ready agent does not use, and the helper refuses such a case because `HUE_EXECUTION_ID` is set without `HUE_WORLD_TOKEN`. See [worlds with a handoff](/evaluations/simulations#worlds-with-a-handoff).
