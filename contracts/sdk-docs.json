@@ -32,7 +32,7 @@
         "verifiedSupport": "OTLP HTTP protobuf/JSON traces and correlated logs, including gzip"
       },
       {
-        "boundary": "Requires a Hue deployment that answers trace exports with `Hue-Pending-Spans: 1` (app.hue.run does). A receiver without that header, an older Hue or a generic collector, gets placeholders only in the first export that carries them: the SDK then records one warning and switches live spans off for that client. Turn `liveSpans` / `live_spans` off to send none at all.",
+        "boundary": "Placeholders travel in their own requests, after an export's completed spans, so a completed span's rejection is never credited to a placeholder. Requires a Hue deployment that answers trace exports with `Hue-Pending-Spans: 1` (app.hue.run does). A receiver without that header, an older Hue or a generic collector, gets at most one request of placeholders: its first trace acknowledgement, whatever the request carried, makes the SDK record one warning and switch live spans off for that client. Turn `liveSpans` / `live_spans` off to send none at all.",
         "path": "Live spans",
         "verifiedSupport": "Placeholders for running Hue and AI spans, sent by the Hue transports from TypeScript `0.7.0` and Python `0.4.0`"
       }
@@ -46,7 +46,7 @@
       "App-launched local agents",
       "Scorer forward compatibility"
     ],
-    "sha256": "sha256:1e18ba83b6f65bd09cf9ead88d84a3a1ed6ceed2f5a7ec5e5d128ef2e8a1d571",
+    "sha256": "sha256:79db2fde5338be57b970cd4e34ee4fde23b275351047c9d9abcc3316444e98c3",
     "source": "COMPATIBILITY.md"
   },
   "packages": {
@@ -103,7 +103,7 @@
         }
       },
       "name": "hue-run",
-      "version": "0.6.4"
+      "version": "0.7.0"
     },
     "typescript": {
       "bins": {
@@ -224,6 +224,7 @@
             "legacyMcpCapability",
             "stripHueControlPlaneCredentials",
             "worldHandoff",
+            "worldNow",
             "writeMcpConfig"
           ]
         },
@@ -500,7 +501,7 @@
           "source": "packages/sdk-typescript/setup-events.schema.json"
         }
       },
-      "version": "0.12.1"
+      "version": "0.13.0"
     }
   },
   "repository": "https://github.com/hue-run/hue-sdk",
@@ -509,10 +510,10 @@
     "description": "Set up or troubleshoot Hue tracing in an existing application, preserving its provider, framework, and OpenTelemetry setup, and read production traces over the Hue MCP. Use when a developer asks to set up or integrate Hue, verify that requests reach Hue, or find out what needs attention, fails or is slow in production.",
     "metadata": {
       "author": "hue-run",
-      "version": "0.5.10"
+      "version": "0.5.11"
     },
     "name": "hue",
-    "sha256": "sha256:e0317f5856c4b3d49467a7741ffa2f76e43abbc13ce9ed6ac6b7b431340f57d5",
+    "sha256": "sha256:03ecf373f3d5ff256a2bf82e19450af339326c8d0b09b5c836379c6c4f0647cd",
     "source": "skills/hue/SKILL.md"
   }
 }

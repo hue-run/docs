@@ -163,7 +163,7 @@ Use the callback to combine text patterns with the fields your application knows
 
 Preserve the structure and non-sensitive evidence your debugging and evaluations need. An email pattern does not cover names, phone numbers, message bodies containing other personal information, or secrets. Hue's built-in filtering of credential fields in tool definitions is also not a general secret scanner.
 
-With `captureContent: false` / `capture_content=False`, Hue removes recognized content fields instead. That choice does not classify arbitrary attributes; native Langfuse content keys also need explicit handling as described in the [OpenTelemetry guide](/integrations/opentelemetry#keep-langfuse-and-add-hue).
+With `captureContent: false` / `capture_content=False`, Hue removes recognized content fields instead, including native Langfuse fields from TypeScript `0.13.0` and Python `0.7.0`. Unrecognized custom attributes need your own producer or Collector policy; see the [OpenTelemetry guide](/integrations/opentelemetry#keep-langfuse-and-add-hue).
 
 ## Verify before rollout
 

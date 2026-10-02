@@ -1,9 +1,9 @@
 ---
 title: "Python API reference"
-description: "Configuration, tracing, delivery, evaluation and environment APIs in hue-run 0.6.4."
+description: "Configuration, tracing, delivery, evaluation and environment APIs in hue-run 0.7.0."
 ---
 
-This reference covers `hue-run` **0.6.4** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
+This reference covers `hue-run` **0.7.0** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -110,7 +110,7 @@ Choose logs or span attributes for the same content event to avoid duplicate sto
 
 See [redact sensitive trace content](/guides/redaction) for runnable email-masking examples and the correct attachment point for each integration.
 
-`capture_content=False` omits input/output content from Hue's helpers **before it enters an OpenTelemetry queue** and, at export, strips recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes, legacy `gen_ai.*` message events, log bodies and status descriptions from every record on Hue's export path, including spans from third-party instrumentors on a borrowed provider. The key list is identical to TypeScript's `contentPrefixes` and is reproduced in the [compatibility matrix](/sdks/compatibility). `True` permits that content. The policy does not classify arbitrary attribute names, span names, session identifiers or another exporter's records; unrecognized custom keys pass through. Configure an external instrumentor's own content policy before enabling it.
+`capture_content=False` omits input/output content from Hue's helpers **before it enters an OpenTelemetry queue** and, at export, strips recognized GenAI, OpenInference, OpenLLMetry, Langfuse and Vercel AI SDK content attributes, legacy `gen_ai.*` message events, log bodies and status descriptions from every record on Hue's export path, including spans from third-party instrumentors on a borrowed provider. The key list is identical to TypeScript's `contentPrefixes` and is reproduced in the [compatibility matrix](/sdks/compatibility). `True` permits that content. The policy does not classify arbitrary attribute names, span names, session identifiers or another exporter's records; unrecognized custom keys pass through. Configure an external instrumentor's own content policy before enabling it.
 
 When content is captured, export replaces hosted-tool credentials (such as `authorization`, `authorization_token`, `headers` and `api_key`) in recorded tool definitions and in the `tools` and `mcp_servers` entries of recorded raw requests with `"[redacted]"`, and exports a `blob` or `file` message part over 64 KiB as its `sha256` and `size` instead of its payload; a message attribute over 8 MiB is dropped by the snapshot budget instead. When `capture_content=False` removes tool definitions, the record keeps `hue.tool.names` and `hue.tool.definitions.sha256`. The [compatibility matrix](/sdks/compatibility) lists the exact fields.
 
@@ -152,7 +152,7 @@ A placeholder usually reaches Hue about 1.5 s after its span starts: up to 0.5 s
 - Placeholders follow the same `capture_content` policy as finished spans. Tool definitions, system instructions and any value over 64 KiB are left out; the finished span still carries them.
 - Placeholders carry the running span's name and attributes as set when the export worker builds them, so a value you overwrite before the span ends can still reach Hue. `capture_content=False` strips recognized content keys from them, and `redactor` rewrites helper content before the helper sets it on the span. Scrub any other sensitive attribute where you record it, or pass `live_spans=False`.
 - Placeholders are advisory. A placeholder is queued only while the queue is under a quarter of its record and byte budgets and is skipped silently otherwise. While queued they count in `queued_trace_records` and `queued_trace_bytes`, but never as dropped or failed telemetry.
-- A receiver that does not accept placeholders, such as a generic collector, rejects them only in the first export that carries them. The SDK then sets `export_status.live_spans_rejected`, a warning that does not affect `ok`, and stops announcing spans for the rest of that client's life.
+- Completed spans are exported in separate requests before placeholders, so their rejections stay visible. If the first trace acknowledgement lacks `Hue-Pending-Spans: 1`, the SDK sets `export_status.live_spans_rejected`, a warning that does not affect `ok`, and stops announcing spans; the receiver gets at most one placeholder request.
 - Pass `live_spans=False` to send none.
 - The SDK registers its span processor on the tracer provider itself and exports no processor to wrap. A provider that wraps it anyway never sees placeholders, so Hue still receives the running span's name and attributes even when the wrapper later drops or edits the span; such a wrapper should forward `on_end` for every span whose `on_start` it forwarded. A placeholder already sent for a span whose finished record never reaches Hue, for example because the span never ends, a wrapper withholds its end or the process exits before flushing it, leaves the span shown as running until Hue marks the trace stalled.
 

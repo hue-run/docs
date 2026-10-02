@@ -4,15 +4,15 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "cad0275d8c485201340492f2b641b659cca5bf6c",
+      "commit": "bec028c37b90f1a695e3e95427e6d7f1f7d73224",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:1792be7f86eaf875035ae79277de59d12b27d537197804049acfcc6fff1653e4"
+      "sha256": "sha256:322cab839bf3a4070fc8ca7418ad08c9bd116b47bc357f57971092a1e5531352"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "b318194200e95aefa28c58b533e417d8629df2af",
+      "commit": "3ccb31047b7fd2491be4d4e38e51013f2e2b3ff8",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:43a85af5b0ae81c30847a21f0e1c255ec2e576c5e934e36840e41af1ee72028b"
+      "sha256": "sha256:667492eab7aa264428ee94603a54150312a64a91b3411f528d2da9adee63049f"
     }
   },
   "site": {
@@ -52,7 +52,7 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.12.1",
+      "version": "0.13.0",
       "entrypoints": [
         "@hue-run/sdk",
         "@hue-run/sdk/ai-sdk",
@@ -64,7 +64,7 @@
     },
     "python": {
       "name": "hue-run",
-      "version": "0.6.4",
+      "version": "0.7.0",
       "modules": [
         "hue_sdk",
         "hue_sdk.evals",
@@ -75,9 +75,9 @@
   "skill": {
     "version": "0.5.12",
     "sha256": "sha256:d1926e57c28b5977edd62684940588fe5d2b2c5e0fba0827e9afb3aba649f7f4",
-    "sdkSourceSha256": "sha256:e0317f5856c4b3d49467a7741ffa2f76e43abbc13ce9ed6ac6b7b431340f57d5",
+    "sdkSourceSha256": "sha256:03ecf373f3d5ff256a2bf82e19450af339326c8d0b09b5c836379c6c4f0647cd",
     "override": {
-      "baseCommit": "b318194200e95aefa28c58b533e417d8629df2af",
+      "baseCommit": "3ccb31047b7fd2491be4d4e38e51013f2e2b3ff8",
       "sourceCommit": "ce7d1f747556cd3d6ed01ef1481831852997eaf8",
       "source": "skills/hue/SKILL.md",
       "sourceSha256": "sha256:19b92281a57afa27930aa021963e117378995b434ad101dd46203a15429747d7"
