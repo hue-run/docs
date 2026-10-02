@@ -213,6 +213,18 @@ test("the retired key-only MCP statement cannot return", () => {
   assert.match(result.stderr, /retired text: does not offer an OAuth authorization flow/);
 });
 
+for (const [name, page, phrase] of [
+  ["the retired decompression limit", "integrations/opentelemetry.mdx", "The request limit is 1 MiB on the wire and after decompression."],
+  ["the retired span cap", "integrations/opentelemetry.mdx", "A trace can contain at most 2,000 distinct spans."],
+  ["the retired quickstart Collector claim", "quickstart.mdx", "The same programs run against any OTLP receiver when you set `baseUrl` to a loopback origin."],
+]) {
+  test(`${name} cannot return`, () => {
+    const result = checkSnapshot((directory) => changePage(directory, page, (text) => `${text}\n${phrase}\n`));
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /retired text: /);
+  });
+}
+
 test("a bare npx hue command in a code block fails", () => {
   const result = checkSnapshot((directory) => changePage(directory, "sdks/cli.mdx", (text) =>
     text.replace(/npx --yes --package @hue-run\/sdk@\d+\.\d+\.\d+ hue login --gitignore/, "npx hue login --gitignore"),
