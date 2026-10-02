@@ -1,9 +1,9 @@
 ---
 title: "TypeScript API reference"
-description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.12.0."
+description: "Configuration, tracing, delivery, evaluation, simulation and environment APIs in @hue-run/sdk 0.12.1."
 ---
 
-This reference covers `@hue-run/sdk` **0.12.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+This reference covers `@hue-run/sdk` **0.12.1** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -492,7 +492,7 @@ Both functions are exported from `@hue-run/sdk/evals`.
 
 `runExperiment` additionally requires `hue`, `experimentId`, `traceEvidence` and `target(inputs, context)`, where `context` is a `RunExperimentTargetContext`. The target may return a JSON value, a `TargetResult` from `withFiles`, `undefined`, or a promise of any of these. Evidence must be `{ mode: "required" }` or `{ mode: "omit", reason: "..." }`. Telemetry and evaluation clients must use the same project and origin.
 
-For required trace evidence, `traceNotAccepted` defaults to `"stop"`: a rejected export stops the runner. Choose `"fail_case"` to complete that case as failed without its output or generated files and continue with other cases. `onTelemetryNotAccepted(entry)` reports each newly failed case before continuing. The `RunnerReport.telemetryNotAccepted` array contains `TelemetryNotAccepted` entries with `caseId`, `caseKey`, `executionId` and `issues`. Each `TelemetryIssueCount` records the signal (`traces` or `logs`), kind (`rejected`, `failed`, `dropped` or `invalid`), optional HTTP status and record count; it contains no captured content.
+For required trace evidence, `traceNotAccepted` defaults to `"stop"`: a rejected export stops the runner. Choose `"fail_case"` to complete that case as failed without its output or generated files and continue with other cases. `onTelemetryNotAccepted(entry)` reports each newly failed case before continuing. The `RunnerReport.telemetryNotAccepted` array contains `TelemetryNotAccepted` entries with `caseId`, `caseKey`, `executionId` and `issues`. Each `TelemetryIssueCount` records the signal (`traces` or `logs`), kind (`rejected`, `failed`, `dropped` or `invalid`), optional HTTP status and record count; it contains no captured content. Choose `"pending"` to complete a case whose telemetry Hue did not accept in time in its true state with its trace evidence pending: Hue attaches the trace once it holds every span the case ended, or records the evidence as omitted a day later. `RunnerReport.tracePending` lists those cases as `TracePending` entries with `caseId`, `caseKey`, `executionId` and, when the checkpoint recorded it, `spanCount`.
 
 `rescore` additionally requires `runId` and has **no target callback**. Create its evaluation run from existing subject IDs first. Both return a `RunnerReport`, `{ runId, subjectIds, resultIds, deferredScorerVersionIds }`.
 

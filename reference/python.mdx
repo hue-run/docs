@@ -1,9 +1,9 @@
 ---
 title: "Python API reference"
-description: "Configuration, tracing, delivery, evaluation and environment APIs in hue-run 0.6.3."
+description: "Configuration, tracing, delivery, evaluation and environment APIs in hue-run 0.6.4."
 ---
 
-This reference covers `hue-run` **0.6.3** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
+This reference covers `hue-run` **0.6.4** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -298,7 +298,7 @@ Both are exported from `hue_sdk.evals` and are synchronous entry points. They su
 | --- | --- |
 | `checkpoint_directory` | Required `str` or `Path`, dedicated to this run. Preserve it for upload recovery; keep it out of Git. Checkpoint guarantees require a POSIX filesystem with private permissions and no-follow opens. |
 | `persist_result_content` | Required boolean, independent of telemetry capture. |
-| `trace_evidence` | Required for `run_experiment`: `TraceEvidence("required")` or `TraceEvidence("omit", "reason")`. |
+| `trace_evidence` | Required for `run_experiment`: `TraceEvidence("required")`, `TraceEvidence("omit", "reason")` or `TraceEvidence("pending")`. With `"pending"`, a case whose export `force_flush` did not acknowledge completes in its true state with its trace evidence pending and the count of spans it ended; Hue attaches the trace once it holds every span, or records the evidence as omitted a day later. Only `"omit"` carries a reason. |
 | `target` | Receives `(inputs, TargetContext)` and returns the output or an awaitable. `TargetContext` has `config`, `item` and `span`. |
 | `scorers` | Optional list of bound `LocalScorer` objects. |
 | `concurrency` | Default `1`; integer `1–64`. |
