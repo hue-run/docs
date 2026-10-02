@@ -589,11 +589,11 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.12.0"
+      "version": "0.12.1"
     },
     "python": {
       "name": "hue-run",
-      "version": "0.6.3"
+      "version": "0.6.4"
     }
   },
   "mcp": {
