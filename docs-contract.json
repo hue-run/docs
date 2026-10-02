@@ -20,7 +20,7 @@
     "projectMcpUrl": "https://mcp.hue.run/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
     "skillUrl": "https://docs.hue.run/skill.md",
-    "pageCount": 26
+    "pageCount": 27
   },
   "serviceKeyPresets": [
     {
@@ -205,6 +205,7 @@
     "integrations/opentelemetry",
     "integrations/reference-chatbot",
     "evaluations/first-evaluation",
+    "evaluations/case-from-trace",
     "evaluations/eval-ready-agent",
     "evaluations/simulations",
     "evaluations/managed-runs",

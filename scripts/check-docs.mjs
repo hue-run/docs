@@ -108,9 +108,10 @@ if (JSON.stringify(mdxFiles) !== JSON.stringify(expectedMdxFiles)) {
 // redaction recipes linked by the SDK guides and coding-agent skill, and agents/mcp-tools keeps
 // the per-tool reference off the connection guide that agents read whole during setup, and
 // evaluations/eval-ready-agent is the one committed change that points an agent's own app clients
-// at Hue's mirrors during an evaluation.
-if (pages.length !== 25 || pages.length + 1 !== 26) {
-  fail(`expected 25 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
+// at Hue's mirrors during an evaluation, and evaluations/case-from-trace is the review path that
+// turns one production trace into a published case.
+if (pages.length !== 26 || pages.length + 1 !== 27) {
+  fail(`expected 26 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
 }
 
 for (const page of expectedMdxFiles) {

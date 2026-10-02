@@ -1,0 +1,55 @@
+---
+title: "Turn a trace into a case"
+sidebarTitle: "Trace to case"
+description: "Review one production trace into a published case with a frozen starting world and a Hue-owned outcome check, in the Hue UI or over the Hue MCP, and know which traces qualify."
+---
+
+A published case is a reviewed task, a frozen starting world and a Hue-owned outcome check, built from one production trace. Your agent then runs against a fresh copy of that world per case with [`hue eval`](/evaluations/eval-ready-agent), and Hue grades the sealed outcome. This page covers the review path from trace to case and which traces qualify. For what a world is, see [simulations](/evaluations/simulations).
+
+## Traces that can become cases
+
+Record with the Hue SDK transport and full content, and name the MCP server on tool spans:
+
+- Use `captureContent: true` in TypeScript or `capture_content=True` in Python. A trace exported without content cannot be reviewed into a case (`content_not_recorded`).
+- Pass the MCP server identity on tool spans (`mcp:` on `hue.tool`), so the trace names the app each call reached.
+- The trace must have reached an app Hue simulates. A trace that reached none is refused with `no_simulated_app` (HTTP 422).
+
+Case creation also refuses a trace that is still running (`running`; retry after it ends), evidence over 8 MiB, and a trace not recorded by Hue's SDK (`not_hue_sdk`) unless the project accepts generic sources, whose traces then need a full review (`generic_task_unreviewed`). Direct OTLP and metadata-only capture record traces you can inspect, but not traces you can turn into cases.
+
+## In the Hue UI
+
+1. Open **Traces** and open the trace.
+2. Choose **Create case** and answer the one question: "Did the agent complete the task correctly?"
+3. Choose **Build case**. Hue compiles a draft: the task, the starting world the trace shows, and the criteria that decide the outcome.
+4. Review the draft at `/case-conversions/<id>/quick`: the task, the criteria and the facts the world rests on.
+5. Choose **Publish case**. Publishing saves the eval-set version when Hue may; otherwise choose **Save eval-set version**.
+
+## Over the Hue MCP
+
+With a **Read and write** connection, a coding agent can run the same review. Writes need the user's go-ahead; on an organization connection every call takes the case's project as `project_id`.
+
+1. `get_trace` for the trace's current revision.
+2. `add_case_conversion` with `trace_id`, `expected_trace_revision` and an `idempotency_key`.
+3. Poll `get_case_conversion` until the build finishes, then call it with `include_content: true` to read the task, the starting world and the criteria you are about to accept. Every write below takes the `revision` of your latest read as `expected_revision`; read the draft again after each write before the next one.
+4. If the draft asks "Was this run correct?", answer with `update_case_conversion` and `run_was_correct`.
+5. Review the criteria and accept them: `update_case_conversion` with `reviewed_criteria` (`accepted_criteria_digest`), `reviewed_task` and `authored_closed_world`.
+6. Publish only when `get_case_conversion` reports `ready: true`, which means trust checks 1 and 2 pass and check 3's empty run fails: `publish_case_conversion` with `name` and the current `expected_revision`.
+
+The `case_from_trace` MCP prompt runs this sequence. To save the eval-set version afterwards, use **Save eval-set version** in Hue, the `freeze_eval_set_version` tool, or `hue eval --save-version`. The [MCP tool reference](/agents/mcp-tools) lists each tool's arguments.
+
+## Tiers
+
+A case publishes at a tier that says how much of its world is verified. Run results report per tier, and judges are advisory: they never decide a case.
+
+| Tier | Meaning |
+| --- | --- |
+| T1 | World verified: every replayed call matched the rules' own answer, independently of the recording. |
+| T2 | Some reads answered from the recording. |
+| T3 | Partial, advisory. |
+| T4 | Answer-only: a run passes on what it says, not on what the world holds afterwards. |
+
+A trace that still needs a person (T5) is never published.
+
+## Next step
+
+Make your agent eval-ready once, then run it against the case: [Make your agent eval-ready](/evaluations/eval-ready-agent).
