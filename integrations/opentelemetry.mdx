@@ -69,8 +69,9 @@ Any OpenTelemetry SDK or Collector that speaks OTLP/HTTP can send to the endpoin
 
     const tracer = trace.getTracer("example.instrumentation");
     await tracer.startActiveSpan("agent.request", async (root) => {
-      const tool = tracer.startSpan("lookup");
-      tool.setAttribute("gen_ai.tool.name", "lookup");
+      const tool = tracer.startSpan("execute_tool lookup", {
+        attributes: { "gen_ai.operation.name": "execute_tool", "gen_ai.tool.name": "lookup" },
+      });
       tool.end();
       console.log("Trace ID:", root.spanContext().traceId);
       root.end();
@@ -113,8 +114,11 @@ Any OpenTelemetry SDK or Collector that speaks OTLP/HTTP can send to the endpoin
 
     tracer = trace.get_tracer("example.instrumentation")
     with tracer.start_as_current_span("agent.request") as root:
-        with tracer.start_as_current_span("lookup") as tool:
-            tool.set_attribute("gen_ai.tool.name", "lookup")
+        with tracer.start_as_current_span(
+            "execute_tool lookup",
+            attributes={"gen_ai.operation.name": "execute_tool", "gen_ai.tool.name": "lookup"},
+        ):
+            pass
         print("Trace ID:", format(root.get_span_context().trace_id, "032x"))
     provider.shutdown()  # Flushes the batch processor and the exporter; a failure is logged.
     ```
@@ -158,7 +162,7 @@ Any OpenTelemetry SDK or Collector that speaks OTLP/HTTP can send to the endpoin
   </Tab>
 </Tabs>
 
-The Node.js exporter sends OTLP/JSON and the Python exporter protobuf; Hue accepts both, and a Collector forwards gzip-compressed protobuf. Each example records `gen_ai.tool.name` so the child shows as a tool span; [make traces useful to a coding agent](#make-traces-useful-to-a-coding-agent) lists the other attributes Hue reads. Confirm delivery by opening the printed trace ID in Hue or with the [trace receipt](/sdks/typescript#verify-stored-trace-evidence).
+The Node.js exporter sends OTLP/JSON and the Python exporter protobuf; Hue accepts both, and a Collector forwards gzip-compressed protobuf. Each example records `gen_ai.operation.name: execute_tool` and `gen_ai.tool.name` on the child, as the GenAI span conventions require, so it shows as a tool span; [make traces useful to a coding agent](#make-traces-useful-to-a-coding-agent) lists the other attributes Hue reads. Confirm delivery by opening the printed trace ID in Hue or with the [trace receipt](/sdks/typescript#verify-stored-trace-evidence).
 
 ### Point a Hue SDK at a Collector
 
