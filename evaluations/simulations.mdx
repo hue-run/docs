@@ -156,6 +156,10 @@ The local tools are bounded. Each callable accepts only the flat parameters its 
 
 ## Worlds with a handoff
 
+<Note>
+Preview: Hue's mirrors answer at `https://app.hue.run/api/sim/…`, but the simulation gateway is not yet a released Hue Cloud capability. Gmail (MCP, REST) and Slack (Web API, MCP) are its established mirrors; other apps' mirrors are experimental and certify no fidelity.
+</Note>
+
 Where Hue's simulation gateway serves a world, the callback receives `context.world` instead of Hue-native tools. It holds a world token, one mirror URL per pinned provider surface, such as a Gmail MCP or REST mirror, environment variables for a child process and an `mcpServers` configuration. Point your agent's own provider client at the mirror and pass the world token where its provider credential would go; [Make your agent eval-ready](/evaluations/eval-ready-agent) shows the one committed helper that does this per framework and the `hue eval --command` path for agents in any language. For a transition release, `context.mcp` is the world's first MCP mirror with the world token, so an adapter that reads `mcp` keeps working. The simulation gateway is not a released Hue Cloud capability yet, so don't rely on `context.world` there.
 
 Pass `agentRevision` to `runSimulation()` to send the agent revision under test when each world is created; a gateway world records it in its fingerprint. Changing it while an unfinished simulation is checkpointed fails, like changing the definition. The [world handoff](/reference/typescript#world-handoff) reference covers the helpers that build a child process's environment and an owner-only MCP configuration file without the project key.
