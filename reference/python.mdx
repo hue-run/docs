@@ -400,6 +400,7 @@ finally:
 | `agent_environment(world, *, parent=None, include_hue_credentials=False, legacy_mcp_variables=True)` | Environment variables for the agent's child process: `parent` (default `os.environ`) without Hue control-plane credentials, then the world's `env`, which wins. `legacy_mcp_variables` also sets `HUE_MCP_URL`, `HUE_MCP_TOKEN` and `HUE_MCP_EXPIRES_AT` from the first MCP mirror. |
 | `mcp_config_file(world, *, directory=None)` | Context manager that writes `mcpConfig` to an owner-only `mcp.json` in a private directory, yields its path and removes the directory afterwards. |
 | `legacy_mcp_capability(world)` | `LegacyMcpCapability`, `{"url", "token", "expiresAt"}` for the first MCP mirror, or `None` without an MCP surface. |
+| `world_now(source=None)` | The world's clock as an aware `datetime`, from a handoff's `now` or from `HUE_WORLD_NOW` in the given environment (`os.environ` by default); `None` when neither names it, so fall back explicitly with `world_now() or datetime.now(timezone.utc)`. Requires 0.7.0. |
 | `strip_hue_control_plane_credentials(parent)` | A copy of `parent` without Hue control-plane credentials. |
 | `is_hue_control_plane_credential(name, value)` | `True` for a name in `HUE_CONTROL_PLANE_VARIABLES` (`HUE_API_KEY`, `HUE_MCP_KEY`, `HUE_PROJECT_KEY`, `HUE_SERVICE_KEY`) or a value that starts with `hue_sk_`, `hue_mcp_` or `hue_attempt_`. |
 

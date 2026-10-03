@@ -29,4 +29,4 @@ Update source repositories first. Then refresh their snapshots here, reconcile e
 
 Document only released customer behavior. Never publish secrets, private infrastructure identifiers, internal runbooks, customer data, or unreleased provider capabilities. Clearly distinguish the project-data MCP server at `https://mcp.hue.run/mcp` from the documentation-only MCP endpoint at `https://docs.hue.run/mcp`.
 
-Changes merged to the default branch are deployed by the configured Mintlify integration. Confirm the ordinary, unversioned deployed pages after release; a cache-busted response alone is not acceptance evidence.
+Changes merged to the default branch are deployed by the configured Mintlify integration. Confirm the ordinary, unversioned deployed pages after release; a cache-busted response alone is not acceptance evidence. The one exception is `skill.md`: docs.hue.run serves it from a day-long CDN cache that a deploy does not purge, so every public link carries `?v=<skill version>` (the check enforces it) and that versioned URL is the acceptance URL; the unversioned route may lag by up to a day.

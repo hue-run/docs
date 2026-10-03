@@ -25,19 +25,23 @@ function bodyAfterFrontmatter(text) {
   return text.slice(match[0].length);
 }
 
-function canonicalSkill(publicSkill, contract) {
+// The SDK file may write its description as a plain or a double-quoted YAML scalar; the contract
+// records the parsed value, so both spellings are reconstructed and either digest may match.
+function canonicalSkills(publicSkill, contract) {
   const body = bodyAfterFrontmatter(publicSkill);
-  if (body === null) return "";
-  return [
-    "---",
-    `name: ${contract.skill.name}`,
-    `description: ${contract.skill.description}`,
-    "metadata:",
-    `  author: ${contract.skill.metadata.author}`,
-    `  version: "${contract.skill.metadata.version}"`,
-    "---",
-    body,
-  ].join("\n");
+  if (body === null) return [""];
+  return [contract.skill.description, `"${contract.skill.description}"`].map((description) =>
+    [
+      "---",
+      `name: ${contract.skill.name}`,
+      `description: ${description}`,
+      "metadata:",
+      `  author: ${contract.skill.metadata.author}`,
+      `  version: "${contract.skill.metadata.version}"`,
+      "---",
+      body,
+    ].join("\n"),
+  );
 }
 
 function canonicalCompatibility(publicCompatibility) {
@@ -458,7 +462,7 @@ const expectedSkillFrontmatter = [
 if (!publicSkill.startsWith(`${expectedSkillFrontmatter}\n`)) {
   fail("skill.md frontmatter differs from the SDK-owned skill metadata");
 }
-const skillSource = canonicalSkill(publicSkill, { skill: mirroredSkill });
+const skillDigests = canonicalSkills(publicSkill, { skill: mirroredSkill }).map(digest);
 // A skill override is the one documented exception to mirroring the pinned SDK skill verbatim: the
 // released skill with one section, or the complete skill, from a later SDK commit. It is
 // bound to the current snapshot, so refreshing contracts/sdk-docs.json forces its removal or renewal.
@@ -477,13 +481,13 @@ if (skillOverride) {
       fail("skillOverride.source must identify a full hue-sdk commit");
     if (source.skill.source !== sdk.skill.source || source.skill.sha256 !== skillOverride.sha256)
       fail("skillOverride.source must name the SDK-owned skill and its exact digest");
-    if (digest(skillSource) !== source.skill.sha256)
+    if (!skillDigests.includes(source.skill.sha256))
       fail("skill.md differs from the later SDK-owned skill source");
   } else {
     if (!/^[0-9a-f]{40}$/.test(section.commit) || section.repository !== sdk.repository) {
       fail("contracts/sources.json skillOverride.section must name a full hue-sdk commit");
     }
-    if (digest(skillSource) !== skillOverride.sha256) fail("skill.md differs from the recorded skill override");
+    if (!skillDigests.includes(skillOverride.sha256)) fail("skill.md differs from the recorded skill override");
     const body = bodyAfterFrontmatter(publicSkill) ?? "";
     const start = body.indexOf(`\n${section.heading}\n`);
     const end = start === -1 ? -1 : body.indexOf("\n## ", start + section.heading.length + 1);
@@ -493,7 +497,7 @@ if (skillOverride) {
     }
     if (body.includes(`\n${section.replaces}\n`)) fail(`skill.md still contains the replaced section ${section.replaces}`);
   }
-} else if (digest(skillSource) !== sdk.skill.sha256) {
+} else if (!skillDigests.includes(sdk.skill.sha256)) {
   fail("skill.md differs from the SDK-owned skill source");
 }
 // Without a key, the skill sends a first-time setup to the one agent setup page.
@@ -537,7 +541,16 @@ for (const phrase of [
 ]) {
   if (!agentSetup.includes(phrase)) fail(`guides/agent-setup.mdx must contain ${phrase}`);
 }
-if (agentSetup.includes("skill.md?v=")) fail("guides/agent-setup.mdx must link the unversioned skill.md");
+// docs.hue.run serves skill.md from a day-long CDN cache that a deploy does not purge, and the query
+// string is part of the cache key, so every public link names the current skill version. The
+// versioned URL is the acceptance URL for the skill; the unversioned route may lag by up to a day.
+for (const [path, text] of Object.entries(publicText)) {
+  for (const [link] of text.matchAll(/https:\/\/docs\.hue\.run\/skill\.md[^\s)\]`"']*/g)) {
+    if (link !== `https://docs.hue.run/skill.md?v=${mirroredSkill.metadata.version}`) {
+      fail(`${path} links ${link}; link https://docs.hue.run/skill.md?v=${mirroredSkill.metadata.version}`);
+    }
+  }
+}
 const movedSetup = publicText["guides/invited-setup.mdx"];
 if (!/^hidden:\s*true$/m.test(frontmatterOf(movedSetup)) || !movedSetup.includes("https://docs.hue.run/guides/agent-setup.md")) {
   fail("guides/invited-setup.mdx must be a hidden stub that points to https://docs.hue.run/guides/agent-setup.md");
