@@ -544,11 +544,14 @@ for (const phrase of [
 // docs.hue.run serves skill.md from a day-long CDN cache that a deploy does not purge, and the query
 // string is part of the cache key, so every public link names the current skill version. The
 // versioned URL is the acceptance URL for the skill; the unversioned route may lag by up to a day.
+// A link may be absolute, site-relative (`/skill.md`) or an autolink in angle brackets; the
+// destination ends at whitespace or the closing delimiter.
+const skillLinkPattern = /(?:https:\/\/docs\.hue\.run)?\/skill\.md(?:\?[^\s)\]>`"']*)?(?=[\s)\]>`"']|$)/g;
+const currentSkillLink = `https://docs.hue.run/skill.md?v=${mirroredSkill.metadata.version}`;
 for (const [path, text] of Object.entries(publicText)) {
-  for (const [link] of text.matchAll(/https:\/\/docs\.hue\.run\/skill\.md[^\s)\]`"']*/g)) {
-    if (link !== `https://docs.hue.run/skill.md?v=${mirroredSkill.metadata.version}`) {
-      fail(`${path} links ${link}; link https://docs.hue.run/skill.md?v=${mirroredSkill.metadata.version}`);
-    }
+  for (const [link] of text.matchAll(skillLinkPattern)) {
+    const absolute = link.startsWith("/") ? `https://docs.hue.run${link}` : link;
+    if (absolute !== currentSkillLink) fail(`${path} links ${link}; link ${currentSkillLink}`);
   }
 }
 const movedSetup = publicText["guides/invited-setup.mdx"];

@@ -249,6 +249,24 @@ test("only the moved stub may link the invited-setup page", () => {
   assert.match(result.stderr, /quickstart\.mdx links the moved invited-setup page/);
 });
 
+test("every skill link names the current skill version, in any link form", () => {
+  const version = JSON.parse(readFileSync(resolve(root, "contracts/sdk-docs.json"), "utf8")).skill.metadata.version;
+  const relative = checkSnapshot((directory) => changePage(directory, "agents/overview.mdx", (text) =>
+    text.replace(`https://docs.hue.run/skill.md?v=${version}`, "/skill.md"),
+  ));
+  assert.notEqual(relative.status, 0);
+  assert.match(relative.stderr, /agents\/overview\.mdx links \/skill\.md/);
+  const stale = checkSnapshot((directory) => changePage(directory, "agents/overview.mdx", (text) =>
+    text.replace(`https://docs.hue.run/skill.md?v=${version}`, "https://docs.hue.run/skill.md?v=0.1.0"),
+  ));
+  assert.notEqual(stale.status, 0);
+  assert.match(stale.stderr, /links https:\/\/docs\.hue\.run\/skill\.md\?v=0\.1\.0/);
+  const autolink = checkSnapshot((directory) => changePage(directory, "agents/overview.mdx", (text) =>
+    text.replace(`[Hue skill](https://docs.hue.run/skill.md?v=${version})`, `Hue skill: <https://docs.hue.run/skill.md?v=${version}>`),
+  ));
+  assert.equal(autolink.status, 0, autolink.stderr);
+});
+
 test("the agent setup page keeps the account contact line", () => {
   const result = checkSnapshot((directory) => changePage(directory, "guides/agent-setup.mdx", (text) =>
     text.replaceAll("founders@hue.run", "team@example.test"),
