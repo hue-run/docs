@@ -19,7 +19,7 @@
     "origin": "https://docs.hue.run",
     "projectMcpUrl": "https://mcp.hue.run/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
-    "skillUrl": "https://docs.hue.run/skill.md",
+    "skillUrl": "https://docs.hue.run/skill.md?v=0.6.0",
     "pageCount": 27
   },
   "serviceKeyPresets": [

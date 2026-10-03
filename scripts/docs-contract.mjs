@@ -67,7 +67,8 @@ export function buildDocsContract() {
       origin: platform.endpoints.documentation.origin,
       projectMcpUrl: platform.endpoints.productMcp.production.endpoint,
       docsMcpUrl: platform.endpoints.documentation.mcpEndpoint,
-      skillUrl: `${platform.endpoints.documentation.origin}/skill.md`,
+      // The versioned URL is the skill's acceptance URL: docs.hue.run caches the bare route for a day.
+      skillUrl: `${platform.endpoints.documentation.origin}/skill.md?v=${(sourceMetadata.skillOverride?.source?.skill ?? sdk.skill).metadata.version}`,
       pageCount: pages.length,
     },
     serviceKeyPresets: platform.serviceKeyPresets,

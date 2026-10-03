@@ -537,7 +537,7 @@ for (const phrase of [
   "hue login",
   "hue mcp install",
   "If you ask the user to choose a client, always include **Other MCP client**.",
-  "https://docs.hue.run/skill.md",
+  `https://docs.hue.run/skill.md?v=${mirroredSkill.metadata.version}`,
 ]) {
   if (!agentSetup.includes(phrase)) fail(`guides/agent-setup.mdx must contain ${phrase}`);
 }
