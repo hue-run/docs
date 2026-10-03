@@ -261,10 +261,19 @@ test("every skill link names the current skill version, in any link form", () =>
   ));
   assert.notEqual(stale.status, 0);
   assert.match(stale.stderr, /links https:\/\/docs\.hue\.run\/skill\.md\?v=0\.1\.0/);
+  const fragment = checkSnapshot((directory) => changePage(directory, "agents/overview.mdx", (text) =>
+    text.replace(`https://docs.hue.run/skill.md?v=${version}`, "https://docs.hue.run/skill.md#handoff"),
+  ));
+  assert.notEqual(fragment.status, 0);
+  assert.match(fragment.stderr, /links https:\/\/docs\.hue\.run\/skill\.md#handoff/);
   const autolink = checkSnapshot((directory) => changePage(directory, "agents/overview.mdx", (text) =>
-    text.replace(`[Hue skill](https://docs.hue.run/skill.md?v=${version})`, `Hue skill: <https://docs.hue.run/skill.md?v=${version}>`),
+    text.replace(`[Hue skill](https://docs.hue.run/skill.md?v=${version})`, `Hue skill: <https://docs.hue.run/skill.md?v=${version}#handoff>`),
   ));
   assert.equal(autolink.status, 0, autolink.stderr);
+  const elsewhere = checkSnapshot((directory) => changePage(directory, "agents/overview.mdx", (text) =>
+    text.replace(`[Hue skill](https://docs.hue.run/skill.md?v=${version})`, `[Hue skill](https://docs.hue.run/skill.md?v=${version}) and [another skill](https://example.com/skill.md)`),
+  ));
+  assert.equal(elsewhere.status, 0, elsewhere.stderr);
 });
 
 test("the agent setup page keeps the account contact line", () => {

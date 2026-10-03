@@ -544,14 +544,24 @@ for (const phrase of [
 // docs.hue.run serves skill.md from a day-long CDN cache that a deploy does not purge, and the query
 // string is part of the cache key, so every public link names the current skill version. The
 // versioned URL is the acceptance URL for the skill; the unversioned route may lag by up to a day.
-// A link may be absolute, site-relative (`/skill.md`) or an autolink in angle brackets; the
-// destination ends at whitespace or the closing delimiter.
-const skillLinkPattern = /(?:https:\/\/docs\.hue\.run)?\/skill\.md(?:\?[^\s)\]>`"']*)?(?=[\s)\]>`"']|$)/g;
+// A destination may be absolute, site-relative (`/skill.md`) or an autolink in angle brackets, and
+// may carry a query or fragment; it ends at whitespace or a closing delimiter. Each is parsed as a
+// URL, and only a docs.hue.run `/skill.md` destination must name the current version in `v`,
+// whatever its fragment. Another site's `/skill.md` is not Hue's.
+const destinationPattern = /(?:https?:\/\/[^\s)\]>`"']+|(?<![\w/.])\/skill\.md[^\s)\]>`"']*)/g;
 const currentSkillLink = `https://docs.hue.run/skill.md?v=${mirroredSkill.metadata.version}`;
 for (const [path, text] of Object.entries(publicText)) {
-  for (const [link] of text.matchAll(skillLinkPattern)) {
-    const absolute = link.startsWith("/") ? `https://docs.hue.run${link}` : link;
-    if (absolute !== currentSkillLink) fail(`${path} links ${link}; link ${currentSkillLink}`);
+  for (const [destination] of text.matchAll(destinationPattern)) {
+    let url;
+    try {
+      url = new URL(destination, "https://docs.hue.run");
+    } catch {
+      continue;
+    }
+    if (url.hostname !== "docs.hue.run" || url.pathname !== "/skill.md") continue;
+    if (url.searchParams.get("v") !== mirroredSkill.metadata.version) {
+      fail(`${path} links ${destination}; link ${currentSkillLink}`);
+    }
   }
 }
 const movedSetup = publicText["guides/invited-setup.mdx"];
