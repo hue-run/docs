@@ -128,7 +128,7 @@ Replace `delegation` with `action_scope`, `delegation_scope` or `output_omission
 
 A **trace** is one tree of spans with one root. A **span** is one timed operation in it, such as a model call, a tool call or an agent step. In a multi-agent application, a trace is often one agent activation rather than one user turn: a sub-agent or background agent that starts its own root produces its own trace. **Sessions** group traces under the session id your application records.
 
-`search_traces` filters a window by `status`, `attention`, `finding`, `check_key`, `user`, `user_prefix`, `release`, `trace_name`, `model`, a root-span `attribute`, `deployment_environment`, `session_id`, `min_duration_ms` and `query` (title, root span name or trace id), and sorts by `started_at` (newest first) or `duration` (longest first). It returns these fields per trace:
+`search_traces` filters a window by `status`, `attention`, `finding`, `check_key`, `user`, `user_prefix`, `release`, `trace_name`, `model`, a root-span `attribute`, `deployment_environment`, `run_traces`, `session_id`, `min_duration_ms` and `query` (title, root span name or trace id), and sorts by `started_at` (newest first) or `duration` (longest first). It returns these fields per trace:
 
 | Field | Meaning |
 | --- | --- |
@@ -142,19 +142,33 @@ A **trace** is one tree of spans with one root. A **span** is one timed operatio
 | `tokens`, `span_count` | Input and output token totals and the number of stored spans. |
 | `session_id`, `session_key` | Hue's session id, for `search_traces`, and your application's session key. |
 | `deployment_environment` | The deployment label your application recorded as `deployment.environment.name`, `deployment.environment` or `langfuse.environment`, on the root span or its resource; not one of Hue's simulated environments. `search_traces` and `aggregate` filter by it exactly, and an empty string selects unlabeled traces. |
+| `run_trace` | `true` when one of your runs recorded the trace; left out otherwise. See [traces from runs](#traces-from-runs). |
 | `user_id`, `release`, `trace_name` | The user id, release and trace name your application recorded, each up to 200 characters and returned whole, so each works as a filter. See the [field glossary](#field-glossary). |
 | `attention_state`, `finding_ids`, `check_state` | The attention state, the ids of the findings present, and the trace-check state. See [attention states and findings](#attention-states-and-findings) and [trace checks](#trace-checks). |
 | `first_useful_answer_ms`, `useful_answer_timing_source`, `request_start_source` | Request timing, for projects set up for it; otherwise `null`. |
 
-`get_trace` adds `has_input`, `has_output` and `revision`, the stored `findings` (the assessment's `attention_state`, `items` with each finding's `id`, `label`, `state`, `source` and `span_ids`, and `tool_errors` with each error's span, tool and `error_type`), the trace-check results as `checks`, and span rows in start order. Each span row has `id`, `span_id`, `parent_span_id`, `name`, `kind`, `status`, `status_message`, `error_type`, `state`, `operation`, `tool`, `started_at`, `ended_at`, `duration_ms`, `model`, `tokens`, `input_bytes` and `output_bytes`. A span's `kind` is `tool`, `agent`, `embedding` or `llm` when Hue recognizes the operation. Otherwise it is the recorded operation name, such as `chain`, or the OpenTelemetry span kind, such as `internal`. A span's `status` comes only from its OpenTelemetry status code.
+`get_trace` adds `has_input`, `has_output` and `revision`, `run` for a trace one of your runs recorded (the run's `id` and `name`, the `case_id`, the `execution_id` that `get_run_execution` reads, and a link to the case result), the stored `findings` (the assessment's `attention_state`, `items` with each finding's `id`, `label`, `state`, `source` and `span_ids`, and `tool_errors` with each error's span, tool and `error_type`), the trace-check results as `checks`, and span rows in start order. Each span row has `id`, `span_id`, `parent_span_id`, `name`, `kind`, `status`, `status_message`, `error_type`, `state`, `operation`, `tool`, `started_at`, `ended_at`, `duration_ms`, `model`, `tokens`, `input_bytes` and `output_bytes`. A span's `kind` is `tool`, `agent`, `embedding` or `llm` when Hue recognizes the operation. Otherwise it is the recorded operation name, such as `chain`, or the OpenTelemetry span kind, such as `internal`. A span's `status` comes only from its OpenTelemetry status code.
 
-`search_spans` returns span rows from many traces with the same fields, plus the span's `trace_id` and `start_offset_ms`, the time from its trace's start to its own. It filters a window of up to 7 days by span `name`, `kind`, `status`, `model`, `min_duration_ms` and one `attribute`, and by the trace's `trace_name`, `user`, `user_prefix`, `release` and `session_id`; it sorts newest or longest first and reports `total_count`. When nothing matches a `name` or `trace_name`, it suggests the closest recorded names.
+`search_spans` returns span rows from many traces with the same fields, plus the span's `trace_id` and `start_offset_ms`, the time from its trace's start to its own. It filters a window of up to 7 days by span `name`, `kind`, `status`, `model`, `min_duration_ms` and one `attribute`, and by the trace's `trace_name`, `user`, `user_prefix`, `release`, `session_id` and `run_traces`; it sorts newest or longest first and reports `total_count`. When nothing matches a `name` or `trace_name`, it suggests the closest recorded names.
 
 `get_span` returns one span: `status` with its `code` and a `message` of up to 200 characters, `model`, `usage` (input, output, cache and reasoning tokens where recorded), `gen_ai` (`operation`, `provider`, `response_model`, `agent_name`, `session_id`, `user_id` and the detected `profiles`), `tool` (`name` and `call_id`), `has_input` and `has_output`, `service`, `attribute_keys` (the names of up to 100 recorded attributes, never their values) and `event_names`. When the result fits `max_chars`, it also carries the instrumentation scope, the dropped-attribute and dropped-event counts, and span `links`.
 
+### Traces from runs
+
+A trace that one of your runs recorded while executing a case is a run trace, whatever deployment label it carries, so a run against your staging deployment keeps `deployment_environment: "staging"`. `search_traces`, `search_spans`, `aggregate` and `list_sessions` leave run traces out unless `run_traces` says otherwise, so a question about production or staging traffic counts what your users did:
+
+| `run_traces` | Keeps |
+| --- | --- |
+| omitted or `exclude` | Every trace except run traces. |
+| `include` | Every trace, run traces included. |
+| `only` | Run traces alone. |
+| a run id or link | That run's traces alone. |
+
+To compare what the agent did across runs, call `aggregate` or `search_spans` once per run id, for example tool calls and errors per tool. An empty `search_traces` page that left run traces out says how many in `hint`. A session that holds any run trace counts as a run session. Reads by id (`get_trace`, `get_span`, `get_run_execution`) return run traces whatever the filter, and the **Traces** page in Hue follows the same default, with **Filter** > **Run traces** to include them or show only them.
+
 ### Aggregates
 
-`aggregate` counts a window's `traces` (the default), or its traces' `spans` over at most 7 days. It filters by `status`, `attention`, `check_key`, `session_id`, `deployment_environment`, `user`, `user_prefix`, `release`, `trace_name`, `name` (for traces, the root span's) and `min_duration_ms`. Span aggregates also filter by `kind`, `model` and `tool`, and refuse `attention` and `check_key`.
+`aggregate` counts a window's `traces` (the default), or its traces' `spans` over at most 7 days. It filters by `status`, `attention`, `check_key`, `session_id`, `deployment_environment`, `user`, `user_prefix`, `release`, `trace_name`, `name` (for traces, the root span's), `min_duration_ms` and `run_traces`. Span aggregates also filter by `kind`, `model` and `tool`, and refuse `attention` and `check_key`.
 
 - `group_by` takes up to two dimensions. Traces group by `trace_name`, `name` (the root span's), `status`, `attention_state`, `finding`, `intent`, `user`, `release` and `bucket`; spans by `trace_name`, `name`, `kind`, `status`, `model`, `tool`, `user`, `release` and `bucket`. `bucket` is a time series of `5m`, `15m`, `1h`, `6h` or `1d` buckets, at most 96, and counts as one of the two dimensions. `intent` needs a published taxonomy.
 - `metrics`, up to 8: `count` (always returned), `error_count`, `duration_p50_ms`, `duration_p95_ms`, `duration_p99_ms`, `input_tokens` and `output_tokens`; for spans also `start_offset_p50_ms`, `start_offset_p95_ms`, `input_bytes_p50`, `input_bytes_p95`, `input_bytes_max`, `output_bytes_p50`, `output_bytes_p95` and `output_bytes_max`.

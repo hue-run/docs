@@ -51,11 +51,11 @@ The **Access** column of each table uses these levels. A level can add a role re
 
 ### `traces`
 
-Listed by default: `search_traces`, `get_trace`, `get_span`, `list_sessions`, `verify_trace`, `get_span_content`, `search_spans` and `aggregate`. The trace-check tools produce results only for projects [set up for trace checks](/agents/investigate-production#trace-checks).
+Listed by default: `search_traces`, `get_trace`, `get_span`, `list_sessions`, `verify_trace`, `get_span_content`, `search_spans` and `aggregate`. The trace-check tools produce results only for projects [set up for trace checks](/agents/investigate-production#trace-checks). `search_traces`, `search_spans`, `aggregate` and `list_sessions` leave out traces your runs recorded unless `run_traces` is `include`, `only` or a run id; see [traces from runs](/agents/investigate-production#traces-from-runs).
 
 | Tool | Access | What it does |
 | --- | --- | --- |
-| `search_traces` | Read | Finds traces in a window by status, attention, finding, trace check, user, release, trace name, model, root attribute, deployment environment, session, duration or text, newest or longest first. |
+| `search_traces` | Read | Finds traces in a window by status, attention, finding, trace check, user, release, trace name, model, root attribute, deployment environment, run, session, duration or text, newest or longest first. |
 | `get_trace` | Read | Returns one trace with its stored findings and trace-check results and a page of its span tree; recorded content with `include_content: true`. |
 | `get_span` | Read | Returns one span's status and error message, timing, model, usage, tool and attribute names; recorded values with `include_content: true` and correlated logs with `include_logs: true`. |
 | `list_sessions` | Read | Lists sessions by last activity, with status, trace count and token and span totals. |
