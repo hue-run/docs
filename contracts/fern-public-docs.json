@@ -1808,7 +1808,7 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "8bf43decdcdbf26e56aa6ec20ca18ab807406fa7db054dfd0cd25f5f648c5283",
+    "catalogSha256": "3ec0ff1f2f80360ab710fcaafa5d41babd9dd3c11a454658792b734f94ecd00f",
     "serverInstructionsSha256": "a57ca5d20b45f22f4e1edcb1935b3555d47afeb0601f7bef597bef4e45d7a2ce",
     "guides": {
       "data-model": {
@@ -1817,7 +1817,7 @@
       },
       "production": {
         "title": "Read production traces with Hue",
-        "sha256": "9e518f641d8c848b130cdeab1068602094cf4fc999bf985a7cde721155dd6fec"
+        "sha256": "61a6b54ac9875bac94e7c46bebd5d457b6e021b856a0bb60b341a5a1840ab44e"
       },
       "investigate": {
         "title": "Investigate a failure with Hue",
@@ -1829,7 +1829,7 @@
       },
       "evaluate": {
         "title": "Run your agent against a case",
-        "sha256": "fc4b239bb7c4441f91937d2f9a64b56446c8e5bd39b9c0b6fd786540cfb33117"
+        "sha256": "d91e750cc6680e62a68884d3296ab885177cc70efa8af77a554b2914e7a7fffd"
       }
     },
     "toolsets": {
