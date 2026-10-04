@@ -25,7 +25,7 @@ Callbacks do not cover every OpenTelemetry field. Keep sensitive information out
 ```ts
 export function redactEmails(value: string, _path: string): string {
   return value.replace(
-    /(?<![A-Z0-9._%+-])[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
+    /[A-Z0-9._%+-]{1,64}@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
     "[EMAIL]",
   );
 }
@@ -106,9 +106,7 @@ import os
 import re
 from hue_sdk import Hue
 
-EMAIL = re.compile(
-    r"(?<![A-Z0-9._%+-])[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.IGNORECASE
-)
+EMAIL = re.compile(r"[A-Z0-9._%+-]{1,64}@[A-Z0-9.-]+\.[A-Z]{2,}", re.IGNORECASE)
 
 
 def redact_emails(field, value):
@@ -165,15 +163,15 @@ Use the callback to combine text patterns with the fields your application knows
 
 Preserve the structure and non-sensitive evidence your debugging and evaluations need. An email pattern does not cover names, phone numbers, message bodies containing other personal information, or secrets. Hue's built-in filtering of credential fields in tool definitions is also not a general secret scanner.
 
+With `captureContent: false` / `capture_content=False`, Hue removes recognized content fields instead, including native Langfuse fields from TypeScript `0.13.0` and Python `0.7.0`. Unrecognized custom attributes need your own producer or Collector policy; see the [OpenTelemetry guide](/integrations/opentelemetry#keep-langfuse-and-add-hue).
+
 ### Keep patterns linear-time
 
 The callback runs synchronously in your serving process, on the Node.js event loop or in the Python request thread, and receives untrusted text such as user messages, model output and fetched pages. A pattern that backtracks on crafted input can block the whole process.
 
-- **Start each match once.** The examples' `(?<![A-Z0-9._%+-])` lookbehind lets a match begin only at the start of a run of address characters, so each run is scanned once. Without it, a run with no `@` is rescanned from every position: a few hundred kilobytes of `a` characters can block the process for tens of seconds. Avoid nested or overlapping quantifiers such as `(a+)+`, or use a linear-time engine such as [`re2`](https://www.npmjs.com/package/re2) for Node.js or [`google-re2`](https://pypi.org/project/google-re2/) for Python.
+- **Bound repetition.** The examples cap the part before `@` at 64 characters, the longest RFC 5321 allows, so each position is checked against at most 64 characters. With an unbounded `[A-Z0-9._%+-]+`, a run with no `@` is rescanned to its end from every position: a few hundred kilobytes of `a` characters can block the process for tens of seconds. In a longer local part, which is not a valid address, the characters before the last 64 stay visible. Avoid nested or overlapping quantifiers such as `(a+)+`. For a guaranteed linear-time engine, use [`re2`](https://www.npmjs.com/package/re2) for Node.js or [`google-re2`](https://pypi.org/project/google-re2/) for Python; both accept the example patterns.
 - **Limit the input size.** Hue's stored-field limits do not cap what the callback receives. TypeScript passes the whole recorded string and cuts the result to 256 KiB afterwards; Python passes content within a 1 MiB value budget. Before running any pattern, return a fixed marker such as `[REDACTED]` for a string longer than your application allows. Replace the whole value rather than redacting only a prefix.
-- **Test adversarial input.** Time the callback on a string of your maximum size made of address characters without `@`, such as `"a".repeat(1_000_000)` or `"a" * 1_000_000`. It should finish in milliseconds.
-
-With `captureContent: false` / `capture_content=False`, Hue removes recognized content fields instead, including native Langfuse fields from TypeScript `0.13.0` and Python `0.7.0`. Unrecognized custom attributes need your own producer or Collector policy; see the [OpenTelemetry guide](/integrations/opentelemetry#keep-langfuse-and-add-hue).
+- **Test adversarial input.** Time the callback on a string of your maximum size made of address characters without `@`, such as `"a".repeat(1_000_000)` or `"a" * 1_000_000`, and on one of half that size. Doubling the input should roughly double the time, not quadruple it, and the time must fit your request budget.
 
 ## Verify before rollout
 
