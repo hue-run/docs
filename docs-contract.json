@@ -4,22 +4,22 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "9cb681a37731a3766b08bd3ee92327c95a82ba9b",
+      "commit": "a6cac13341185359bcde686c736f4b8af333716a",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:1244cb904854a97171c5bb7ddc93de924eceb214935869f6b6b44174a68f0dd5"
+      "sha256": "sha256:1a0ea82554781a1f0e14be08ce478ad0c37a54c333e06e6002b90e4b7e85616a"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "598831025608d5626b2a6fccfbc5592860560385",
+      "commit": "0d04c9927c191ae457efa384b0da2543186676db",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:1899b9ae87451c988caca088aec192e23a364d759ccf4cdbd53632c523a464b7"
+      "sha256": "sha256:e0b0a7633418cd03436c671d3e513b037f3d0b04d7535917c0cf374235b11b53"
     }
   },
   "site": {
     "origin": "https://docs.hue.run",
     "projectMcpUrl": "https://mcp.hue.run/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
-    "skillUrl": "https://docs.hue.run/skill.md?v=0.6.0",
+    "skillUrl": "https://docs.hue.run/skill.md?v=0.6.1",
     "pageCount": 27
   },
   "serviceKeyPresets": [
@@ -52,7 +52,7 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.13.0",
+      "version": "0.13.1",
       "entrypoints": [
         "@hue-run/sdk",
         "@hue-run/sdk/ai-sdk",
@@ -64,7 +64,7 @@
     },
     "python": {
       "name": "hue-run",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "modules": [
         "hue_sdk",
         "hue_sdk.evals",
@@ -73,9 +73,9 @@
     }
   },
   "skill": {
-    "version": "0.6.0",
-    "sha256": "sha256:3be7784a56ebccd40f6aa007871afd2f6986aff87d9bfe303f8bdfe9fef4bb4d",
-    "sdkSourceSha256": "sha256:3b8eaef3b81032e4d02da4bf5c00f29b8d5569fd72d2b8ff36c2c1370277905a"
+    "version": "0.6.1",
+    "sha256": "sha256:5070ff8b301a747b500bc428b1ec8b7801a5439dc2d567cc236c2b80fef9db24",
+    "sdkSourceSha256": "sha256:1009b2cf93667cc9024576e64a8b8881bb01df544fcd2ea7464ad3880d667c88"
   },
   "mcp": {
     "transport": "Streamable HTTP",
