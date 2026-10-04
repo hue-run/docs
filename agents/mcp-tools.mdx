@@ -80,9 +80,9 @@ Eval sets and evaluators.
 
 | Tool | Access | What it does |
 | --- | --- | --- |
-| `list_eval_sets` | Read | Lists eval sets with names, descriptions and links. |
+| `list_eval_sets` | Read | Lists eval sets with names, descriptions, tags and links; `tags` keeps those carrying any of the named tags. |
 | `get_eval_set` | Read | Returns an eval set's versions, one page of cases (values with `include_content: true`) and a run block with the `hue eval --set` command. |
-| `list_evaluators` | Read | Lists evaluators with ownership and links. |
+| `list_evaluators` | Read | Lists evaluators with ownership, tags and links; `tags` filters them the same way. |
 | `get_evaluator` | Read | Returns an evaluator's published versions with kind, digest and definition. |
 | `add_eval_set` | Write | Creates an eval set with an empty draft version. |
 | `update_eval_set` | Destructive | Renames an eval set or changes its slug or description. |
@@ -94,6 +94,8 @@ Eval sets and evaluators.
 | `add_evaluator` | Write | Creates a code-owned evaluator, which any key or sign-in connection can publish versions of. |
 | `publish_evaluator` | Write | Publishes an immutable version of a code-owned evaluator, such as one using the built-in `hue.exact_match.v1`. |
 | `copy_evaluator` | Write | Copies an evaluator version, such as one made in Hue, into a new code-owned evaluator. |
+| `set_evaluator_check_descriptions` | Destructive | Sets or clears the descriptions of an evaluator's checks, which every version, its runs and the evaluator page show. A description in a version's own definition still wins. |
+| `set_tags` | Destructive | Replaces the tags of an eval set, evaluator or run, by name; a new name creates a tag and `[]` clears them. |
 | `archive_eval_set` | Destructive, owner or admin through sign-in | Hides an eval set from the active list; frozen versions and the runs that pin them stay readable. |
 | `archive_evaluator` | Destructive, owner or admin through sign-in | Hides an evaluator from the active list; versions pinned on runs stay readable. |
 
@@ -103,7 +105,7 @@ Runs execute an eval set version's cases; scoring runs score outputs that alread
 
 | Tool | Access | What it does |
 | --- | --- | --- |
-| `list_runs` | Read | Lists runs, newest first, by eval set or creation window. |
+| `list_runs` | Read | Lists runs, newest first, by eval set, creation window or tag; a run carries its own tags and matches its eval set's. |
 | `get_run` | Read | Returns per-evaluator aggregates, execution states and durations, with up to 25 failing cases first, optionally compared with a baseline run. |
 | `add_run` | Write | Creates a run on a frozen eval set version with 1 to 32 pinned evaluator versions. |
 | `list_run_items` | Read | Lists a run's cases with their latest execution state. |
