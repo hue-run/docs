@@ -223,7 +223,7 @@ A run ID and a scoring ID identify different records.
 
 ### Tags
 
-Tags group eval sets, evaluators and runs, for example by the area of the agent they test. Methods take tag names: a name the project has no tag for creates one, and names match without case. `create_eval_set`, `create_evaluator` and `create_run` accept `tags`; `update_eval_set`, `update_evaluator` and `update_run` replace an item's tags with the names you pass; `list_eval_sets` and `list_evaluators` keep items carrying any of the named `tags`; and `list_tags()` returns the project's tags, each with `id`, `name` and `color`. Responses carry each item's `tags`. A run also shows its eval set's tags in `evalSetTags`; they are not its own, so `update_run` leaves them unchanged. The dataset, scorer and experiment methods take the same `tags`. Tags require a Hue server that supports them.
+Tags group eval sets, evaluators and runs, for example by the area of the agent they test. Methods take tag names: a name the project has no tag for creates one, and names match without case. `create_eval_set`, `create_evaluator` and `create_run` accept `tags`; `update_eval_set`, `update_evaluator` and `update_run` replace an item's tags with the names you pass (`[]` clears them); `list_eval_sets` and `list_evaluators` keep items carrying any of the named `tags`; and `list_tags()` returns the project's tags, each with `id`, `name` and `color`. Responses carry each item's `tags`. A run also shows its eval set's tags in `evalSetTags`; they are not its own, so `update_run` leaves them unchanged. The dataset, scorer and experiment methods take the same `tags`.
 
 ```python
 client.create_eval_set(name="Refunds", slug="refunds", tags=["billing"])
