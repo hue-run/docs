@@ -1,9 +1,9 @@
 ---
 title: "Python API reference"
-description: "Configuration, tracing, delivery, evaluation and environment APIs in hue-run 0.7.0."
+description: "Configuration, tracing, delivery, evaluation and environment APIs in hue-run 0.7.1."
 ---
 
-This reference covers `hue-run` **0.7.0** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
+This reference covers `hue-run` **0.7.1** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -190,7 +190,7 @@ client = EvaluationClient(
 
 `EvaluationClient(base_url: str = "https://app.hue.run", api_key: str | None = None, *, timeout_seconds: float = 10, max_attempts: int = 4)` requires a valid **Read and write** project service key. Use `api_key=` for Hue Cloud or retain `EvaluationClient(base_url, api_key)` for an explicit origin; a bare key in the first position raises `TypeError` naming `api_key=`. Timeouts must be positive and finite.
 
-Client methods are synchronous and return dictionaries. **Arguments use snake_case; response fields and low-level completion payloads use HTTP camelCase.** `check_connection()` returns the current project. List methods accept keyword-only `after=None, limit=100`; limits are 1–100. Responses contain `items` and `nextCursor`.
+Client methods are synchronous and return dictionaries. **Arguments use snake_case; response fields and low-level completion payloads use HTTP camelCase.** `check_connection()` returns the current project. List methods accept keyword-only `after=None, limit=100`; limits are 1–100. Responses contain `items` and `nextCursor`. `list_eval_sets`, `list_evaluators`, `list_datasets` and `list_scorers` also accept `tags`, which keeps items carrying any of the named [tags](#tags).
 
 Evaluation responses are limited to **4 MiB**. `list_cases(version_id, ...)` includes case content, so a valid row limit can still produce an oversized response when cases are large. Request a smaller page, such as `limit=1`, and pass each non-null `nextCursor` as `after`. The client does not automatically split or retry an oversized page.
 
@@ -200,13 +200,16 @@ Use these product-named methods in new code. They call the same v1 endpoints as 
 
 | Method | Parameters and result |
 | --- | --- |
-| `create_eval_set(*, name, slug, description="")` / `get_eval_set(eval_set_id)` / `list_eval_sets(...)` | Eval set with initial `versions` / an eval set / page of summaries. |
+| `create_eval_set(*, name, slug, description="", tags=None)` / `get_eval_set(eval_set_id)` / `list_eval_sets(...)` | Eval set with initial `versions` / an eval set / page of summaries. |
+| `update_eval_set(eval_set_id, *, name=None, slug=None, description=None, tags=None)` | Rename an eval set or replace its tags; omitted fields stay. |
 | `create_eval_set_version(eval_set_id, *, from_version_id=None)` / `get_eval_set_version(version_id)` | New editable version / a version. |
 | `list_eval_set_cases(version_id, ...)` / `add_eval_set_case(version_id, *, expected_revision, external_key, inputs, expected=MISSING, metadata=None)` | Page of cases / `{ "item": ..., "version": ... }`; retain the updated revision. |
 | `freeze_eval_set_version(version_id, expected_revision)` | Frozen eval set version. |
-| `create_evaluator(*, name, slug, description="")` / `get_evaluator(evaluator_id)` / `list_evaluators(...)` | Register or retrieve evaluator identities. |
+| `create_evaluator(*, name, slug, description="", tags=None)` / `get_evaluator(evaluator_id)` / `list_evaluators(...)` | Register or retrieve evaluator identities. |
+| `update_evaluator(evaluator_id, *, name=None, description=None, tags=None)` | Rename an evaluator or replace its tags; omitted fields stay. |
 | `publish_evaluator_version(evaluator_id, definition)` / `get_evaluator_version(version_id)` | Publish or retrieve an immutable evaluator version. |
-| `create_run(*, idempotency_key, name, eval_set_version_id, evaluator_version_ids, config)` | `{ "id": ..., "scoringId": ..., "evaluationRunId": ... }`. |
+| `create_run(*, idempotency_key, name, eval_set_version_id, evaluator_version_ids, config, tags=None)` | `{ "id": ..., "scoringId": ..., "evaluationRunId": ... }`. |
+| `update_run(run_id, *, name=None, tags=None)` | Rename a run or replace its own tags → `{ "id", "name", "tags", "evalSetTags" }`. |
 | `get_run(run_id)` / `list_run_items(run_id, ...)` / `get_run_case(run_id, case_id)` | Read pinned configuration and cases. |
 | `start_run_execution(run_id, case_id, *, idempotency_key, ...)` / `get_run_execution(execution_id)` / `complete_run_execution(execution_id, payload)` | Start or recover an attempt / retrieve it / acknowledge its terminal outcome. |
 | `finish_run(run_id, idempotency_key)` | `{ "id": ..., "finishedAt": ... }`. |
@@ -214,20 +217,33 @@ Use these product-named methods in new code. They call the same v1 endpoints as 
 | `get_scoring(scoring_id)` / `list_scorings(...)` / `list_scoring_items(scoring_id, ...)` / `get_scoring_subject(subject_id)` | Read a scoring pass, the project's scoring passes, its items and immutable saved evidence. |
 | `submit_scoring_results(scoring_id, *, idempotency_key, results)` | `{ "ids": [...] }`; each result names its `evaluatorVersionId`. |
 | `list_scoring_results(scoring_id, ...)` / `get_scoring_result(result_id)` | Result summaries / a stored result. |
+| `list_tags()` | `{ "items": [...] }`, the project's tags in the order they were created. |
 
 A run ID and a scoring ID identify different records.
+
+### Tags
+
+Tags group eval sets, evaluators and runs, for example by the area of the agent they test. Methods take tag names: a name the project has no tag for creates one, and names match without case. `create_eval_set`, `create_evaluator` and `create_run` accept `tags`; `update_eval_set`, `update_evaluator` and `update_run` replace an item's tags with the names you pass; `list_eval_sets` and `list_evaluators` keep items carrying any of the named `tags`; and `list_tags()` returns the project's tags, each with `id`, `name` and `color`. Responses carry each item's `tags`. A run also shows its eval set's tags in `evalSetTags`; they are not its own, so `update_run` leaves them unchanged. The dataset, scorer and experiment methods take the same `tags`. Tags require a Hue server that supports them.
+
+```python
+client.create_eval_set(name="Refunds", slug="refunds", tags=["billing"])
+client.update_evaluator(evaluator_id, tags=["billing", "regression"])
+billing = client.list_eval_sets(tags=["billing"])
+```
 
 ### Datasets and scorer definitions
 
 | Method | Parameters and result |
 | --- | --- |
-| `create_dataset(*, name, slug, description="")` | Dataset with initial `versions`. |
+| `create_dataset(*, name, slug, description="", tags=None)` | Dataset with initial `versions`. |
+| `update_dataset(dataset_id, *, name=None, slug=None, description=None, tags=None)` | Rename a dataset or replace its tags; omitted fields stay. |
 | `get_dataset(dataset_id)` / `list_datasets(...)` | Retrieve a dataset / page of summaries. |
 | `create_dataset_version(dataset_id, *, from_version_id=None)` | New editable version. |
 | `get_dataset_version(version_id)` / `list_cases(version_id, ...)` | Retrieve a version / page of cases. |
 | `add_case(version_id, *, expected_revision, external_key, inputs, expected=MISSING, metadata=None)` | `{ "item": ..., "version": ... }`; retain the updated revision. |
 | `freeze_dataset_version(version_id, expected_revision)` | Frozen dataset version. |
-| `create_scorer(*, name, slug, description="")` / `get_scorer(scorer_id)` / `list_scorers(...)` | Register or retrieve scorer identities. |
+| `create_scorer(*, name, slug, description="", tags=None)` / `get_scorer(scorer_id)` / `list_scorers(...)` | Register or retrieve scorer identities. |
+| `update_scorer(scorer_id, *, name=None, description=None, tags=None)` | Rename a scorer or replace its tags; omitted fields stay. |
 | `publish_scorer_version(scorer_id, definition)` / `get_scorer_version(version_id)` | Publish or retrieve an immutable scorer version. |
 
 Use `MISSING` or omit `expected` to declare no reference. `None` is a present JSON-null reference. Freeze the dataset and publish scorer definitions before creating an experiment.
@@ -245,7 +261,7 @@ Scorer `definition` dictionaries use **camelCase** keys, even when supplied to a
 
 Import the built-in bundle as `from hue_sdk.evals import builtin_scorers`. `builtins` remains an alias, but it shadows the standard-library module of the same name in any file that imports it. `builtin_scorers.json_schema` needs the optional `hue-run[evals]` extra (`jsonschema` and `referencing`); without it the helper raises `ImportError` and stored schema scorers report `SchemaValidatorUnavailable`.
 
-Each metric definition has a `name` and `type`: `boolean`, `text`, `number` (optional `min`/`max`), or `category` (required `categories`, a list of strings). Results must match the pinned definitions exactly.
+Each metric definition has a `name` and `type`: `boolean`, `text`, `number` (optional `min`/`max`), or `category` (required `categories`, a list of strings). An optional `description` (1–500 characters) is shown with the metric's check in Hue's run view. Results must match the pinned definitions exactly.
 
 Hosted `config` requires `model`, `provider`, `rubric`, `bindings` (a list of dictionaries with `name`, `path`, `required`), `maxOutputTokens` and `timeoutMs`; `temperature` is optional. The declaration states the requested policy; the server validates supported values and project execution settings when it is used.
 
@@ -253,7 +269,8 @@ Hosted `config` requires `model`, `provider`, `rubric`, `bindings` (a list of di
 
 | Method | Parameters and result |
 | --- | --- |
-| `create_experiment(*, idempotency_key, name, dataset_version_id, scorer_version_ids, config)` | `{ "id": ..., "evaluationRunId": ... }`. |
+| `create_experiment(*, idempotency_key, name, dataset_version_id, scorer_version_ids, config, tags=None)` | `{ "id": ..., "evaluationRunId": ... }`. |
+| `update_experiment(experiment_id, *, name=None, tags=None)` | Rename an experiment or replace its own tags → `{ "id", "name", "tags", "evalSetTags" }`. |
 | `get_experiment(experiment_id)` / `list_experiment_items(experiment_id, ...)` / `get_experiment_case(experiment_id, case_id)` | Read pinned configuration and cases. |
 | `start_execution(experiment_id, case_id, *, idempotency_key, trace_external_id=None, previous_execution_id=None, allow_uncertain_retry=False)` | Start or recover an execution attempt. |
 | `get_execution(execution_id)` / `complete_execution(execution_id, payload)` | Retrieve an attempt / acknowledge its terminal outcome. |
@@ -267,7 +284,7 @@ Hosted `config` requires `model`, `provider`, `rubric`, `bindings` (a list of di
 
 Each submitted result requires `evaluationItemId`, `scorerVersionId` and the `Score` fields described below; a local-code result also carries `sourceDigest`. A scored result has `metrics` entries with `name`, `value` and optional `passed`, plus a nonempty `explanation` or an `evidence` value. Error results contain `error` with `type` and optional `message`; skipped results contain an `explanation`.
 
-A read, or a mutation the server deduplicates by the `idempotencyKey` in its body, is sent again after a connection failure, a timeout or a 408 or 5xx without `Retry-After`, up to `max_attempts` (default 4, range 1–10) times with a jittered backoff; `is_transient_api_error(error)` names those failures. A mutation without a key is sent once: preserve idempotency keys and returned IDs across retries after a lost response. `HueApiError.status` is the HTTP status when available, `HueApiError.diagnostic` Hue's `X-Hue-Diagnostic` code when it sent one, and `HueApiError.reason` is `malformed_response` for a body the client refused; errors do not echo server bodies. The client rejects invalid JSON before writes, does not follow redirects, and limits request/response bodies to 1 MiB/4 MiB.
+A read, an update that sets given fields (`update_eval_set`, `update_evaluator`, `update_run` and their dataset, scorer and experiment forms), or a mutation the server deduplicates by the `idempotencyKey` in its body, is sent again after a connection failure, a timeout or a 408 or 5xx without `Retry-After`, up to `max_attempts` (default 4, range 1–10) times with a jittered backoff; `is_transient_api_error(error)` names those failures. Any other mutation is sent once: preserve idempotency keys and returned IDs across retries after a lost response. `HueApiError.status` is the HTTP status when available, `HueApiError.diagnostic` Hue's `X-Hue-Diagnostic` code when it sent one, and `HueApiError.reason` is `malformed_response` for a body the client refused; errors do not echo server bodies. The client rejects invalid JSON before writes, does not follow redirects, and limits request/response bodies to 1 MiB/4 MiB.
 
 Runner target outputs and built-in JSON Schema declarations are limited to 200,000 serialized bytes. JSON validation also enforces nesting depth 32 and 20,000 nodes; for an HTTP write, those structural limits apply to the complete request body. Values must use finite JSON numbers, valid Unicode without NUL, string dictionary keys, lists and dictionaries without cycles. Python integers outside `-(2**53 - 1)` through `2**53 - 1` are rejected; use strings for larger exact integers. The server can apply additional field-specific limits.
 
@@ -402,7 +419,7 @@ finally:
 | `legacy_mcp_capability(world)` | `LegacyMcpCapability`, `{"url", "token", "expiresAt"}` for the first MCP mirror, or `None` without an MCP surface. |
 | `world_now(source=None)` | The world's clock as an aware `datetime`, from a handoff's `now` or from `HUE_WORLD_NOW` in the given environment (`os.environ` by default); `None` when neither names it, so fall back explicitly with `world_now() or datetime.now(timezone.utc)`. Requires 0.7.0. |
 | `strip_hue_control_plane_credentials(parent)` | A copy of `parent` without Hue control-plane credentials. |
-| `is_hue_control_plane_credential(name, value)` | `True` for a name in `HUE_CONTROL_PLANE_VARIABLES` (`HUE_API_KEY`, `HUE_MCP_KEY`, `HUE_PROJECT_KEY`, `HUE_SERVICE_KEY`) or a value that starts with `hue_sk_`, `hue_mcp_` or `hue_attempt_`. |
+| `is_hue_control_plane_credential(name, value)` | `True` for a name in `HUE_CONTROL_PLANE_VARIABLES` (`HUE_API_KEY`, `HUE_MCP_KEY`, `HUE_PROJECT_KEY`, `HUE_SERVICE_KEY`) or a value carrying a prefix from `HUE_CONTROL_PLANE_CREDENTIAL_PREFIXES` (`hue_sk_`, `hue_attempt_`, `hue_mcp_`, `hue_setup_`, `hue_inv_`, `hue_install_`, `hue_at_`, `hue_rt_`, `hue_oauth_`) anywhere in it, including wrapped, percent-encoded or JSON-Unicode-escaped values. A world token or `hue_sim_` capability is not one. |
 
 `WorldHandoff` has `id`, `token` (a `hue_world_` credential that lives as long as the world), `expiresAt`, `lifecycle` (`WorldLifecycle`: `pending`, `live`, `completing` or `sealed`), `completingUntil`, `traceparent`, `baggage`, `surfaces` (`WorldSurface` entries with `provider`, `surface`, `providerInstanceKey`, `url` and `alias`), `env` (`HUE_WORLD_ID`, `HUE_WORLD_TOKEN`, `BAGGAGE`, `TRACEPARENT` and one `HUE_SIM_<SURFACE ID>_URL` per surface) and `mcpConfig` (`WorldMcpConfig`, the common `mcpServers` shape of `WorldMcpServer` entries with the token as a bearer). `RunState` of a gateway world adds advisory `flags` (`WorldFlag`: `no_calls` or `fingerprint_differs`) and never returns the token; `WorldEvidenceSection` names the evidence sections.
 

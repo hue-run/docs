@@ -646,7 +646,7 @@ print(json.dumps(answer))  # logs go to stderr, never stdout
 Run with a **Read and write** key that `hue login` stored in an ignored env file:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.13.0 --package "zod@^4.6.5" hue eval --case "<name>" --command "node agent.js" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.13.1 --package "zod@^4.6.5" hue eval --case "<name>" --command "node agent.js" --env-file .env.hue
 ```
 
 `hue eval` needs Node.js 22 or 24, even for a Python agent. The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the agent's repository gains no package.json or dependency. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `--package @hue-run/sdk` runs that local, possibly older, copy. Installing zod in the project does not help when the SDK itself is not installed there: the CLI exits with `hue eval needs zod`, even for `--help`.
@@ -669,7 +669,7 @@ The command receives this environment, and only the current case's world sets it
 To let the **Run** button in Hue and the `launch_local_run` MCP tool use the same agent, start a worker instead. It claims runs Hue queues and executes them on your machine with the same handoff:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.13.0 --package "zod@^4.6.5" hue eval --worker --command "node agent.js" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.13.1 --package "zod@^4.6.5" hue eval --worker --command "node agent.js" --env-file .env.hue
 ```
 
 A TypeScript adapter runs inside `hue eval`'s own process, where `HUE_WORLD_TOKEN` and `HUE_EXECUTION_ID` are not set, so the helper would return production values. An adapter must throw when `context.world` is missing, then either pass `context.world.env` as `env` to every helper call or spawn the agent with [`agentEnvironment(context.world)`](/reference/typescript#world-handoff). Never set `process.env` yourself: with `--concurrency` above 1 that leaks one case's world into another. Prefer `--command`, which the helper protects without changes. Python drives worlds with the [`hue_sdk.environment`](/reference/python#world-handoff) helpers `agent_environment` and `mcp_config_file`. A world the simulation gateway does not serve has no handoff and sets no `HUE_WORLD_TOKEN`; it offers only the deprecated Hue-native capability, which an eval-ready agent does not use, and the helper refuses such a case because `HUE_EXECUTION_ID` is set without `HUE_WORLD_TOKEN`. See [worlds with a handoff](/evaluations/simulations#worlds-with-a-handoff).
