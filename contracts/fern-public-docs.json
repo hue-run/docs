@@ -589,7 +589,7 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.13.1"
+      "version": "0.13.2"
     },
     "python": {
       "name": "hue-run",
@@ -1057,7 +1057,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false
         }
@@ -1297,7 +1297,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false
         }
@@ -1309,7 +1309,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false
         }
@@ -1321,7 +1321,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false
         }
@@ -1441,7 +1441,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false
         }
@@ -1597,7 +1597,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": false,
           "openWorldHint": false
         }
@@ -1832,12 +1832,12 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "c54f54d6f182c9ee3708bd1ef632e9212b6728387e6179925486f00decf9e8bd",
+    "catalogSha256": "c47a9347fad810afb1297d1409e30c1f860e286808a7f48c62801341d1cbba7c",
     "serverInstructionsSha256": "a57ca5d20b45f22f4e1edcb1935b3555d47afeb0601f7bef597bef4e45d7a2ce",
     "guides": {
       "data-model": {
         "title": "Hue data model",
-        "sha256": "105265e9f2f6830c6b7f62ba2c2a83e7c714d38d13de990ccd4f958b47eb7211"
+        "sha256": "b8184f8249487f340ac9e2788fdeafab7d1be92326cd35a2f00c3c36ea7bb95d"
       },
       "production": {
         "title": "Read production traces with Hue",
@@ -1849,11 +1849,11 @@
       },
       "author": {
         "title": "Author evaluations with Hue",
-        "sha256": "ddbac969a04ceff6722c5d09af577d40c0583d808dcdcabe6e2877f770b0fe03"
+        "sha256": "610a99a489be17cfcac5098b1f8336964f3d9c4d5e14f2b9a5924e88aa20b88d"
       },
       "evaluate": {
         "title": "Run your agent against a case",
-        "sha256": "d91e750cc6680e62a68884d3296ab885177cc70efa8af77a554b2914e7a7fffd"
+        "sha256": "40a5f4c83d3445e4c44e0b2ea8eda0ac180773b64afec3e60fa5ea0e68c702f2"
       }
     },
     "toolsets": {
