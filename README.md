@@ -4,7 +4,7 @@ This repository publishes the customer documentation at [docs.hue.run](https://d
 
 ## Local checks
 
-Use Bun 1.3.9 and Node.js 24:
+Use Bun 1.3.9, Node.js 24 and Python 3.10 or later. The copied Python helper is tested with `python3`, which must be on your `PATH`; install [Python](https://www.python.org/downloads/) if it is missing. Check it with `python3 --version`, then run:
 
 ```sh
 bun install --frozen-lockfile

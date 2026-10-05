@@ -4,7 +4,7 @@ sidebarTitle: "Eval-ready agent"
 description: "Commit one helper that points your agent's own app clients at Hue's mirrors during an evaluation and leaves production unchanged, then run published cases with hue eval."
 ---
 
-In a Hue evaluation your agent runs unchanged, in your process, against a fresh simulated world per case. Hue never executes the agent, never intercepts its network traffic and never adds tools. The one thing that changes is where the agent's own app clients point, and a helper you commit once decides that.
+In a Hue evaluation your agent runs in your process. A case with app calls gives it a fresh simulated world; an answer-only case gives it the reviewed task and context without a world. Hue never executes the agent, intercepts its network traffic or adds tools. For a case with a world, a helper you commit once points your agent's own app clients at its mirrors.
 
 This guide is for any agent that talks to apps such as Gmail, Slack or Notion over MCP or REST, in any language, including agents that reach apps through their own meta-tools or through code the model writes. It describes the current `@hue-run/sdk` release, which the commands below pin; a `--command` agent in any language needs no Hue package. For the TypeScript callback path and what a world is, see [simulations](/evaluations/simulations); for the command reference, see [`hue eval`](/sdks/cli#run-an-evaluation).
 
@@ -26,7 +26,7 @@ The mirrors serve the real app's captured catalog, or the tool list the trace th
 
 ## The one-time change
 
-Read each app's URL and credential through a helper that detects an evaluation and falls back to the production values otherwise. `hue eval --command` sets `HUE_WORLD_TOKEN` only in the process it starts, so its presence means an evaluation. During one, the helper reads the mirror URL from the app's `HUE_SIM_<SURFACE>_URL` variable and uses `HUE_WORLD_TOKEN` as the bearer. It **fails closed**: a missing variable for an app the agent needs throws before any request, and never falls back to the real app inside an evaluation. It also refuses a case without a world: `hue eval --command` always sets `HUE_EXECUTION_ID`, so that variable without `HUE_WORLD_TOKEN` throws instead of running the agent against the real app. Without either variable it returns the production URL and credential unchanged, so production behavior is identical.
+Read each app's URL and credential through a helper that detects an evaluation and falls back to the production values otherwise. `hue eval --command` always sets `HUE_EXECUTION_ID`; a case with a world also sets `HUE_WORLD_TOKEN`. During an evaluation, connect optional apps only where `appInWorld(variable)` is true. An answer-only case skips those apps and can answer without tools. A required app connection or MCP configuration **fails closed** without a world token or its mirror URL, before any request and without reading the real credential. With neither evaluation variable set, the helper returns the production URL and credential unchanged.
 
 Every function takes the environment as an argument that defaults to the process environment, so a test can pass a mapping and an in-process adapter can pass a world's `env`. Copy the helper into your package, import it the way the package imports its other modules, and trim the functions no call site uses. Commit it with its call sites, an optional thin entry point and an optional test of the [checks below](#verify-before-you-finish), run without Hue credentials. A temporary stderr line that logs variable names is not committed. Nothing else changes: not the prompts, the model, the tools or the dependencies.
 
@@ -43,21 +43,16 @@ import { join } from "node:path";
 export type Env = Record<string, string | undefined>;
 
 /**
- * True only in the process `hue eval` started for a case with a world. `hue eval --command`
- * always sets HUE_EXECUTION_ID; a case it started without HUE_WORLD_TOKEN has no world (the
- * simulation gateway does not serve it), so running the agent would reach the real app: refuse.
+ * Detect an evaluation with or without a world. A world passed to an in-process adapter
+ * carries HUE_WORLD_TOKEN; the command always receives HUE_EXECUTION_ID.
  */
 export function inHueEval(env: Env = process.env): boolean {
-  if (env.HUE_WORLD_TOKEN) return true;
-  if (env.HUE_EXECUTION_ID) {
-    throw new Error("Hue eval: this case has no world handoff (HUE_WORLD_TOKEN is not set); refusing to run the agent against the real app");
-  }
-  return false;
+  return Boolean(env.HUE_EXECUTION_ID || env.HUE_WORLD_TOKEN);
 }
 
 /** Whether to connect an app at all: always in production, in an evaluation only when the world mirrors it. */
 export function appInWorld(variable: string, env: Env = process.env): boolean {
-  return !inHueEval(env) || Boolean(env[variable]);
+  return !inHueEval(env) || Boolean(env.HUE_WORLD_TOKEN && env[variable]);
 }
 
 /**
@@ -70,6 +65,9 @@ export function appEndpoint(
   env: Env = process.env,
 ): { url: string; token: string } {
   if (!inHueEval(env)) return production();
+  if (!env.HUE_WORLD_TOKEN) {
+    throw new Error("Hue eval: this case has no world handoff (HUE_WORLD_TOKEN is not set); refusing to connect the app");
+  }
   const url = env[variable];
   if (!url) {
     const present = Object.keys(env).filter((key) => /^HUE_SIM_.*_URL$/.test(key)).sort();
@@ -92,6 +90,9 @@ export function mcpServersFile(
   env: Env = process.env,
 ): { path: string; dispose(): void } {
   if (!inHueEval(env)) return { path: production, dispose() {} };
+  if (!env.HUE_WORLD_TOKEN) {
+    throw new Error("Hue eval: this case has no world handoff (HUE_WORLD_TOKEN is not set); refusing to load MCP servers");
+  }
   const config = JSON.parse(readFileSync(production, "utf8")) as {
     mcpServers: Record<string, Record<string, unknown>>;
   };
@@ -127,25 +128,13 @@ from contextlib import contextmanager
 
 
 def in_hue_eval(env: Mapping[str, str] = os.environ) -> bool:
-    """True only in the process `hue eval` started for a case with a world.
-
-    `hue eval --command` always sets HUE_EXECUTION_ID; a case it started without
-    HUE_WORLD_TOKEN has no world (the simulation gateway does not serve it), so running
-    the agent would reach the real app: refuse.
-    """
-    if env.get("HUE_WORLD_TOKEN"):
-        return True
-    if env.get("HUE_EXECUTION_ID"):
-        raise RuntimeError(
-            "Hue eval: this case has no world handoff (HUE_WORLD_TOKEN is not set); "
-            "refusing to run the agent against the real app"
-        )
-    return False
+    """Detect an evaluation with or without a world."""
+    return bool(env.get("HUE_EXECUTION_ID") or env.get("HUE_WORLD_TOKEN"))
 
 
 def app_in_world(variable: str, env: Mapping[str, str] = os.environ) -> bool:
     """Connect an app always in production, and in an evaluation only when mirrored."""
-    return not in_hue_eval(env) or bool(env.get(variable))
+    return not in_hue_eval(env) or bool(env.get("HUE_WORLD_TOKEN") and env.get(variable))
 
 
 def app_endpoint(
@@ -159,6 +148,11 @@ def app_endpoint(
     """
     if not in_hue_eval(env):
         return production()
+    if not env.get("HUE_WORLD_TOKEN"):
+        raise RuntimeError(
+            "Hue eval: this case has no world handoff (HUE_WORLD_TOKEN is not set); "
+            "refusing to connect the app"
+        )
     url = env.get(variable)
     if not url:
         present = sorted(k for k in env if re.fullmatch(r"HUE_SIM_.*_URL", k))
@@ -187,6 +181,11 @@ def mcp_servers_file(
     if not in_hue_eval(env):
         yield production
         return
+    if not env.get("HUE_WORLD_TOKEN"):
+        raise RuntimeError(
+            "Hue eval: this case has no world handoff (HUE_WORLD_TOKEN is not set); "
+            "refusing to load MCP servers"
+        )
     with open(production, encoding="utf-8") as file:
         config = json.load(file)
     known = {"type", "url", "headers"}
@@ -245,7 +244,7 @@ Experimental mirrors follow the same rule, one variable per surface: Linear has 
 
 ### Agents that use several apps
 
-A world includes only the apps its case pins, so a Gmail-only case has no Slack mirror. Resolve every app at startup, before the first model or app request and outside tool error handling, so a refusal ends the process instead of becoming a tool error the model reads. During an evaluation, connect only the apps where `appInWorld(variable)` is true, and log each skipped app's name to stderr. In production `appInWorld` is always true, so production connects everything as before. "Same tools" then means every app the world includes exposes the tools production has.
+A world includes only the apps its case pins, so a Gmail-only case has no Slack mirror. An answer-only case has no app mirrors. Resolve every required app at startup, before the first model or app request and outside tool error handling, so a refusal ends the process instead of becoming a tool error the model reads. Connect optional apps only where `appInWorld(variable)` is true, and log each skipped app's name to stderr. In production `appInWorld` is always true, so production connects everything as before. "Same tools" then means every app the world includes exposes the tools production has.
 
 ## Call sites
 
@@ -608,7 +607,9 @@ A world's clock is the recorded start of the trace it was built from, not the wa
 
 ## Run it
 
-`hue eval` starts your agent's own command once per case, in a fresh world, with the world's variables set. Nothing is edited per run. The command contract is small: read `{"inputs","config"}` as JSON from stdin, run the unchanged production agent once, print the answer on stdout and exit.
+`hue eval` starts your agent's own command once per case. A case with a world sets its world variables; an answer-only case sets the execution and case variables without a world token or app mirrors. Nothing is edited per run. The command contract is small: read `{"inputs","config"}` as JSON from stdin, run your agent once, print the answer on stdout and exit. Answer-only cases keep their generated answer checks and required judge; see [trace to case](/evaluations/case-from-trace#answer-only-cases).
+
+Use an absolute path to the command's entry point for a one-shot run. A one-shot direct case starts the command in a private case directory, so a path relative to your repository will not resolve there. A command worker keeps the directory where you started the CLI for both answer-only and world cases. The examples below expand `$PWD` in your shell before starting the CLI.
 
 `inputs` is the input your agent's root span recorded in the source trace (a string, an object such as `{task}`, `{query}` or `{prompt}`, or a messages array), or what the reviewer authored. When earlier turns were included it is `{"task": <that input>, "priorContext": [<earlier inputs>]}`. `get_case` with `include_content` shows it. Map it to your production entry argument, and pass `priorContext` through as earlier turns. Stdout is parsed as JSON when it is valid JSON, otherwise stored as text, at most 4 MiB. A non-zero exit, or a timeout (default 600 seconds, `--timeout`), errors the case.
 
@@ -646,12 +647,12 @@ print(json.dumps(answer))  # logs go to stderr, never stdout
 Run with a **Read and write** key that `hue login` stored in an ignored env file:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.13.1 --package "zod@^4.6.5" hue eval --case "<name>" --command "node agent.js" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.13.2 --package "zod@^4.6.5" hue eval --case "<name>" --command "node \"$PWD/agent.js\"" --env-file .env.hue
 ```
 
 `hue eval` needs Node.js 22 or 24, even for a Python agent. The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the agent's repository gains no package.json or dependency. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `--package @hue-run/sdk` runs that local, possibly older, copy. Installing zod in the project does not help when the SDK itself is not installed there: the CLI exits with `hue eval needs zod`, even for `--help`.
 
-The command receives this environment, and only the current case's world sets its world variables:
+Every case receives execution and case variables. Only a case with a world receives the world and mirror variables:
 
 | Variable | Meaning |
 | --- | --- |
@@ -659,27 +660,31 @@ The command receives this environment, and only the current case's world sets it
 | `HUE_WORLD_NOW` | The world's clock at creation, RFC 3339, when Hue sends it. |
 | `HUE_SIM_<SURFACE>_URL` | One per mirror; see [variable names](#variable-names). |
 | `HUE_MCP_CONFIG` | An owner-only `mcpServers` file for the world's MCP mirrors, removed after the case. |
-| `TRACEPARENT`, `BAGGAGE` | The case span's trace context and `hue-world=<id>`. |
-| `HUE_EXECUTION_ID`, `HUE_ENVIRONMENT_RUN_ID`, `HUE_CASE_ID`, `HUE_CASE_KEY` | The attempt, the world, and the case. |
+| `TRACEPARENT`, `BAGGAGE` | A world case's trace context and `hue-world=<id>`. |
+| `HUE_EXECUTION_ID`, `HUE_CASE_ID`, `HUE_CASE_KEY` | The execution and the case, including answer-only cases. |
+| `HUE_ENVIRONMENT_RUN_ID` | The world, only for a case with a world. |
 | `HUE_CASE_DIR`, `HUE_CASE_INPUTS`, `HUE_CASE_OUTPUT_DIR` | A private case directory: the inputs file, the case's input files under `files/<role>/`, and `output/`, whose files are uploaded after the case. |
 | `HUE_MCP_URL`, `HUE_MCP_TOKEN`, `HUE_MCP_EXPIRES_AT` | Legacy names for the first MCP mirror. |
 
-`HUE_API_KEY` and any other Hue-key-shaped value are removed from the command's environment. Other variables in your shell and in `--env-file` reach the command, so the model key can live in either; don't reload a file that contains `HUE_API_KEY` inside the command (for example `uv run --env-file .env`). `hue eval` writes checkpoints to `.hue/eval/<agent-key>`; add `.hue/` to `.gitignore`. World cases with input files put them under `HUE_CASE_DIR/files/<role>/`; a worker registers `--capability environment-files:v1` (and `input:pdf`). Keep logs on stderr: stdout is stored, with the credentials `hue eval` handed it redacted. Exit code 0 means every case passed; 1 means a case failed, errored, is inconclusive or is incomplete; 2 is a usage error; 130 is an interrupt. Rerun with `--baseline <previous experimentId>` to compare.
+`HUE_API_KEY` and any other Hue-key-shaped value are removed from the command's environment. Other variables in your shell and in `--env-file` reach the command, so the model key can live in either; don't reload a file that contains `HUE_API_KEY` inside the command (for example `uv run --env-file .env`). `hue eval` writes checkpoints to `.hue/eval/<agent-key>`; add `.hue/` to `.gitignore`. World cases with input files put them under `HUE_CASE_DIR/files/<role>/`; a worker registers `--capability environment-files:v1` (and `input:pdf`). Keep logs on stderr: stdout is stored, with the credentials `hue eval` handed it redacted. For a one-shot run, exit code 0 means every case passed; 1 means a case failed, errored, is inconclusive or is incomplete; 2 is a usage error; 130 is an interrupt. Rerun with `--baseline <previous experimentId>` to compare.
 
-To let the **Run** button in Hue and the `launch_local_run` MCP tool use the same agent, start a worker instead. It claims runs Hue queues and executes them on your machine with the same handoff:
+To let the **Run** button in Hue and the `launch_local_run` MCP tool use the same agent for answer-only cases, world cases or an eval set containing both, start a command worker. It claims runs Hue queues and executes them on your machine with the same stdin handoff:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.13.1 --package "zod@^4.6.5" hue eval --worker --command "node agent.js" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.13.2 --package "zod@^4.6.5" hue eval --worker --command "node \"$PWD/agent.js\"" --revision "<new-agent-revision>" --env-file .env.hue
 ```
 
-A TypeScript adapter runs inside `hue eval`'s own process, where `HUE_WORLD_TOKEN` and `HUE_EXECUTION_ID` are not set, so the helper would return production values. An adapter must throw when `context.world` is missing, then either pass `context.world.env` as `env` to every helper call or spawn the agent with [`agentEnvironment(context.world)`](/reference/typescript#world-handoff). Never set `process.env` yourself: with `--concurrency` above 1 that leaks one case's world into another. Prefer `--command`, which the helper protects without changes. Python drives worlds with the [`hue_sdk.environment`](/reference/python#world-handoff) helpers `agent_environment` and `mcp_config_file`. A world the simulation gateway does not serve has no handoff and sets no `HUE_WORLD_TOKEN`; it offers only the deprecated Hue-native capability, which an eval-ready agent does not use, and the helper refuses such a case because `HUE_EXECUTION_ID` is set without `HUE_WORLD_TOKEN`. See [worlds with a handoff](/evaluations/simulations#worlds-with-a-handoff).
+TypeScript 0.13.2 command workers register both `direct:v1` and `environment:v1`. When upgrading an existing worker, use a new `--revision`: a registered revision's capabilities cannot change. Keep that revision stable for runs that should use the same agent code.
+
+A TypeScript adapter runs inside `hue eval`'s own process, where `HUE_WORLD_TOKEN` and `HUE_EXECUTION_ID` are not set, so the helper would return production values. A world-only adapter must throw when `context.world` is missing, then either pass `context.world.env` as `env` to every helper call or spawn the agent with [`agentEnvironment(context.world)`](/reference/typescript#world-handoff). A direct adapter receives `context.mode: "direct"` and `context.executionId`; pass `{ HUE_EXECUTION_ID: context.executionId }` to the helper and do not connect apps. Adapter-file workers register only world support by default; add `--capability direct:v1` only after the adapter handles that direct context. Never set `process.env` yourself: with `--concurrency` above 1 that leaks one case's world into another. Prefer `--command`, which supplies the correct case environment. Python drives worlds with the [`hue_sdk.environment`](/reference/python#world-handoff) helpers `agent_environment` and `mcp_config_file`. A world the simulation gateway does not serve has no handoff and sets no `HUE_WORLD_TOKEN`; a required app connection refuses it. See [worlds with a handoff](/evaluations/simulations#worlds-with-a-handoff).
 
 ## Verify before you finish
 
-- **Production unchanged.** With `HUE_WORLD_TOKEN` unset, the helper returns the production URL and credential for every call site, and the application's existing tests pass.
-- **Fail closed.** With `HUE_WORLD_TOKEN` set and one `HUE_SIM_<SURFACE>_URL` unset, and with `HUE_EXECUTION_ID` set but `HUE_WORLD_TOKEN` unset, the helper throws before any request is sent. Code the model writes cannot reach the real host.
+- **Production unchanged.** With both `HUE_WORLD_TOKEN` and `HUE_EXECUTION_ID` unset, the helper returns the production URL and credential for every call site, and the application's existing tests pass.
+- **Answer-only.** With `HUE_EXECUTION_ID` set and no world token, evaluation detection succeeds, optional apps are skipped and the agent can answer without tools.
+- **Fail closed.** A required app or MCP connection without a world token, or an app without its mirror URL, throws before any request is sent and never reads production credentials. Code the model writes cannot reach the real host.
 - **Same tools.** Every app the world includes exposes the tools production has. Nothing was added or removed, and nothing Hue-native was handed to the agent.
-- **Adapter**, when you use one. With no world variables in `process.env` and `context.world` set, every call site resolves to the mirror; with `context.world` absent, the adapter throws.
+- **Adapter**, when you use one. Pass the supplied world's environment for world cases and the execution identity for direct cases. A world-only adapter refuses a missing world; a direct adapter connects no apps.
 - **Clean diff.** The change is the helper, its call sites, an optional entry point and an optional test, and no Hue variable or value is in production configuration, secrets or a committed file.
 - **A real run.** You have the run URL, the printed verdicts, `get_case_divergence` on a failing case, and stdout that carried no credential.
 
@@ -696,7 +701,7 @@ A TypeScript adapter runs inside `hue eval`'s own process, where `HUE_WORLD_TOKE
 | --- | --- |
 | Exit 1 with an unsaved eval-set version | Rerun with `--save-version`. |
 | `hue eval needs zod` | Use the two-package `npx` form above. |
-| The helper throws "no world handoff" | The case's world has no gateway handoff; it offers only the deprecated Hue-native capability, which an eval-ready agent does not use. |
+| The helper throws "no world handoff" | A required app or MCP connection has no world token. An answer-only case should skip optional apps; a case that needs apps requires a world with a gateway handoff. |
 | The helper throws "`HUE_SIM_…_URL` is not set" | The world does not include that app; connect it only where `appInWorld` is true. |
 | 501 `surface_unavailable` | The case needs a mirror this deployment does not serve. |
 | `no_calls` on a case that needed app calls | Check where the agent's requests went before changing a call site; see below. |
