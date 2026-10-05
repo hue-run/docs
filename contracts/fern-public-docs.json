@@ -1057,7 +1057,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false
         }
@@ -1297,7 +1297,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false
         }
@@ -1309,7 +1309,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false
         }
@@ -1321,7 +1321,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false
         }
@@ -1441,7 +1441,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false
         }
@@ -1597,7 +1597,7 @@
         "access": "write",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": false,
           "openWorldHint": false
         }
@@ -1832,7 +1832,7 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "c54f54d6f182c9ee3708bd1ef632e9212b6728387e6179925486f00decf9e8bd",
+    "catalogSha256": "c47a9347fad810afb1297d1409e30c1f860e286808a7f48c62801341d1cbba7c",
     "serverInstructionsSha256": "a57ca5d20b45f22f4e1edcb1935b3555d47afeb0601f7bef597bef4e45d7a2ce",
     "guides": {
       "data-model": {
