@@ -128,6 +128,51 @@ test("a complete skill override must come from the SDK repository", () => {
   assert.match(result.stderr, /must identify a full hue-sdk commit/);
 });
 
+test("a complete skill override validates its install commands against its source versions", () => {
+  const result = checkSnapshot((directory) => changeSources(directory, (sources) => {
+    const override = ensureOverride(directory, sources);
+    const sdk = JSON.parse(readFileSync(resolve(directory, "contracts/sdk-docs.json"), "utf8"));
+    override.source.packages ??= structuredClone(sdk.packages);
+    override.source.packages.typescript.version = "0.1.0";
+  }));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /public install command uses stale package version .*; expected 0\.1\.0/);
+});
+
+test("a skill source version does not change the other pages' package contract", () => {
+  const sdk = JSON.parse(readFileSync(resolve(root, "contracts/sdk-docs.json"), "utf8"));
+  const result = checkSnapshot((directory) => changePage(directory, "installation.mdx", (text) =>
+    text.replace(`@hue-run/sdk@${sdk.packages.typescript.version}`, "@hue-run/sdk@0.1.0"),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /public install command uses stale package version 0\.1\.0; expected/);
+});
+
+test("a complete skill override cannot substitute another package", () => {
+  const result = checkSnapshot((directory) => changeSources(directory, (sources) => {
+    const override = ensureOverride(directory, sources);
+    const sdk = JSON.parse(readFileSync(resolve(directory, "contracts/sdk-docs.json"), "utf8"));
+    override.source.packages ??= structuredClone(sdk.packages);
+    override.source.packages.typescript.name = "unrelated-package";
+  }));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /skill override must name the typescript SDK package and its source version/);
+});
+
+for (const language of ["typescript", "python"]) {
+  test(`a missing ${language} skill package reports a contract error without crashing`, () => {
+    const result = checkSnapshot((directory) => changeSources(directory, (sources) => {
+      const override = ensureOverride(directory, sources);
+      const sdk = JSON.parse(readFileSync(resolve(directory, "contracts/sdk-docs.json"), "utf8"));
+      override.source.packages ??= structuredClone(sdk.packages);
+      delete override.source.packages[language];
+    }));
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, new RegExp(`skill override must name the ${language} SDK package and its source version`));
+    assert.doesNotMatch(result.stderr, /TypeError/);
+  });
+}
+
 test("a double-quoted key reference in an mcp add command fails", () => {
   const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
     text.replace("--header 'Authorization: Bearer ${HUE_MCP_KEY}'", '--header "Authorization: Bearer ${HUE_MCP_KEY}"'),
@@ -250,7 +295,9 @@ test("only the moved stub may link the invited-setup page", () => {
 });
 
 test("every skill link names the current skill version, in any link form", () => {
-  const version = JSON.parse(readFileSync(resolve(root, "contracts/sdk-docs.json"), "utf8")).skill.metadata.version;
+  const sources = JSON.parse(readFileSync(resolve(root, "contracts/sources.json"), "utf8"));
+  const sdk = JSON.parse(readFileSync(resolve(root, "contracts/sdk-docs.json"), "utf8"));
+  const version = (sources.skillOverride?.source?.skill ?? sdk.skill).metadata.version;
   const relative = checkSnapshot((directory) => changePage(directory, "agents/overview.mdx", (text) =>
     text.replace(`https://docs.hue.run/skill.md?v=${version}`, "/skill.md"),
   ));
