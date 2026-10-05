@@ -16,7 +16,7 @@ The **Access** column of each table uses these levels. A level can add a role re
 | --- | --- | --- |
 | **Read** | A **Read** or **Read and write** key, or a sign-in connection | Nothing, though recorded content (`include_content: true`, `get_span_content`) is audited and is untrusted data. |
 | **Write** | A **Read and write** key or a sign-in connection, with no `?read_only=true` on the URL or `X-Hue-MCP-Read-Only: true` header | Ask the user. |
-| **Destructive** | The same as **Write**. The tool changes or removes existing data, or stops work: it updates, sets, activates or deactivates, archives, cancels, revokes or deletes, and carries `destructiveHint: true` | Ask the user, naming the object. Never auto-approve it. |
+| **Destructive** | The same as **Write**. The tool changes or removes existing data, or stops work: it updates, sets, activates or deactivates, freezes, seals, publishes, supersedes, archives, cancels, revokes or deletes, and carries `destructiveHint: true` | Ask the user, naming the object. Never auto-approve it. |
 | owner or admin | The member who created the key, still a verified member, or the member who signed in must currently be an owner or admin of the organization | Ask an owner or admin when you are not one. |
 | owner or admin through sign-in | A **Read and write** key can call it; a sign-in connection needs an owner or admin | The same. |
 | key only | A **Read and write** key whose creator is an owner or admin. A sign-in connection never lists it | Create keys in **Settings → Integrations & API keys** instead. |
@@ -90,7 +90,7 @@ Eval sets and evaluators.
 | `add_eval_set_cases` | Write | Appends 1 to 25 cases to a draft version. |
 | `update_eval_set_case` | Destructive | Replaces a draft case, which clears its link to a source trace. |
 | `delete_eval_set_case` | Destructive | Removes one case from a draft version. |
-| `freeze_eval_set_version` | Write | Freezes a draft version so its cases never change and runs can pin it. |
+| `freeze_eval_set_version` | Destructive | Freezes a draft version so its cases never change and runs can pin it. |
 | `add_evaluator` | Write | Creates a code-owned evaluator, which any key or sign-in connection can publish versions of. |
 | `publish_evaluator` | Write | Publishes an immutable version of a code-owned evaluator, such as one using the built-in `hue.exact_match.v1`. |
 | `copy_evaluator` | Write | Copies an evaluator version, such as one made in Hue, into a new code-owned evaluator. |
@@ -111,9 +111,9 @@ Runs execute an eval set version's cases; scoring runs score outputs that alread
 | `list_run_items` | Read | Lists a run's cases with their latest execution state. |
 | `get_run_item` | Read | Returns one case of a run; inputs and expected values with `include_content: true`. |
 | `get_run_execution` | Read | Returns one execution attempt's state, times, error, the trace it declared, its output files and each pinned evaluator's result; the recorded output and evidence with `include_content: true`. |
-| `start_run_case` | Write | Starts or retries one case of a run. |
-| `complete_run_case` | Write | Marks a started execution succeeded, errored or cancelled; a success carries its output. |
-| `finish_run` | Write | Seals a run once every case's latest execution has ended. |
+| `start_run_case` | Destructive | Starts or retries one case of a run. |
+| `complete_run_case` | Destructive | Marks a started execution succeeded, errored or cancelled; a success carries its output. |
+| `finish_run` | Destructive | Seals a run once every case's latest execution has ended. |
 | `list_scoring_runs` | Read | Lists scoring runs, newest first. |
 | `get_scoring_run` | Read | Returns one scoring run's pinned evaluator versions, seal time and a page of its items: each `scoring_item_id`, which `add_scoring_results` and `add_judge_jobs` take, with every evaluator's result or `pending`; hosted judge jobs with `include_judge_jobs: true`. |
 | `add_scoring_run` | Write | Creates a sealed scoring run with pinned evaluator versions over existing outputs or a run's completed cases, without running the agent, and returns its items. Hue scores the evaluator kinds it runs itself; record the rest with `add_scoring_results`. |
@@ -146,7 +146,7 @@ Cases reviewed from traces, from a single trace or in bulk from Suggested cases.
 | `add_case_conversion` | Write | Pins a trace revision into a draft case. |
 | `get_case_conversion` | Read | Returns a draft's readiness, findings, evidence and criteria summary; its task, starting world and criteria with `include_content: true`. |
 | `update_case_conversion` | Destructive | Edits a draft: its JSON fields, facts and acknowledgements, and for a case built from a trace, the review actions. |
-| `publish_case_conversion` | Write | Publishes a ready draft into a new eval set or an existing draft version. |
+| `publish_case_conversion` | Destructive | Publishes a ready draft into a new eval set or an existing draft version. |
 | `archive_case_conversion` | Destructive | Abandons a draft; a published case cannot be archived. |
 | `get_case_divergence` | Read | Shows where a run of a case built from a trace first went differently from its source trace. |
 | `list_suggested_cases` | Read | Ranks groups of production requests by what a case would add. |
@@ -191,7 +191,7 @@ Listed by default: `get_intent_summary`, `list_intent_traces` and `get_request_a
 | Tool | Access | What it does |
 | --- | --- | --- |
 | `get_intent_taxonomy` | Read | Returns the project's intent categories, empty when no taxonomy is saved. |
-| `save_intent_taxonomy` | Write, owner or admin | Publishes a new version of the intent taxonomy. |
+| `save_intent_taxonomy` | Destructive, owner or admin | Publishes a new version of the intent taxonomy. |
 | `get_intent_summary` | Read | Counts a window's traces per intent bucket and reports whether classification is on; with request answers, it also carries the `task_types` answer. |
 | `list_intent_traces` | Read | Lists one intent bucket's traces as `search_traces` rows. |
 | `get_request_answer` | Read | Answers one question about the agent's behavior across requests, or returns every finding with `overview`. |
