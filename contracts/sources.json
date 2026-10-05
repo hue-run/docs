@@ -9,9 +9,9 @@
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "0d04c9927c191ae457efa384b0da2543186676db",
+      "commit": "f5c60a769e86327bf1e2715b8f2f691c6a9097df",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:e0b0a7633418cd03436c671d3e513b037f3d0b04d7535917c0cf374235b11b53"
+      "sha256": "sha256:5d4b60beda35fee88cf533044a079001dc11365697418678adc637921fcd905f"
     }
   }
 }

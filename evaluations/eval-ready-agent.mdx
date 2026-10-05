@@ -609,7 +609,7 @@ A world's clock is the recorded start of the trace it was built from, not the wa
 
 `hue eval` starts your agent's own command once per case. A case with a world sets its world variables; an answer-only case sets the execution and case variables without a world token or app mirrors. Nothing is edited per run. The command contract is small: read `{"inputs","config"}` as JSON from stdin, run your agent once, print the answer on stdout and exit. Answer-only cases keep their generated answer checks and required judge; see [trace to case](/evaluations/case-from-trace#answer-only-cases).
 
-Use an absolute path to the command's entry point. A direct case starts the command in a private case directory, so a path relative to your repository will not resolve there. The examples below expand `$PWD` in your shell before starting the CLI.
+Use an absolute path to the command's entry point for a one-shot run. A one-shot direct case starts the command in a private case directory, so a path relative to your repository will not resolve there. A command worker keeps the directory where you started the CLI for both answer-only and world cases. The examples below expand `$PWD` in your shell before starting the CLI.
 
 `inputs` is the input your agent's root span recorded in the source trace (a string, an object such as `{task}`, `{query}` or `{prompt}`, or a messages array), or what the reviewer authored. When earlier turns were included it is `{"task": <that input>, "priorContext": [<earlier inputs>]}`. `get_case` with `include_content` shows it. Map it to your production entry argument, and pass `priorContext` through as earlier turns. Stdout is parsed as JSON when it is valid JSON, otherwise stored as text, at most 4 MiB. A non-zero exit, or a timeout (default 600 seconds, `--timeout`), errors the case.
 
@@ -647,12 +647,12 @@ print(json.dumps(answer))  # logs go to stderr, never stdout
 Run with a **Read and write** key that `hue login` stored in an ignored env file:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.13.1 --package "zod@^4.6.5" hue eval --case "<name>" --command "node \"$PWD/agent.js\"" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.13.2 --package "zod@^4.6.5" hue eval --case "<name>" --command "node \"$PWD/agent.js\"" --env-file .env.hue
 ```
 
 `hue eval` needs Node.js 22 or 24, even for a Python agent. The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the agent's repository gains no package.json or dependency. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `--package @hue-run/sdk` runs that local, possibly older, copy. Installing zod in the project does not help when the SDK itself is not installed there: the CLI exits with `hue eval needs zod`, even for `--help`.
 
-The command receives this environment, and only the current case's world sets its world variables:
+Every case receives execution and case variables. Only a case with a world receives the world and mirror variables:
 
 | Variable | Meaning |
 | --- | --- |
@@ -660,24 +660,23 @@ The command receives this environment, and only the current case's world sets it
 | `HUE_WORLD_NOW` | The world's clock at creation, RFC 3339, when Hue sends it. |
 | `HUE_SIM_<SURFACE>_URL` | One per mirror; see [variable names](#variable-names). |
 | `HUE_MCP_CONFIG` | An owner-only `mcpServers` file for the world's MCP mirrors, removed after the case. |
-| `TRACEPARENT`, `BAGGAGE` | The case span's trace context and `hue-world=<id>`. |
-| `HUE_EXECUTION_ID`, `HUE_ENVIRONMENT_RUN_ID`, `HUE_CASE_ID`, `HUE_CASE_KEY` | The attempt, the world, and the case. |
+| `TRACEPARENT`, `BAGGAGE` | A world case's trace context and `hue-world=<id>`. |
+| `HUE_EXECUTION_ID`, `HUE_CASE_ID`, `HUE_CASE_KEY` | The execution and the case, including answer-only cases. |
+| `HUE_ENVIRONMENT_RUN_ID` | The world, only for a case with a world. |
 | `HUE_CASE_DIR`, `HUE_CASE_INPUTS`, `HUE_CASE_OUTPUT_DIR` | A private case directory: the inputs file, the case's input files under `files/<role>/`, and `output/`, whose files are uploaded after the case. |
 | `HUE_MCP_URL`, `HUE_MCP_TOKEN`, `HUE_MCP_EXPIRES_AT` | Legacy names for the first MCP mirror. |
 
-`HUE_API_KEY` and any other Hue-key-shaped value are removed from the command's environment. Other variables in your shell and in `--env-file` reach the command, so the model key can live in either; don't reload a file that contains `HUE_API_KEY` inside the command (for example `uv run --env-file .env`). `hue eval` writes checkpoints to `.hue/eval/<agent-key>`; add `.hue/` to `.gitignore`. World cases with input files put them under `HUE_CASE_DIR/files/<role>/`; a worker registers `--capability environment-files:v1` (and `input:pdf`). Keep logs on stderr: stdout is stored, with the credentials `hue eval` handed it redacted. Exit code 0 means every case passed; 1 means a case failed, errored, is inconclusive or is incomplete; 2 is a usage error; 130 is an interrupt. Rerun with `--baseline <previous experimentId>` to compare.
+`HUE_API_KEY` and any other Hue-key-shaped value are removed from the command's environment. Other variables in your shell and in `--env-file` reach the command, so the model key can live in either; don't reload a file that contains `HUE_API_KEY` inside the command (for example `uv run --env-file .env`). `hue eval` writes checkpoints to `.hue/eval/<agent-key>`; add `.hue/` to `.gitignore`. World cases with input files put them under `HUE_CASE_DIR/files/<role>/`; a worker registers `--capability environment-files:v1` (and `input:pdf`). Keep logs on stderr: stdout is stored, with the credentials `hue eval` handed it redacted. For a one-shot run, exit code 0 means every case passed; 1 means a case failed, errored, is inconclusive or is incomplete; 2 is a usage error; 130 is an interrupt. Rerun with `--baseline <previous experimentId>` to compare.
 
-To let the **Run** button in Hue and the `launch_local_run` MCP tool use the same agent for cases with worlds, start a worker instead. It claims runs Hue queues and executes them on your machine with the same handoff:
-
-<Note>
-The current SDK worker runs cases with worlds. Support for answer-only cases in the same worker is pending the next TypeScript SDK release. Use the one-shot command above for answer-only cases until that release.
-</Note>
+To let the **Run** button in Hue and the `launch_local_run` MCP tool use the same agent for answer-only cases, world cases or an eval set containing both, start a command worker. It claims runs Hue queues and executes them on your machine with the same stdin handoff:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.13.1 --package "zod@^4.6.5" hue eval --worker --command "node \"$PWD/agent.js\"" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.13.2 --package "zod@^4.6.5" hue eval --worker --command "node \"$PWD/agent.js\"" --revision "<new-agent-revision>" --env-file .env.hue
 ```
 
-A TypeScript adapter runs inside `hue eval`'s own process, where `HUE_WORLD_TOKEN` and `HUE_EXECUTION_ID` are not set, so the helper would return production values. A world-only adapter must throw when `context.world` is missing, then either pass `context.world.env` as `env` to every helper call or spawn the agent with [`agentEnvironment(context.world)`](/reference/typescript#world-handoff). A direct adapter receives `context.mode: "direct"` and `context.executionId`; pass `{ HUE_EXECUTION_ID: context.executionId }` to the helper and do not connect apps. Never set `process.env` yourself: with `--concurrency` above 1 that leaks one case's world into another. Prefer `--command`, which supplies the correct case environment. Python drives worlds with the [`hue_sdk.environment`](/reference/python#world-handoff) helpers `agent_environment` and `mcp_config_file`. A world the simulation gateway does not serve has no handoff and sets no `HUE_WORLD_TOKEN`; a required app connection refuses it. See [worlds with a handoff](/evaluations/simulations#worlds-with-a-handoff).
+TypeScript 0.13.2 command workers register both `direct:v1` and `environment:v1`. When upgrading an existing worker, use a new `--revision`: a registered revision's capabilities cannot change. Keep that revision stable for runs that should use the same agent code.
+
+A TypeScript adapter runs inside `hue eval`'s own process, where `HUE_WORLD_TOKEN` and `HUE_EXECUTION_ID` are not set, so the helper would return production values. A world-only adapter must throw when `context.world` is missing, then either pass `context.world.env` as `env` to every helper call or spawn the agent with [`agentEnvironment(context.world)`](/reference/typescript#world-handoff). A direct adapter receives `context.mode: "direct"` and `context.executionId`; pass `{ HUE_EXECUTION_ID: context.executionId }` to the helper and do not connect apps. Adapter-file workers register only world support by default; add `--capability direct:v1` only after the adapter handles that direct context. Never set `process.env` yourself: with `--concurrency` above 1 that leaks one case's world into another. Prefer `--command`, which supplies the correct case environment. Python drives worlds with the [`hue_sdk.environment`](/reference/python#world-handoff) helpers `agent_environment` and `mcp_config_file`. A world the simulation gateway does not serve has no handoff and sets no `HUE_WORLD_TOKEN`; a required app connection refuses it. See [worlds with a handoff](/evaluations/simulations#worlds-with-a-handoff).
 
 ## Verify before you finish
 

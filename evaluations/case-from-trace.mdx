@@ -20,11 +20,11 @@ Case creation also refuses a trace that is still running (`running`; retry after
 
 A support reply, summary or other model answer needs no simulated app when the selected turn made no tool calls. Hue pins the trace evidence, keeps the reviewed task and allowed earlier context, and generates checks for the answer. The draft has no starting world, app mirrors or replayed calls.
 
-Mark a correct run **Yes** to generate checks from facts supported by the task and context. Mark it **No** and describe what should have happened to generate checks from that intent. Review those checks before publishing. The original answer is evaluator evidence, not a guaranteed correct answer, and is not given to the agent as part of the task.
+Mark a correct run **Yes** to generate checks from facts supported by the task and context. Mark it **No** and describe what should have happened to generate checks from that intent. Review the task, checks and any build limitations before publishing. The original answer is evaluator evidence, not a guaranteed correct answer, and is not given to the agent as part of the task.
 
-Publication pins **Answer outcome**, including the required **answers-the-task** judge. A rerun must pass the required answer checks and judge to pass the case. An empty answer fails; an unavailable or undecided judge makes the result **Inconclusive**. A paraphrase can pass without matching the source answer word for word.
+Publication pins **Answer outcome** and the required **Answers the task** judge. A rerun must pass the required answer checks and judge to pass the case. An empty answer fails; an unavailable or undecided judge makes the result **Inconclusive**. A paraphrase can pass without matching the source answer word for word.
 
-An answer-only case publishes at **T4**. Run it with the [one-shot command](/evaluations/eval-ready-agent#run-it); the agent receives the task and returns its answer without world setup. Cases that made tool calls use the app or recorded-tool path. A turn without a recorded answer cannot become an answer-only case; a turn that produced output files also needs a supported way to evaluate those files.
+An answer-only case publishes at **T4**. Run it with the [agent command or a connected worker](/evaluations/eval-ready-agent#run-it); the agent receives the task and returns its answer without world setup. Cases that made tool calls use the app or recorded-tool path. A turn without a recorded answer cannot become an answer-only case; a turn that produced output files also needs a supported way to evaluate those files.
 
 ## In the Hue UI
 
