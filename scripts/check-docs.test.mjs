@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -413,4 +414,54 @@ test("the tool reference keeps each tool under its toolset", () => {
   }));
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /lists get_request_answer under intents; the contract puts it in traces/);
+});
+
+
+test("released SDK versions can advance independently of platform compatibility pins", () => {
+  const result = checkSnapshot((directory) => {
+    const path = resolve(directory, "contracts/fern-public-docs.json");
+    const platform = JSON.parse(readFileSync(path, "utf8"));
+    platform.packages.typescript.version = "0.1.0";
+    platform.packages.python.version = "0.1.0";
+    writeFileSync(path, `${JSON.stringify(platform, null, 2)}\n`);
+    changeSources(directory, (sources) => {
+      sources.sources.platform.sha256 = `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
+    });
+    const generated = spawnSync(process.execPath, ["scripts/generate-docs-contract.mjs"], { cwd: directory, encoding: "utf8" });
+    assert.equal(generated.status, 0, generated.stderr);
+  });
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test("different platform and SDK package names are rejected", () => {
+  const result = checkSnapshot((directory) => {
+    const path = resolve(directory, "contracts/fern-public-docs.json");
+    const platform = JSON.parse(readFileSync(path, "utf8"));
+    platform.packages.typescript.name = "unrelated-package";
+    writeFileSync(path, `${JSON.stringify(platform, null, 2)}\n`);
+    changeSources(directory, (sources) => {
+      sources.sources.platform.sha256 = `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
+    });
+    const generated = spawnSync(process.execPath, ["scripts/generate-docs-contract.mjs"], { cwd: directory, encoding: "utf8" });
+    assert.equal(generated.status, 0, generated.stderr);
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /platform and SDK typescript package names disagree/);
+});
+
+
+test("platform compatibility pins must remain stable versions", () => {
+  const result = checkSnapshot((directory) => {
+    const path = resolve(directory, "contracts/fern-public-docs.json");
+    const platform = JSON.parse(readFileSync(path, "utf8"));
+    platform.packages.python.version = "latest";
+    writeFileSync(path, `${JSON.stringify(platform, null, 2)}\n`);
+    changeSources(directory, (sources) => {
+      sources.sources.platform.sha256 = `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
+    });
+    const generated = spawnSync(process.execPath, ["scripts/generate-docs-contract.mjs"], { cwd: directory, encoding: "utf8" });
+    assert.equal(generated.status, 0, generated.stderr);
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /platform python compatibility pin must be a stable version/);
 });

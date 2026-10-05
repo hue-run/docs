@@ -1,6 +1,6 @@
 ---
 title: "Python SDK"
-description: "Trace Python applications with Hue helpers, explicit capture choices, and observable export failures."
+description: "Trace Python applications with Hue helpers, content capture and metadata-only opt-outs, and observable export failures."
 ---
 
 Use the Hue Python SDK to trace your application with OpenTelemetry spans and correlated logs. Provider requests stay in your application.
@@ -66,7 +66,7 @@ Open **Traces** in the project that owns the key. The root span and its `execute
 
 For a copyable email-masking callback and guidance on custom field rules, follow [redact sensitive trace content](/guides/redaction).
 
-`capture_content` is required; there is no default. Use `True`, the recommended setting: Hue can only show and evaluate what a trace records. `True` captures content supplied through Hue's input, output, tool, and inference-log helpers, such as prompts and messages, responses and tool inputs and outputs. Use `False` for metadata-only capture when you'd rather not send content, or when an application or data policy forbids sending it to another service; it omits that content before it enters an OpenTelemetry queue. Received content is stored under your project’s [retention policy](/guides/production-safety#capture-titles-and-retention).
+`capture_content` defaults to `True`; set it to `False` to opt out. Use `True`, the recommended setting: Hue can only show and evaluate what a trace records. `True` captures content supplied through Hue's input, output, tool, and inference-log helpers, such as prompts and messages, responses and tool inputs and outputs. Use `False` for metadata-only capture when you'd rather not send content, or when an application or data policy forbids sending it to another service; it omits that content before it enters an OpenTelemetry queue. Received content is stored under your project’s [retention policy](/guides/production-safety#capture-titles-and-retention).
 
 With `capture_content=False`, Hue also strips recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes, legacy `gen_ai.*` message events, log bodies and status descriptions from every record it exports, including spans from third-party instrumentors on the same provider. The [compatibility matrix](/sdks/compatibility) lists the keys, which are identical to TypeScript's `contentPrefixes`. The setting does not classify arbitrary attribute names, span names, session IDs or another exporter's records, and unrecognized custom keys pass through. Configure an instrumentor's own content controls before enabling it; it may also send content to other exporters.
 

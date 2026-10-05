@@ -7,22 +7,22 @@ description: "Store a Hue key with hue login, connect your coding agent with hue
 
 <CodeGroup>
 ```sh npm
-npm install @hue-run/sdk@0.13.1
+npm install @hue-run/sdk@0.14.0
 ```
 
 ```sh Bun
-bun add @hue-run/sdk@0.13.1
+bun add @hue-run/sdk@0.14.0
 ```
 </CodeGroup>
 
-Run the commands from that project with `npx --yes --package @hue-run/sdk@0.13.1 hue …`. Always name the package: a bare `npx hue` can run an unrelated npm package called `hue`. Every command accepts `--help`.
+Run the commands from that project with `npx --yes --package @hue-run/sdk@0.14.0 hue …`. Always name the package: a bare `npx hue` can run an unrelated npm package called `hue`. Every command accepts `--help`.
 
 ## Store your key
 
 Create a **Read and write** key in **Settings → Integrations & API keys** for the project you want to use, then run:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.13.1 hue login --gitignore
+npx --yes --package @hue-run/sdk@0.14.0 hue login --gitignore
 ```
 
 `hue login` prints the key settings page and opens it in your browser when a terminal is attached. It reads the key without echoing it, checks it against Hue, and stores it once as both `HUE_API_KEY` (for evaluations) and `HUE_MCP_KEY` (for your coding agent) in `./.env.hue`, together with `HUE_BASE_URL` and `HUE_MCP_URL`. `--gitignore` adds that file to `.gitignore`. Key values are never printed.
@@ -45,7 +45,7 @@ To revoke evaluation and agent access separately, run `--keys evaluations` and `
 ## Connect your coding agent
 
 ```sh
-npx --yes --package @hue-run/sdk@0.13.1 hue mcp install --client claude-code --auth oauth
+npx --yes --package @hue-run/sdk@0.14.0 hue mcp install --client claude-code --auth oauth
 ```
 
 `hue mcp install` writes a server named `hue` at `https://mcp.hue.run/mcp` for your client. Supported clients are `claude-code`, `codex`, `conductor`, `cursor`, `vscode`, `windsurf` and `gemini`. For `windsurf` it only prints the snippet; merge it into the configuration opened by Cascade's **… (Actions) → MCPs → Open MCP config file**. See the [Cascade MCP guide](https://docs.devin.ai/desktop/cascade/mcp) for that client's configuration. Add `--dry-run` to see the change first, or `--print` for the snippet only.
@@ -73,8 +73,8 @@ With a key, export `HUE_MCP_KEY` in the shell that starts your client; an app st
 `hue eval` runs your agent locally against a published case or a saved eval set and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It uses `HUE_API_KEY` from `--env-file` (or its alias `--env-path`). Start the agent's own command with `--command`, after the one-time change in [Make your agent eval-ready](/evaluations/eval-ready-agent):
 
 ```sh
-npx --yes --package @hue-run/sdk@0.13.1 --package "zod@^4.6.5" hue eval --case "<name|id|url>" --command "<start command>" --env-file .env.hue
-npx --yes --package @hue-run/sdk@0.13.1 --package "zod@^4.6.5" hue eval --worker --command "<start command>" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.14.0 --package "zod@^4.6.5" hue eval --case "<name|id|url>" --command "<start command>" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.14.0 --package "zod@^4.6.5" hue eval --worker --command "<start command>" --env-file .env.hue
 ```
 
 The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the agent's repository gains no package.json or dependency; without the second, `hue eval` exits with `hue eval needs zod`, even for `--help`, and installing zod in the project does not help when the SDK itself is not installed there. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `--package @hue-run/sdk` runs that local, possibly older, copy. `hue eval` needs Node.js 22 or 24, even for a Python agent.
@@ -99,13 +99,14 @@ The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the 
 | `--checkpoint-dir <path>` | Private checkpoint directory (default `.hue/eval/<agent-key>`; add `.hue/` to `.gitignore`). |
 | `--capability <value>` | Extra worker capability, repeatable, such as `environment-files:v1` and `input:pdf`. |
 | `--no-output` | One-shot: do not store case outputs, error messages and explanations. |
-| `--content` | Capture telemetry content on the run's spans. |
+| `--content` | Explicitly enable telemetry content capture (the default). |
+| `--no-content` | Opt out of telemetry content capture. |
 | `--allow-hue-credentials` | Keep `HUE_API_KEY` and other Hue credentials in the `--command` child. |
 | `--revision <id>` | The agent revision under test (default `AGENT_REVISION`, git `HEAD` or `dev`). |
 
 Exit codes: 0 every case passed; 1 a case failed, errored, is inconclusive or is incomplete; 2 usage error; 130 interrupted. `hue eval --help` lists every flag.
 
-Since TypeScript 0.10.0, one-shot runs store case outputs, target error messages and explanations by default, as workers already do. `--content` separately enables trace content capture; it is off by default. Use `--no-output` to omit result content from a one-shot run. A command's stdout becomes its stored answer, with credentials handed to it by `hue eval` redacted; keep credentials and debug logs out of stdout. Generated files are uploaded regardless of `--no-output` and are not fully redacted, so never write credentials into them.
+Since TypeScript 0.10.0, one-shot runs store case outputs, target error messages and explanations by default, as workers already do. Trace content capture is on by default; `--no-content` opts out. Earlier SDK versions require `--content` to enable it. Use `--no-output` to omit result content from a one-shot run, or `--no-output --no-content` to omit both results and telemetry content. Resume an older metadata-only run with `--no-content` and its original output policy. A command's stdout becomes its stored answer, with credentials handed to it by `hue eval` redacted; keep credentials and debug logs out of stdout. Generated files are uploaded regardless of `--no-output` and are not fully redacted, so never write credentials into them.
 
 An evaluator that does not apply to a case shows `n/a` and neither passes nor fails it. A case with no applicable pinned evaluator is an error.
 
