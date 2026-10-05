@@ -159,6 +159,20 @@ test("a complete skill override cannot substitute another package", () => {
   assert.match(result.stderr, /skill override must name the typescript SDK package and its source version/);
 });
 
+for (const language of ["typescript", "python"]) {
+  test(`a missing ${language} skill package reports a contract error without crashing`, () => {
+    const result = checkSnapshot((directory) => changeSources(directory, (sources) => {
+      const override = ensureOverride(directory, sources);
+      const sdk = JSON.parse(readFileSync(resolve(directory, "contracts/sdk-docs.json"), "utf8"));
+      override.source.packages ??= structuredClone(sdk.packages);
+      delete override.source.packages[language];
+    }));
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, new RegExp(`skill override must name the ${language} SDK package and its source version`));
+    assert.doesNotMatch(result.stderr, /TypeError/);
+  });
+}
+
 test("a double-quoted key reference in an mcp add command fails", () => {
   const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
     text.replace("--header 'Authorization: Bearer ${HUE_MCP_KEY}'", '--header "Authorization: Bearer ${HUE_MCP_KEY}"'),

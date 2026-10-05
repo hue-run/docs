@@ -441,8 +441,8 @@ for (const [path, text] of Object.entries(publicText)) {
   const packages = path === "skill.md" ? skillPackages : sdk.packages;
   for (const match of text.matchAll(/@hue-run\/sdk@(\d+\.\d+\.\d+)|hue-run==(\d+\.\d+\.\d+)/g)) {
     const version = match[1] ?? match[2];
-    const expected = packages[match[1] ? "typescript" : "python"].version;
-    if (version !== expected) fail(`public install command uses stale package version ${version}; expected ${expected}`);
+    const expected = packages[match[1] ? "typescript" : "python"]?.version;
+    if (expected && version !== expected) fail(`public install command uses stale package version ${version}; expected ${expected}`);
   }
 }
 for (const [path, phrases] of Object.entries({
