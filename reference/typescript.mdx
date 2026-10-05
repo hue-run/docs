@@ -378,7 +378,7 @@ Use these product-named methods in new code. They call the same v1 endpoints as 
 | `getScoring(id)` / `listScorings(page?)` / `listScoringItems(id, page?)` / `getScoringSubject(subjectId)` | A `Scoring` / a page of `ScoringSummary` values / a page of `EvaluationItem` values / a `ScoringSubject`. |
 | `submitScoringResults(scoringId, { idempotencyKey, results: ScoringResultInput[] })` | `{ ids }`. |
 | `listScoringResults(scoringId, page?)` / `getScoringResult(resultId)` | A page of `ScoringResultSummary` values / a `StoredScoringResult`. |
-| `listTags()` | `{ items: Tag[] }`, the project's tags in the order they were created. |
+| `listTags()` | `{ items: Tag[] }`, the project's tags in its order: as people arranged them in Hue, then newer tags. |
 
 ### Tags
 

@@ -217,7 +217,7 @@ Use these product-named methods in new code. They call the same v1 endpoints as 
 | `get_scoring(scoring_id)` / `list_scorings(...)` / `list_scoring_items(scoring_id, ...)` / `get_scoring_subject(subject_id)` | Read a scoring pass, the project's scoring passes, its items and immutable saved evidence. |
 | `submit_scoring_results(scoring_id, *, idempotency_key, results)` | `{ "ids": [...] }`; each result names its `evaluatorVersionId`. |
 | `list_scoring_results(scoring_id, ...)` / `get_scoring_result(result_id)` | Result summaries / a stored result. |
-| `list_tags()` | `{ "items": [...] }`, the project's tags in the order they were created. |
+| `list_tags()` | `{ "items": [...] }`, the project's tags in its order: as people arranged them in Hue, then newer tags. |
 
 A run ID and a scoring ID identify different records.
 
