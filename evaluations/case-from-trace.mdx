@@ -67,7 +67,7 @@ Create with MCP `publish_when_ready: false` or REST `publishWhenReady: false` to
 
 Read the task, criteria and any starting world before publishing. In the UI, the explicit **Publish** action confirms the displayed task, including a task read from a generic trace. Use the full review when the draft needs an edit or confirmation.
 
-Over MCP, use `get_case_conversion` with `include_content: true`, then `update_case_conversion` to accept `reviewed_task` and `reviewed_criteria` with `accepted_criteria_digest`. Accept `authored_closed_world` only for a case with a world. Publish with `publish_case_conversion`, `name` and the latest `expected_revision` only when `ready: true`. Each write uses the revision of your latest read.
+Over MCP, use `get_case_conversion` with `include_content: true`, then `update_case_conversion` to accept `reviewed_task` and `reviewed_criteria` in `accepted_assumptions`, with `accepted_criteria_digest`. Accept `authored_closed_world` only for a case with a world. Publish with `publish_case_conversion`, `name` and the latest `expected_revision` only when `ready: true`. Each write uses the revision of your latest read.
 
 ## Tiers
 
