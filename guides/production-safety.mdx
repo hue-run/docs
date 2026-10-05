@@ -27,7 +27,7 @@ import { createHueSafe, type JsonValue } from "@hue-run/sdk";
 export const hue = createHueSafe({
   apiKey: process.env.HUE_API_KEY ?? "",
   serviceName: "customer-agent",
-  captureContent: process.env.HUE_CAPTURE_CONTENT === "true", // Set HUE_CAPTURE_CONTENT=true (recommended) to record content; any other value sends metadata only.
+  captureContent: process.env.HUE_CAPTURE_CONTENT !== "false", // Content is on unless explicitly disabled.
   enabled: process.env.HUE_TRACING_ENABLED !== "false",
   maxQueueBytes: 8 * 1024 * 1024,
 });
@@ -57,7 +57,7 @@ from hue_sdk import create_hue_safe
 hue = create_hue_safe(
     api_key=os.environ.get("HUE_API_KEY"),
     service_name="customer-agent",
-    capture_content=os.environ.get("HUE_CAPTURE_CONTENT") == "true",  # Set HUE_CAPTURE_CONTENT=true (recommended) to record content; any other value sends metadata only.
+    capture_content=os.environ.get("HUE_CAPTURE_CONTENT") != "false",  # Content is on unless explicitly disabled.
     enabled=os.environ.get("HUE_TRACING_ENABLED") != "false",
     max_queue_bytes=8 * 1024 * 1024,
 )
@@ -103,7 +103,7 @@ Before rollout, test your real entry point against a loopback receiver that retu
 
 ## Capture, titles and retention
 
-Set `HUE_CAPTURE_CONTENT=true` in the serving environment. Hue can only show and evaluate what a trace records, so capturing prompts, responses and tool inputs and outputs alongside model, usage, timing and errors is the recommended setting. The snippets treat any other value, including an unset variable, as `false` and send metadata only. Choose `false` when your team would rather not send that content, or when an application or data policy forbids sending it to another service. Content capture does not turn off your redactor or Hue's credential scrubbing. Use the [redaction recipe](/guides/redaction) to mask email addresses and add your own field rules before supported content leaves your application.
+The snippets capture content when `HUE_CAPTURE_CONTENT` is unset. Hue can only show and evaluate what a trace records, so they capture supplied prompts, responses and tool inputs and outputs alongside model, usage, timing and errors. Set `HUE_CAPTURE_CONTENT=false` explicitly for metadata-only export, for example when an application or data policy forbids sending content to another service. Content capture does not turn off your redactor or Hue's credential scrubbing. Use the [redaction recipe](/guides/redaction) to mask email addresses and add your own field rules before supported content leaves your application.
 
 In metadata-only mode, both SDKs strip recognized third-party content attributes on Hue's export path, but unrecognized custom keys pass through, so configure third-party instrumentors' own capture controls to match your choice. Custom names and arbitrary attributes are application-controlled.
 

@@ -19,7 +19,7 @@
     "origin": "https://docs.hue.run",
     "projectMcpUrl": "https://mcp.hue.run/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
-    "skillUrl": "https://docs.hue.run/skill.md?v=0.6.3",
+    "skillUrl": "https://docs.hue.run/skill.md?v=0.6.4",
     "pageCount": 27
   },
   "serviceKeyPresets": [
@@ -73,9 +73,15 @@
     }
   },
   "skill": {
-    "version": "0.6.3",
-    "sha256": "sha256:baf9005934a106cce5ad805b8b8065269a237077c57ac0cb3941ac89f2e46a5c",
-    "sdkSourceSha256": "sha256:d3d552a13a5f285911225d7061b53bd9229ab856b53e13a48b8880dbd914b701"
+    "version": "0.6.4",
+    "sha256": "sha256:18ae5160878142d8833f32b08ef4cb6727b73c31dd2ccb170ca0ac267e8e5b30",
+    "sdkSourceSha256": "sha256:d3d552a13a5f285911225d7061b53bd9229ab856b53e13a48b8880dbd914b701",
+    "override": {
+      "baseCommit": "f5c60a769e86327bf1e2715b8f2f691c6a9097df",
+      "sourceCommit": "9849ecf14a8ed1e2274048efd10ba95aa0bbc5a3",
+      "source": "skills/hue/SKILL.md",
+      "sourceSha256": "sha256:ac3327248b3ac28dec5e91482085be6f9ff49665f30adb913b72a5eca048c1ca"
+    }
   },
   "mcp": {
     "transport": "Streamable HTTP",
