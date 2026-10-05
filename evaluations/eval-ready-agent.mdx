@@ -647,7 +647,7 @@ print(json.dumps(answer))  # logs go to stderr, never stdout
 Run with a **Read and write** key that `hue login` stored in an ignored env file:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.13.2 --package "zod@^4.6.5" hue eval --case "<name>" --command "node \"$PWD/agent.js\"" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.14.0 --package "zod@^4.6.5" hue eval --case "<name>" --command "node \"$PWD/agent.js\"" --env-file .env.hue
 ```
 
 `hue eval` needs Node.js 22 or 24, even for a Python agent. The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the agent's repository gains no package.json or dependency. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `--package @hue-run/sdk` runs that local, possibly older, copy. Installing zod in the project does not help when the SDK itself is not installed there: the CLI exits with `hue eval needs zod`, even for `--help`.
@@ -671,7 +671,7 @@ Every case receives execution and case variables. Only a case with a world recei
 To let the **Run** button in Hue and the `launch_local_run` MCP tool use the same agent for answer-only cases, world cases or an eval set containing both, start a command worker. It claims runs Hue queues and executes them on your machine with the same stdin handoff:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.13.2 --package "zod@^4.6.5" hue eval --worker --command "node \"$PWD/agent.js\"" --revision "<new-agent-revision>" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.14.0 --package "zod@^4.6.5" hue eval --worker --command "node \"$PWD/agent.js\"" --revision "<new-agent-revision>" --env-file .env.hue
 ```
 
 TypeScript 0.13.2 command workers register both `direct:v1` and `environment:v1`. When upgrading an existing worker, use a new `--revision`: a registered revision's capabilities cannot change. Keep that revision stable for runs that should use the same agent code.

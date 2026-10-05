@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -298,27 +299,30 @@ test("every skill link names the current skill version, in any link form", () =>
   const sources = JSON.parse(readFileSync(resolve(root, "contracts/sources.json"), "utf8"));
   const sdk = JSON.parse(readFileSync(resolve(root, "contracts/sdk-docs.json"), "utf8"));
   const version = (sources.skillOverride?.source?.skill ?? sdk.skill).metadata.version;
+  const skillLink = readFileSync(resolve(root, "agents/overview.mdx"), "utf8")
+    .match(/https:\/\/docs\.hue\.run\/skill\.md\?[^\s)]+/)[0];
+  assert.equal(new URL(skillLink).searchParams.get("v"), version);
   const relative = checkSnapshot((directory) => changePage(directory, "agents/overview.mdx", (text) =>
-    text.replace(`https://docs.hue.run/skill.md?v=${version}`, "/skill.md"),
+    text.replace(skillLink, "/skill.md"),
   ));
   assert.notEqual(relative.status, 0);
   assert.match(relative.stderr, /agents\/overview\.mdx links \/skill\.md/);
   const stale = checkSnapshot((directory) => changePage(directory, "agents/overview.mdx", (text) =>
-    text.replace(`https://docs.hue.run/skill.md?v=${version}`, "https://docs.hue.run/skill.md?v=0.1.0"),
+    text.replace(skillLink, "https://docs.hue.run/skill.md?v=0.1.0"),
   ));
   assert.notEqual(stale.status, 0);
   assert.match(stale.stderr, /links https:\/\/docs\.hue\.run\/skill\.md\?v=0\.1\.0/);
   const fragment = checkSnapshot((directory) => changePage(directory, "agents/overview.mdx", (text) =>
-    text.replace(`https://docs.hue.run/skill.md?v=${version}`, "https://docs.hue.run/skill.md#handoff"),
+    text.replace(skillLink, "https://docs.hue.run/skill.md#handoff"),
   ));
   assert.notEqual(fragment.status, 0);
   assert.match(fragment.stderr, /links https:\/\/docs\.hue\.run\/skill\.md#handoff/);
   const autolink = checkSnapshot((directory) => changePage(directory, "agents/overview.mdx", (text) =>
-    text.replace(`[Hue skill](https://docs.hue.run/skill.md?v=${version})`, `Hue skill: <https://docs.hue.run/skill.md?v=${version}#handoff>`),
+    text.replace(`[Hue skill](${skillLink})`, `Hue skill: <https://docs.hue.run/skill.md?v=${version}#handoff>`),
   ));
   assert.equal(autolink.status, 0, autolink.stderr);
   const elsewhere = checkSnapshot((directory) => changePage(directory, "agents/overview.mdx", (text) =>
-    text.replace(`[Hue skill](https://docs.hue.run/skill.md?v=${version})`, `[Hue skill](https://docs.hue.run/skill.md?v=${version}) and [another skill](https://example.com/skill.md)`),
+    text.replace(`[Hue skill](${skillLink})`, `[Hue skill](${skillLink}) and [another skill](https://example.com/skill.md)`),
   ));
   assert.equal(elsewhere.status, 0, elsewhere.stderr);
 });
@@ -413,4 +417,54 @@ test("the tool reference keeps each tool under its toolset", () => {
   }));
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /lists get_request_answer under intents; the contract puts it in traces/);
+});
+
+
+test("released SDK versions can advance independently of platform compatibility pins", () => {
+  const result = checkSnapshot((directory) => {
+    const path = resolve(directory, "contracts/fern-public-docs.json");
+    const platform = JSON.parse(readFileSync(path, "utf8"));
+    platform.packages.typescript.version = "0.1.0";
+    platform.packages.python.version = "0.1.0";
+    writeFileSync(path, `${JSON.stringify(platform, null, 2)}\n`);
+    changeSources(directory, (sources) => {
+      sources.sources.platform.sha256 = `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
+    });
+    const generated = spawnSync(process.execPath, ["scripts/generate-docs-contract.mjs"], { cwd: directory, encoding: "utf8" });
+    assert.equal(generated.status, 0, generated.stderr);
+  });
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test("different platform and SDK package names are rejected", () => {
+  const result = checkSnapshot((directory) => {
+    const path = resolve(directory, "contracts/fern-public-docs.json");
+    const platform = JSON.parse(readFileSync(path, "utf8"));
+    platform.packages.typescript.name = "unrelated-package";
+    writeFileSync(path, `${JSON.stringify(platform, null, 2)}\n`);
+    changeSources(directory, (sources) => {
+      sources.sources.platform.sha256 = `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
+    });
+    const generated = spawnSync(process.execPath, ["scripts/generate-docs-contract.mjs"], { cwd: directory, encoding: "utf8" });
+    assert.equal(generated.status, 0, generated.stderr);
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /platform and SDK typescript package names disagree/);
+});
+
+
+test("platform compatibility pins must remain stable versions", () => {
+  const result = checkSnapshot((directory) => {
+    const path = resolve(directory, "contracts/fern-public-docs.json");
+    const platform = JSON.parse(readFileSync(path, "utf8"));
+    platform.packages.python.version = "latest";
+    writeFileSync(path, `${JSON.stringify(platform, null, 2)}\n`);
+    changeSources(directory, (sources) => {
+      sources.sources.platform.sha256 = `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
+    });
+    const generated = spawnSync(process.execPath, ["scripts/generate-docs-contract.mjs"], { cwd: directory, encoding: "utf8" });
+    assert.equal(generated.status, 0, generated.stderr);
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /platform python compatibility pin must be a stable version/);
 });

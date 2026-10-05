@@ -453,8 +453,15 @@ for (const [path, phrases] of Object.entries({
 })) {
   for (const phrase of phrases) if (!publicText[path].includes(phrase)) fail(`${path} must name current version ${phrase}`);
 }
-if (platform.packages.typescript.version !== typescriptVersion || platform.packages.python.version !== pythonVersion) {
-  fail("platform and SDK package-version contracts disagree");
+// The platform records its tested SDK pins; SDK releases are independent of
+// server deployment. Both producer revisions and digests remain checked above.
+for (const language of ["typescript", "python"]) {
+  if (!/^\d+\.\d+\.\d+$/.test(platform.packages[language].version)) {
+    fail(`platform ${language} compatibility pin must be a stable version`);
+  }
+  if (platform.packages[language].name !== sdk.packages[language].name) {
+    fail(`platform and SDK ${language} package names disagree`);
+  }
 }
 
 const mirroredSkill = sourceMetadata.skillOverride?.source?.skill ?? sdk.skill;

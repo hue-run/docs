@@ -10,16 +10,16 @@
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "f5c60a769e86327bf1e2715b8f2f691c6a9097df",
+      "commit": "3ec539411b519dcbc98dfab219565c85335e0f90",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:5d4b60beda35fee88cf533044a079001dc11365697418678adc637921fcd905f"
+      "sha256": "sha256:a04b686571f1f751d81cc205ea961f5fd04cd56297aad12604c87e8000c4f991"
     }
   },
   "site": {
     "origin": "https://docs.hue.run",
     "projectMcpUrl": "https://mcp.hue.run/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
-    "skillUrl": "https://docs.hue.run/skill.md?v=0.6.4",
+    "skillUrl": "https://docs.hue.run/skill.md?v=0.6.5",
     "pageCount": 27
   },
   "serviceKeyPresets": [
@@ -52,7 +52,7 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.13.2",
+      "version": "0.14.0",
       "entrypoints": [
         "@hue-run/sdk",
         "@hue-run/sdk/ai-sdk",
@@ -64,7 +64,7 @@
     },
     "python": {
       "name": "hue-run",
-      "version": "0.7.1",
+      "version": "0.8.0",
       "modules": [
         "hue_sdk",
         "hue_sdk.evals",
@@ -73,15 +73,9 @@
     }
   },
   "skill": {
-    "version": "0.6.4",
-    "sha256": "sha256:18ae5160878142d8833f32b08ef4cb6727b73c31dd2ccb170ca0ac267e8e5b30",
-    "sdkSourceSha256": "sha256:d3d552a13a5f285911225d7061b53bd9229ab856b53e13a48b8880dbd914b701",
-    "override": {
-      "baseCommit": "f5c60a769e86327bf1e2715b8f2f691c6a9097df",
-      "sourceCommit": "9849ecf14a8ed1e2274048efd10ba95aa0bbc5a3",
-      "source": "skills/hue/SKILL.md",
-      "sourceSha256": "sha256:ac3327248b3ac28dec5e91482085be6f9ff49665f30adb913b72a5eca048c1ca"
-    }
+    "version": "0.6.5",
+    "sha256": "sha256:3d56943fb196938726cd542f4667e27a158dd9a6b2de14c46436e4b7c327871c",
+    "sdkSourceSha256": "sha256:52312eca182364d289d7d75cc4d7cd59e9d49136232294b32da4f206c686a17c"
   },
   "mcp": {
     "transport": "Streamable HTTP",
