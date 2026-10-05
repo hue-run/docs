@@ -69,6 +69,8 @@ Read the task, criteria and any starting world before publishing. In the UI, the
 
 Over MCP, use `get_case_conversion` with `include_content: true`, then `update_case_conversion` to accept `reviewed_task` and `reviewed_criteria` in `accepted_assumptions`, with `accepted_criteria_digest`. Accept `authored_closed_world` only for a case with a world. Publish with `publish_case_conversion`, `name` and the latest `expected_revision` only when `ready: true`. Each write uses the revision of your latest read.
 
+Manual MCP publication leaves the eval-set version open, including for a new eval set. Save it with **Save eval-set version**, `freeze_eval_set_version`, or `hue eval --save-version` before running the case.
+
 ## Tiers
 
 A case publishes at a tier that says what its evaluators can verify. Run results report per tier. World judges are advisory until aligned; answer-only cases have a required answer judge.
