@@ -137,16 +137,16 @@ World judges and hosted judge jobs.
 
 ### `cases`
 
-Cases reviewed from traces, from a single trace or in bulk from Suggested cases.
+Cases built from traces, from a single trace or in bulk from Suggested cases.
 
 | Tool | Access | What it does |
 | --- | --- | --- |
-| `list_cases` | Read | Lists cases reviewed from traces, drafts and published, with links. |
-| `get_case` | Read | Returns one reviewed case with its eval set, saved version, pinned evaluators, environment and a run block; task text with `include_content: true`. |
-| `add_case_conversion` | Write | Pins a trace revision into a draft case. |
-| `get_case_conversion` | Read | Returns a draft's readiness, findings, evidence and criteria summary; its task, starting world and criteria with `include_content: true`. |
+| `list_cases` | Read | Lists cases built from traces, drafts and published, with links. |
+| `get_case` | Read | Returns one case with its eval set, saved version, pinned evaluators, environment when present and a run block; task text with `include_content: true`. |
+| `add_case_conversion` | Write | Pins a trace revision and builds a case. Supply `run_was_correct` and `outcome_intent` for the outcome; verified builds publish by default. Set `publish_when_ready: false` for a manual draft. |
+| `get_case_conversion` | Read | Returns publication status or a draft's readiness, findings, evidence and criteria summary; its task, any starting world and criteria with `include_content: true`. |
 | `update_case_conversion` | Destructive | Edits a draft: its JSON fields, facts and acknowledgements, and for a case built from a trace, the review actions. |
-| `publish_case_conversion` | Destructive | Publishes a ready draft into a new eval set or an existing draft version. |
+| `publish_case_conversion` | Destructive | Publishes a ready manual draft into a new eval set or an existing draft version. |
 | `archive_case_conversion` | Destructive | Abandons a draft; a published case cannot be archived. |
 | `get_case_divergence` | Read | Shows where a run of a case built from a trace first went differently from its source trace. |
 | `list_suggested_cases` | Read | Ranks groups of production requests by what a case would add. |

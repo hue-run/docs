@@ -4,7 +4,7 @@ sidebarTitle: "Eval-ready agent"
 description: "Commit one helper that points your agent's own app clients at Hue's mirrors during an evaluation and leaves production unchanged, then run published cases with hue eval."
 ---
 
-In a Hue evaluation your agent runs in your process. A case with app calls gives it a fresh simulated world; an answer-only case gives it the reviewed task and context without a world. Hue never executes the agent, intercepts its network traffic or adds tools. For a case with a world, a helper you commit once points your agent's own app clients at its mirrors.
+In a Hue evaluation your agent runs in your process. A case with app calls gives it a fresh simulated world; an answer-only case gives it the task and context without a world. Hue never executes the agent, intercepts its network traffic or adds tools. For a case with a world, a helper you commit once points your agent's own app clients at its mirrors.
 
 This guide is for any agent that talks to apps such as Gmail, Slack or Notion over MCP or REST, in any language, including agents that reach apps through their own meta-tools or through code the model writes. It describes the current `@hue-run/sdk` release, which the commands below pin; a `--command` agent in any language needs no Hue package. For the TypeScript callback path and what a world is, see [simulations](/evaluations/simulations); for the command reference, see [`hue eval`](/sdks/cli#run-an-evaluation).
 
@@ -611,7 +611,7 @@ A world's clock is the recorded start of the trace it was built from, not the wa
 
 Use an absolute path to the command's entry point for a one-shot run. A one-shot direct case starts the command in a private case directory, so a path relative to your repository will not resolve there. A command worker keeps the directory where you started the CLI for both answer-only and world cases. The examples below expand `$PWD` in your shell before starting the CLI.
 
-`inputs` is the input your agent's root span recorded in the source trace (a string, an object such as `{task}`, `{query}` or `{prompt}`, or a messages array), or what the reviewer authored. When earlier turns were included it is `{"task": <that input>, "priorContext": [<earlier inputs>]}`. `get_case` with `include_content` shows it. Map it to your production entry argument, and pass `priorContext` through as earlier turns. Stdout is parsed as JSON when it is valid JSON, otherwise stored as text, at most 4 MiB. A non-zero exit, or a timeout (default 600 seconds, `--timeout`), errors the case.
+`inputs` is the input recorded on the selected task-bearing span in the source trace (a string, an object such as `{task}`, `{query}` or `{prompt}`, or a messages array), or what the reviewer authored. When earlier turns were included it is `{"task": <that input>, "priorContext": [<earlier inputs>]}`. `get_case` with `include_content` shows it. Map it to your production entry argument, and pass `priorContext` through as earlier turns. Evaluator criteria and the original source reply stay out of the agent's inputs. Stdout is parsed as JSON when it is valid JSON, otherwise stored as text, at most 4 MiB. A non-zero exit, or a timeout (default 600 seconds, `--timeout`), errors the case.
 
 When your production entry point is a server or takes another input shape, add a thin entry point and commit it with the helper:
 

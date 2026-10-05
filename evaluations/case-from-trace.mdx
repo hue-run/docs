@@ -1,26 +1,30 @@
 ---
 title: "Turn a trace into a case"
 sidebarTitle: "Trace to case"
-description: "Review a recorded query and answer or an agent's app calls into an eval case with generated evaluators, in the Hue UI or over the Hue MCP."
+description: "Build an eval case from a recorded query and answer or an agent's app calls, with automatic publication after verification or explicit manual review."
 ---
 
-A published case is a reviewed task and a set of generated evaluators, built from one recorded trace. A query and model answer can become an answer-only case without an app simulation or a starting world. A trace with app calls can also pin a world; your agent then runs against a fresh copy with [`hue eval`](/evaluations/eval-ready-agent). This page covers both review paths. For what a world is, see [simulations](/evaluations/simulations).
+A published case contains a task and pinned evaluators, built from one recorded trace. A query and model answer can become an answer-only case without an app simulation or a starting world. A trace with app calls can also pin a world; your agent then runs against a fresh copy with [`hue eval`](/evaluations/eval-ready-agent). For what a world is, see [simulations](/evaluations/simulations).
+
+Mark whether the recorded run was correct and choose an eval set. Hue builds the case and publishes it when verification passes, without a separate review or sign-off. If a check fails, the draft stays available with a correction or retry action. [Manual publication](#manual-publication) remains available for authoring and review.
 
 ## Traces that can become cases
 
 Record the task and final answer with full content:
 
-- Use `captureContent: true` in TypeScript or `capture_content=True` in Python. A trace exported without content cannot be reviewed into a case (`content_not_recorded`).
-- For a trace with no tool calls, record the query as the root span's input and the reply as its output. **Answer-graded cases from plain traces** is on by default in project settings; an owner or admin can turn it off.
-- For a trace with app calls, pass the MCP server identity on tool spans (`mcp:` on `hue.tool`) so the trace names the app each call reached. The case builds a world from supported app simulations or recorded tools; a call Hue cannot read or serve may prevent publication.
+- The current SDK captures content by default; `captureContent: true` in TypeScript or `capture_content=True` in Python also makes the choice explicit. A trace exported without content cannot become a case (`content_not_recorded`).
+- Record the task and reply on the task-bearing agent span. A trace with no tool calls can become an answer-only case. **Answer-graded cases from plain traces** is on by default in project settings; an owner or admin can turn it off.
+- For a trace with app calls, keep tool names, arguments, results and app identity. Pass the MCP server identity on tool spans (`mcp:` on `hue.tool`) so the trace names the app each call reached. A server version number alone does not identify the app. The case builds a world from supported app simulations or recorded tools; a call Hue cannot read or serve may prevent publication.
 
-Case creation also refuses a trace that is still running (`running`; retry after it ends), evidence over 8 MiB, and a trace not recorded by Hue's SDK (`not_hue_sdk`) unless the project accepts generic sources, whose traces then need a full review (`generic_task_unreviewed`). Direct OTLP traces can qualify when the project accepts generic sources and their recorded content can be read. Metadata-only capture does not provide the task and answer a case needs.
+Case creation also refuses a trace that is still running (`running`; retry after it ends), selected evidence over 8 MiB, and a trace not recorded by Hue's SDK (`not_hue_sdk`) unless the project accepts generic sources. Direct OTLP traces, including supported Pydantic AI message and tool records, can qualify when their recorded content can be read. Metadata-only capture does not provide the task and answer a case needs.
+
+An empty HTTP or workflow wrapper can contain the task. Hue selects its single task-bearing agent; multiple peer agents require an explicit selection with MCP `root_span_id` or REST `rootSpanId`. Missing, ambiguous or unreadable evidence leaves a reason to correct. Hue cannot reconstruct content that was never captured.
 
 ## Answer-only cases
 
-A support reply, summary or other model answer needs no simulated app when the selected turn made no tool calls. Hue pins the trace evidence, keeps the reviewed task and allowed earlier context, and generates checks for the answer. The draft has no starting world, app mirrors or replayed calls.
+A support reply, summary or other model answer needs no simulated app when the selected turn made no tool calls. Hue pins the trace evidence, keeps the task and allowed earlier context, and generates checks for the answer. The draft has no starting world, app mirrors or replayed calls.
 
-Mark a correct run **Yes** to generate checks from facts supported by the task and context. Mark it **No** and describe what should have happened to generate checks from that intent. Review the task, checks and any build limitations before publishing. The original answer is evaluator evidence, not a guaranteed correct answer, and is not given to the agent as part of the task.
+Mark a correct run **Yes** and optionally say why it is correct; that reason supplies required outcome constraints. Mark it **No** and describe what should have happened to generate checks from that intent. An unmarked request waits until it has usable outcome evidence. The original answer is evaluator evidence, not a guaranteed correct answer, and is not given to the agent as part of the task.
 
 Publication pins **Answer outcome** and the required **Answers the task** judge. A rerun must pass the required answer checks and judge to pass the case. An empty answer fails; an unavailable or undecided judge makes the result **Inconclusive**. A paraphrase can pass without matching the source answer word for word.
 
@@ -30,26 +34,44 @@ An answer-only case publishes at **T4**. Run it with the [agent command or a con
 
 1. Open **Traces** and open the trace.
 2. Choose **Create case** and answer the one question: "Did the agent complete the task correctly?"
-3. Choose **Build case**. Hue prepares the task and generated criteria. For app calls, it also builds the starting world.
-4. Review the task and criteria. For a case with a world, also review the facts it rests on.
-5. Choose **Publish case**. Publishing saves the eval-set version when Hue may; otherwise choose **Save eval-set version**.
+3. Choose the **Eval set** and **Build case**. Hue prepares the task and generated criteria. For app calls, it also builds the starting world.
+4. A verified build enters the selected eval set automatically. Open **View case** to inspect the task, evaluators, tier and limitations, or use its run command.
+5. If the build stops, open the case and follow its correction or retry action. Correct the task or criteria, add a missing fact, or retry a failed step as appropriate.
+
+Publication saves a version for a new eval set or a draft version Hue opened. When the destination already has an open draft, the case joins that draft; choose **Save eval-set version** before running it.
+
+## What verification establishes
+
+Automatic publication requires deterministic checks sufficient to assess the requested outcome. An outcome that depends only on an unaligned judge remains a draft. World judges stay advisory until their pinned version meets the alignment bar; answer-only cases retain their required answer judge. Manual publication keeps its reviewed answer-case path.
+
+Hue tests the evaluator with passing and failing reference runs. Checks that accept empty answers, omit requested values or accept known wrong outcomes need correction. If the grader accepts a recorded reply marked wrong, the build stops rather than publishing it.
+
+For a world case, replay verifies recorded observations under the case's comparison rules. Your agent can follow another valid path through the world. Hue preserves observed facts and recorded query results while generating background records; the background's size is a heuristic, not a fidelity guarantee.
+
+Missing essential evidence or evidence cut by a build limit blocks automatic publication. Optional background omissions remain visible as limitations. A published case records machine verification, its tier and its limitations; automatic publication does not record a human review. Hue does not run your agent before publishing, so run it against the case to verify your integration.
 
 ## Over the Hue MCP
 
-With a **Read and write** connection, a coding agent can run the same review. Writes need the user's go-ahead; on an organization connection every call takes the case's project as `project_id`.
+With a **Read and write** connection, a coding agent can build the same case. Writes need the user's go-ahead; on an organization connection every call takes the case's project as `project_id`.
 
 1. `get_trace` for the trace's current revision.
-2. `add_case_conversion` with `trace_id`, `expected_trace_revision` and an `idempotency_key`.
-3. Poll `get_case_conversion` until the build finishes, then call it with `include_content: true` to read the task, criteria and any starting world you are about to accept. Every write below takes the `revision` of your latest read as `expected_revision`; read the draft again after each write before the next one.
-4. If the draft asks "Was this run correct?", answer with `update_case_conversion` and `run_was_correct`.
-5. Review the criteria and accept them: `update_case_conversion` with `reviewed_criteria` (`accepted_criteria_digest`) and `reviewed_task`. For a case with a world, also review `authored_closed_world`.
-6. Publish only when `get_case_conversion` reports `ready: true`: `publish_case_conversion` with `name` and the current `expected_revision`. Readiness verifies the criteria and required review; an answer-only case has no world to replay.
+2. `add_case_conversion` with `trace_id`, `expected_trace_revision`, an `idempotency_key` and `run_was_correct`. Use `true` for a correct run and an optional reason in `outcome_intent`; use `false` and `outcome_intent` for what a wrong run should have done. Set `eval_set_id` to choose the destination, or omit it for a new eval set. Retrying the same request with the same idempotency key returns the original conversion.
+3. New creates default to `publish_when_ready: true`. Poll `get_case_conversion` until it reports `status: "published"` or a reason to correct the draft. Automatic publication does not require reviewer acknowledgements or a `publish_case_conversion` call.
+4. Read with `include_content: true` to inspect the task, criteria and any starting world. For corrections, use `update_case_conversion` with the latest `revision` as `expected_revision`; read the draft again after each write.
 
-The `case_from_trace` MCP prompt runs this sequence. To save the eval-set version afterwards, use **Save eval-set version** in Hue, the `freeze_eval_set_version` tool, or `hue eval --save-version`. The [MCP tool reference](/agents/mcp-tools) lists each tool's arguments.
+The `case_from_trace` MCP prompt follows this automatic route. To save an existing open eval-set draft afterwards, use **Save eval-set version** in Hue, `freeze_eval_set_version`, or `hue eval --save-version`. The [MCP tool reference](/agents/mcp-tools) lists each tool's arguments.
+
+## Manual publication
+
+Create with MCP `publish_when_ready: false` or REST `publishWhenReady: false` to keep a manual draft. Historical drafts without that field remain manual. REST creation uses `runWasCorrect` and `outcomeIntent` for the marking.
+
+Read the task, criteria and any starting world before publishing. In the UI, the explicit **Publish** action confirms the displayed task, including a task read from a generic trace. Use the full review when the draft needs an edit or confirmation.
+
+Over MCP, use `get_case_conversion` with `include_content: true`, then `update_case_conversion` to accept `reviewed_task` and `reviewed_criteria` with `accepted_criteria_digest`. Accept `authored_closed_world` only for a case with a world. Publish with `publish_case_conversion`, `name` and the latest `expected_revision` only when `ready: true`. Each write uses the revision of your latest read.
 
 ## Tiers
 
-A case publishes at a tier that says what its evaluators can verify. Run results report per tier. World cases have advisory judges; answer-only cases have a required answer judge.
+A case publishes at a tier that says what its evaluators can verify. Run results report per tier. World judges are advisory until aligned; answer-only cases have a required answer judge.
 
 | Tier | Meaning |
 | --- | --- |
@@ -58,7 +80,7 @@ A case publishes at a tier that says what its evaluators can verify. Run results
 | T3 | Partial, advisory. |
 | T4 | Answer-only: required answer checks and the answer judge decide the case; no world is simulated. |
 
-A trace that still needs a person (T5) is never published.
+A trace that still needs correction (T5) is never published.
 
 ## Next step
 
