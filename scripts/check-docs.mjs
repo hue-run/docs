@@ -425,14 +425,25 @@ for (const [language, referencePath] of [
   if (missing.length) fail(`${referencePath} is missing public exports: ${missing.join(", ")}`);
 }
 
+const sourceMetadata = readJson("contracts/sources.json");
+const skillPackages = sourceMetadata.skillOverride?.source?.packages ?? sdk.packages;
+for (const language of ["typescript", "python"]) {
+  const sourcePackage = skillPackages[language];
+  if (sourcePackage?.name !== sdk.packages[language].name || !/^\d+\.\d+\.\d+$/.test(sourcePackage?.version ?? "")) {
+    fail(`skill override must name the ${language} SDK package and its source version`);
+  }
+}
 const typescriptVersion = sdk.packages.typescript.version;
 const pythonVersion = sdk.packages.python.version;
 if (!publicText["installation.mdx"].includes(`npm install @hue-run/sdk@${typescriptVersion}`)) fail("installation.mdx has a stale TypeScript version");
 if (!publicText["installation.mdx"].includes(`pip install hue-run==${pythonVersion}`)) fail("installation.mdx has a stale Python version");
-for (const match of allPublicText.matchAll(/@hue-run\/sdk@(\d+\.\d+\.\d+)|hue-run==(\d+\.\d+\.\d+)/g)) {
-  const version = match[1] ?? match[2];
-  const expected = match[1] ? typescriptVersion : pythonVersion;
-  if (version !== expected) fail(`public install command uses stale package version ${version}; expected ${expected}`);
+for (const [path, text] of Object.entries(publicText)) {
+  const packages = path === "skill.md" ? skillPackages : sdk.packages;
+  for (const match of text.matchAll(/@hue-run\/sdk@(\d+\.\d+\.\d+)|hue-run==(\d+\.\d+\.\d+)/g)) {
+    const version = match[1] ?? match[2];
+    const expected = packages[match[1] ? "typescript" : "python"].version;
+    if (version !== expected) fail(`public install command uses stale package version ${version}; expected ${expected}`);
+  }
 }
 for (const [path, phrases] of Object.entries({
   "sdks/compatibility.mdx": [`TypeScript \`${typescriptVersion}\``, `Python \`${pythonVersion}\``],
@@ -446,7 +457,6 @@ if (platform.packages.typescript.version !== typescriptVersion || platform.packa
   fail("platform and SDK package-version contracts disagree");
 }
 
-const sourceMetadata = readJson("contracts/sources.json");
 const mirroredSkill = sourceMetadata.skillOverride?.source?.skill ?? sdk.skill;
 const publicSkill = read("skill.md");
 const expectedSkillFrontmatter = [
