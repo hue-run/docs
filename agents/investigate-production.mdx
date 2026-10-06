@@ -252,7 +252,7 @@ Langfuse metadata (`langfuse.observation.metadata.*`, `langfuse.trace.metadata.*
 | Counts | `total_count` counts up to 10,000 traces; beyond that `total_count_capped` is `true`. |
 | Query time | Searches have a 2-second budget; a slower one fails with `timeout`. An `aggregate` part that runs out of time returns `partial: true` with the rest. |
 | Request size | 1 MiB; a larger body answers HTTP `413`. |
-| Tool search and writes | `search_hue_tools` returns 10 tools per page. `add_eval_set_cases` takes 1 to 25 cases per call, `add_run` pins 1 to 32 evaluator versions, and `get_run` pages failing cases 25 at a time with `failing_cases_cursor`. |
+| Tool search and writes | `search_hue_tools` returns 10 tools per page. `add_eval_set_cases` takes 1 to 25 cases per call, `add_run` pins 1 to 100 evaluator versions, and `get_run` pages failing cases 25 at a time with `failing_cases_cursor`. |
 | Text caps | Titles and names are capped at 200 characters, session keys at 128 and status messages at 200. |
 
 A tool that fails returns an MCP error result (`isError: true`) whose text starts with a code, then the message, sometimes a hint, and `Retryable.` or `Retryable after <n> ms.` when a retry can succeed, for example `timeout: The query exceeded its time budget. Narrow the window … Retryable.` The same fields (`code`, `message`, `hint`, `retryable`, `retry_after_ms`) are in the result's `_meta` under `hue.run/error` for clients that read them programmatically. Retry only when the error says so. A write that is not safe to repeat and fails with `unavailable` or `timeout` may already have completed: its error does not say `Retryable.`, and its hint says to read the write's state before trying again.

@@ -107,7 +107,7 @@ Runs execute an eval set version's cases; scoring runs score outputs that alread
 | --- | --- | --- |
 | `list_runs` | Read | Lists runs, newest first, by eval set, creation window or tag; a run carries its own tags and matches its eval set's. |
 | `get_run` | Read | Returns per-evaluator aggregates, execution states and durations, with up to 25 failing cases first, optionally compared with a baseline run. |
-| `add_run` | Write | Creates a run on a frozen eval set version with 1 to 32 pinned evaluator versions. |
+| `add_run` | Write | Creates a run on a frozen eval set version with 1 to 100 pinned evaluator versions. |
 | `list_run_items` | Read | Lists a run's cases with their latest execution state. |
 | `get_run_item` | Read | Returns one case of a run; inputs and expected values with `include_content: true`. |
 | `get_run_execution` | Read | Returns one execution attempt's state, times, error, the trace it declared, its output files and each pinned evaluator's result; the recorded output and evidence with `include_content: true`. |
