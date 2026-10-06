@@ -26,7 +26,7 @@ A support reply, summary or other model answer needs no simulated app when the s
 
 Mark a correct run **Yes** and optionally say why it is correct; that reason supplies required outcome constraints. Mark it **No** and describe what should have happened to generate checks from that intent. An unmarked request waits until it has usable outcome evidence. The original answer is evaluator evidence, not a guaranteed correct answer, and is not given to the agent as part of the task.
 
-Publication pins **Answer outcome** and the required **Answers the task** judge. A rerun must pass the required answer checks and judge to pass the case. An empty answer fails; an unavailable or undecided judge makes the result **Inconclusive**. A paraphrase can pass without matching the source answer word for word.
+Publication pins **Answer outcome** and the required **Answers the task** judge. A rerun must pass the required answer checks and judge to pass the case. A failed required check, including an empty answer, fails the case. Otherwise, a pending, unavailable or undecided required judge makes the result **Inconclusive**. A paraphrase can pass without matching the source answer word for word.
 
 An answer-only case publishes at **T4**. Run it with the [agent command or a connected worker](/evaluations/eval-ready-agent#run-it); the agent receives the task and returns its answer without world setup. Cases that made tool calls use the app or recorded-tool path. A turn without a recorded answer cannot become an answer-only case; a turn that produced output files also needs a supported way to evaluate those files.
 
@@ -42,7 +42,7 @@ Publication saves a version for a new eval set or a draft version Hue opened. Wh
 
 ## What verification establishes
 
-Automatic publication requires deterministic checks sufficient to assess the requested outcome. An outcome that depends only on an unaligned judge remains a draft. World judges stay advisory until their pinned version meets the alignment bar; answer-only cases retain their required answer judge. Manual publication keeps its reviewed answer-case path.
+Automatic publication requires outcome checks and technical verification. Newly generated semantic judges are required, pinned and score the new execution. Deterministic checks still verify objective values, the target record, requested writes and procedural constraints, and protect unrelated fields. Historical advisory judge pins keep their policy; answer-only cases retain their required **Answers the task** judge. Manual publication keeps its reviewed answer-case path.
 
 Hue tests the evaluator with passing and failing reference runs. Checks that accept empty answers, omit requested values or accept known wrong outcomes need correction. If the grader accepts a recorded reply marked wrong, the build stops rather than publishing it.
 
@@ -73,7 +73,7 @@ Manual MCP publication leaves the eval-set version open, including for a new eva
 
 ## Tiers
 
-A case publishes at a tier that says what its evaluators can verify. Run results report per tier. World judges are advisory until aligned; answer-only cases have a required answer judge.
+A case publishes at a tier that says what its evaluators can verify. Run results report per tier. Newly generated world judges are required and score the new execution; historical advisory judge pins keep their policy. Answer-only cases retain their required answer judge. A failed required check fails the case; otherwise, a pending, unavailable or undecided required judge leaves the result **Inconclusive**.
 
 | Tier | Meaning |
 | --- | --- |
