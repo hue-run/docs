@@ -6,7 +6,7 @@ description: "Commit one helper that points your agent's own app clients at Hue'
 
 In a Hue evaluation your agent runs in your process. A case with app calls gives it a fresh simulated world; an answer-only case gives it the task and context without a world. Hue never executes the agent, intercepts its network traffic or adds tools. For a case with a world, a helper you commit once points your agent's own app clients at its mirrors.
 
-This guide is for any agent that talks to apps such as Gmail, Slack or Notion over MCP or REST, in any language, including agents that reach apps through their own meta-tools or through code the model writes. It describes the current `@hue-run/sdk` release, which the commands below pin; a `--command` agent in any language needs no Hue package. For the TypeScript callback path and what a world is, see [simulations](/evaluations/simulations); for the command reference, see [`hue eval`](/sdks/cli#run-an-evaluation).
+This guide is for any agent that talks to apps such as Gmail, Slack or Notion over MCP or REST, in any language, including agents that reach apps through their own meta-tools or through code the model writes. It uses the tested `@hue-run/sdk@0.15.0` pin in the commands below; a `--command` agent in any language needs no Hue package. For the TypeScript callback path and what a world is, see [simulations](/evaluations/simulations); for the command reference, see [`hue eval`](/sdks/cli#run-an-evaluation).
 
 <Note>
 Preview: Hue's mirrors answer at `https://app.hue.run/api/sim/…`, but the simulation gateway is not yet a released Hue Cloud capability. Gmail (MCP, REST) and Slack (Web API, MCP) are its established mirrors; other apps' mirrors are experimental and certify no fidelity.
@@ -240,7 +240,7 @@ Each mirror's variable is `HUE_SIM_<SURFACE>_URL`, where the surface is the app'
 
 Experimental mirrors follow the same rule, one variable per surface: Linear has `HUE_SIM_LINEAR_GRAPHQL_URL` and `HUE_SIM_LINEAR_MCP_URL`, and HubSpot has one per service, such as `HUE_SIM_HUBSPOT_CRM_OBJECTS_URL`. A replay-only surface has no URL. For an SDK whose base option is an origin, such as HubSpot's `basePath`, pass the value up to and including the real host (`https://app.hue.run/api/sim/api.hubapi.com`).
 
-`HUE_MCP_CONFIG` names an owner-only `mcpServers` file for every MCP mirror of the world, keyed by Hue's provider instance (such as `gmail-primary`) rather than by your server names, with `HUE_WORLD_TOKEN` as the bearer; it fits as-is only when those keys are the names your production configuration uses, since a framework derives tool names from them. `HUE_MCP_URL`, `HUE_MCP_TOKEN` and `HUE_MCP_EXPIRES_AT` carry the first MCP mirror under the names older adapters read. `hue eval` prints `world created` per case, not the variable names. To learn a case's exact names, have the agent log the `HUE_SIM_` variable names, never their values, to stderr during one local trial run, and don't commit the line; the helper's fail-closed error also lists the names present.
+`HUE_MCP_CONFIG` names an owner-only `mcpServers` file for every MCP mirror of the world, keyed by Hue's provider instance (such as `gmail-primary`) rather than by your server names, with `HUE_WORLD_TOKEN` as the bearer; it fits as-is only when those keys are the names your production configuration uses, since a framework derives tool names from them. `HUE_MCP_URL`, `HUE_MCP_TOKEN` and `HUE_MCP_EXPIRES_AT` carry the first MCP mirror under the names older adapters read. `hue eval` prints `world created` for cases with a world, not the variable names. To learn a case's exact names, have the agent log the `HUE_SIM_` variable names, never their values, to stderr during one local trial run, and don't commit the line; the helper's fail-closed error also lists the names present.
 
 ### Agents that use several apps
 
@@ -647,7 +647,7 @@ print(json.dumps(answer))  # logs go to stderr, never stdout
 Run with a **Read and write** key that `hue login` stored in an ignored env file:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.14.0 --package "zod@^4.6.5" hue eval --case "<name>" --command "node \"$PWD/agent.js\"" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.15.0 --package "zod@^4.6.5" hue eval --case "<name>" --command "node \"$PWD/agent.js\"" --env-file .env.hue
 ```
 
 `hue eval` needs Node.js 22 or 24, even for a Python agent. The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the agent's repository gains no package.json or dependency. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `--package @hue-run/sdk` runs that local, possibly older, copy. Installing zod in the project does not help when the SDK itself is not installed there: the CLI exits with `hue eval needs zod`, even for `--help`.
@@ -671,7 +671,7 @@ Every case receives execution and case variables. Only a case with a world recei
 To let the **Run** button in Hue and the `launch_local_run` MCP tool use the same agent for answer-only cases, world cases or an eval set containing both, start a command worker. It claims runs Hue queues and executes them on your machine with the same stdin handoff:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.14.0 --package "zod@^4.6.5" hue eval --worker --command "node \"$PWD/agent.js\"" --revision "<new-agent-revision>" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.15.0 --package "zod@^4.6.5" hue eval --worker --command "node \"$PWD/agent.js\"" --revision "<new-agent-revision>" --env-file .env.hue
 ```
 
 TypeScript 0.13.2 command workers register both `direct:v1` and `environment:v1`. When upgrading an existing worker, use a new `--revision`: a registered revision's capabilities cannot change. Keep that revision stable for runs that should use the same agent code.

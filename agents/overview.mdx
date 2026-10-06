@@ -10,7 +10,7 @@ The installable project-data server runs at `https://mcp.hue.run/mcp`. A separat
 
 | Surface | Use it when | It owns | It never does |
 | --- | --- | --- | --- |
-| [Hue skill](https://docs.hue.run/skill.md?v=0.6.5&release=3ec5394) | The agent is adding or troubleshooting tracing in an application | How to install the SDK, choose a capture policy, keep serving requests independent of telemetry and verify a real request | Grant credentials, read your project's data |
+| [Hue skill](https://docs.hue.run/skill.md?v=0.6.7&release=1126f6b) | The agent is adding or troubleshooting tracing in an application | How to install the SDK, choose a capture policy, keep serving requests independent of telemetry and verify a real request | Grant credentials, read your project's data |
 | [Hue MCP server](/agents/mcp-server) | The agent needs live project data: see what needs attention in production, find failing or slow traces, inspect a span, read trace checks and intents, check a receipt, read or author evaluations, inspect cases built from traces, or inspect settings | Tools for one project, or for the active projects of one organization through sign-in, with pagination, deep links and documentation search. Writes appear only with **Read and write** access. Key management, project settings including AI-processing consent, trace-check consent, managed targets, the intent taxonomy and the judge alignment bar need an owner or admin; through sign-in, other trace-check changes and archiving eval sets and evaluators do too. See [permissions](/agents/mcp-tools#permissions) | Billing and plan changes; OTLP ingest; artifact bytes; org invites or role changes; access outside the key's project or the signed-in organization |
 | [SDKs](/sdks/typescript) and REST | CI jobs and agents that can run a shell and prefer to filter data in code | Tracing, receipts, datasets, scorers, experiments and evaluation runs | Browse traces — the clients expose no trace-search API |
 
@@ -31,7 +31,7 @@ Then send the prompt from [agent setup](/guides/agent-setup). Your agent guides 
 - **The agent cannot run a shell**, for example a hosted assistant, **or you want several connected actions in one conversation** ("find yesterday's failing traces, show me the slowest span, compare the last two runs"). Connect the MCP server; a hosted assistant that supports MCP sign-in adds the URL and signs in with Hue. Hue has not yet verified claude.ai or ChatGPT end to end.
 - **You are automating in CI.** Use the SDK evaluation clients and the receipt endpoint directly.
 
-For a coding agent implementing content scrubbing, use the [redaction recipe](/guides/redaction). It includes email examples, exporter attachment points and a synthetic verification checklist. The [Hue skill](https://docs.hue.run/skill.md?v=0.6.5&release=3ec5394) routes agents to the same guide.
+For a coding agent implementing content scrubbing, use the [redaction recipe](/guides/redaction). It includes email examples, exporter attachment points and a synthetic verification checklist. The [Hue skill](https://docs.hue.run/skill.md?v=0.6.7&release=1126f6b) routes agents to the same guide.
 
 ## Authentication
 
