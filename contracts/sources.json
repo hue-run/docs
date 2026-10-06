@@ -9,9 +9,41 @@
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "3ec539411b519dcbc98dfab219565c85335e0f90",
+      "commit": "db3ef1b9463c7826a01167a4e136af9ca913307e",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:a04b686571f1f751d81cc205ea961f5fd04cd56297aad12604c87e8000c4f991"
+      "sha256": "sha256:c57cdc8be9b34d25cf4e48040779e9b5c5faf88e390ebd93531c4a46e05e9c73"
     }
+  },
+  "skillOverride": {
+    "base": {
+      "commit": "db3ef1b9463c7826a01167a4e136af9ca913307e",
+      "source": "skills/hue/SKILL.md",
+      "sha256": "sha256:18325b63bf077bcba83bb4e565f8197d5ce5a544312314e4db76552800fc16db"
+    },
+    "source": {
+      "repository": "https://github.com/hue-run/hue-sdk",
+      "commit": "1126f6b92207b6e18c022dede58015ddf89fc113",
+      "packages": {
+        "python": {
+          "name": "hue-run",
+          "version": "0.9.0"
+        },
+        "typescript": {
+          "name": "@hue-run/sdk",
+          "version": "0.15.0"
+        }
+      },
+      "skill": {
+        "description": "Set up and verify Hue tracing, investigate production traces over the Hue MCP, turn traces into eval cases, make an agent eval-ready and run Hue evaluations with hue eval. Use when a developer asks to set up, integrate or troubleshoot Hue or verify that requests reach Hue; asks what needs attention, fails or is slow in production; asks to turn a trace into a case or eval set; asks to make their agent eval-ready or point its Gmail, Slack or other app clients at Hue's simulated worlds; or asks to evaluate, test or regression-test their agent or run Hue evals (hue eval --case, --command or --worker) and read the results. Also use when the repository already uses Hue (@hue-run/sdk, hue-run, HUE_API_KEY or .env.hue) and the developer asks to evaluate or test their agent. Preserves the application's model provider, framework, OpenTelemetry setup and production behavior.",
+        "metadata": {
+          "author": "hue-run",
+          "version": "0.6.7"
+        },
+        "name": "hue",
+        "sha256": "sha256:44bdca4c93b6f2864e2755305ceb1f87e7bebd706114759e0579a7842023be04",
+        "source": "skills/hue/SKILL.md"
+      }
+    },
+    "sha256": "sha256:44bdca4c93b6f2864e2755305ceb1f87e7bebd706114759e0579a7842023be04"
   }
 }

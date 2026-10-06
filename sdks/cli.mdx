@@ -7,22 +7,22 @@ description: "Store a Hue key with hue login, connect your coding agent with hue
 
 <CodeGroup>
 ```sh npm
-npm install @hue-run/sdk@0.14.0
+npm install @hue-run/sdk@0.15.0
 ```
 
 ```sh Bun
-bun add @hue-run/sdk@0.14.0
+bun add @hue-run/sdk@0.15.0
 ```
 </CodeGroup>
 
-Run the commands from that project with `npx --yes --package @hue-run/sdk@0.14.0 hue …`. Always name the package: a bare `npx hue` can run an unrelated npm package called `hue`. Every command accepts `--help`.
+Run the commands from that project with `npx --yes --package @hue-run/sdk@0.15.0 hue …`. Always name the package: a bare `npx hue` can run an unrelated npm package called `hue`. Every command accepts `--help`.
 
 ## Store your key
 
 Create a **Read and write** key in **Settings → Integrations & API keys** for the project you want to use, then run:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.14.0 hue login --gitignore
+npx --yes --package @hue-run/sdk@0.15.0 hue login --gitignore
 ```
 
 `hue login` prints the key settings page and opens it in your browser when a terminal is attached. It reads the key without echoing it, checks it against Hue, and stores it once as both `HUE_API_KEY` (for evaluations) and `HUE_MCP_KEY` (for your coding agent) in `./.env.hue`, together with `HUE_BASE_URL` and `HUE_MCP_URL`. `--gitignore` adds that file to `.gitignore`. Key values are never printed.
@@ -45,7 +45,7 @@ To revoke evaluation and agent access separately, run `--keys evaluations` and `
 ## Connect your coding agent
 
 ```sh
-npx --yes --package @hue-run/sdk@0.14.0 hue mcp install --client claude-code --auth oauth
+npx --yes --package @hue-run/sdk@0.15.0 hue mcp install --client claude-code --auth oauth
 ```
 
 `hue mcp install` writes a server named `hue` at `https://mcp.hue.run/mcp` for your client. Supported clients are `claude-code`, `codex`, `conductor`, `cursor`, `vscode`, `windsurf` and `gemini`. For `windsurf` it only prints the snippet; merge it into the configuration opened by Cascade's **… (Actions) → MCPs → Open MCP config file**. See the [Cascade MCP guide](https://docs.devin.ai/desktop/cascade/mcp) for that client's configuration. Add `--dry-run` to see the change first, or `--print` for the snippet only.
@@ -73,8 +73,8 @@ With a key, export `HUE_MCP_KEY` in the shell that starts your client; an app st
 `hue eval` runs your agent locally against a published case or a saved eval set and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It uses `HUE_API_KEY` from `--env-file` (or its alias `--env-path`). Start the agent's own command with `--command`, after the one-time change in [Make your agent eval-ready](/evaluations/eval-ready-agent):
 
 ```sh
-npx --yes --package @hue-run/sdk@0.14.0 --package "zod@^4.6.5" hue eval --case "<name|id|url>" --command "<start command>" --env-file .env.hue
-npx --yes --package @hue-run/sdk@0.14.0 --package "zod@^4.6.5" hue eval --worker --command "<start command>" --revision "<new-agent-revision>" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.15.0 --package "zod@^4.6.5" hue eval --case "<name|id|url>" --command "<start command>" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.15.0 --package "zod@^4.6.5" hue eval --worker --command "<start command>" --revision "<new-agent-revision>" --env-file .env.hue
 ```
 
 The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the agent's repository gains no package.json or dependency; without the second, `hue eval` exits with `hue eval needs zod`, even for `--help`, and installing zod in the project does not help when the SDK itself is not installed there. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `--package @hue-run/sdk` runs that local, possibly older, copy. `hue eval` needs Node.js 22 or 24, even for a Python agent.
