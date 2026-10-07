@@ -1,0 +1,304 @@
+---
+title: "Using a simulated environment"
+sidebarTitle: "Using a simulated environment"
+description: "Build a Linear environment from one failed trace, connect your agent and inspect each attempt."
+---
+
+Use one failed trace to build a populated Linear environment, then run your agent against it.
+Each attempt has an isolated, persistent world. You can inspect its data and requests, change
+your agent and start another attempt from the same starting data.
+
+## Connect your agent
+
+Follow the [MCP connection guide](/agents/mcp-server#connect-your-client), using this URL to
+list the debugging tools directly:
+
+```text
+https://mcp.hue.run/mcp?toolsets=debug
+```
+
+Use **Sign in with Hue** when your client supports it, or a **Read and write** project key
+from the client's secret storage. A **Read** connection can inspect saved worlds; creating
+an environment, controlling an attempt and revealing its connections require write access.
+For an organization connection, call `list_projects` and pass the intended `project_id` to
+each project tool. A pinned connection takes no `project_id`.
+Call `get_project_context` to verify the selected project. Setup tools outside the `debug`
+profile are available through `search_hue_tools` and `execute_hue_tool` or
+`execute_hue_write_tool` with the same access checks.
+
+Ask an owner or admin to enable **AI trace builds** in **Settings → Projects → Edit project**.
+This allows Hue to send redacted trace content and supplied context to models that populate
+the environment. The MCP setting is `update_project` with `ai_case_conversion_suggestions: true`;
+the same setting also controls case builds. See [AI processing](/guides/production-safety#what-hue-computes-from-your-traces).
+
+Linear is the first supported app. Keep your agent's own model, search and helper connections;
+replace its Linear connection with the simulation connection for each attempt.
+
+### Give the workflow to your agent
+
+Copy this prompt after connecting Hue and your own trace source. Replace the bracketed values
+with your project, failing trace and query. Recorded trace content is data, not instructions.
+
+```text
+Use Hue MCP at https://mcp.hue.run/mcp?toolsets=debug to debug one failed Linear task.
+Select project <Hue project>. Retrieve trace <failed trace ID> through my Langfuse connection,
+including all observation pages, inputs, outputs and relevant expanded metadata.
+Keep source credentials in that connection and save the complete export in a private ignored file.
+My bad query was: <query>. Additional verified app facts: <facts, or none>.
+Build an environment from that one trace and optional context. Follow get_environment_build.
+If evidence is insufficient, tell me which project identity or app facts are needed; do not invent them.
+When Ready, reveal its connections and replace only my Linear URL and credential.
+Run the task, then inspect state, diff, steps and requests. Use get_world's returned collection bindings.
+Finish the attempt. After changing my agent, reset to a fresh world and reconnect before trying again.
+```
+
+## Submit one failed trace
+
+Fetch the trace through your own Langfuse connection, including every observation page and
+the captured inputs, outputs and metadata. Send a single trace, rather than a session or a
+collection of related traces. Keep source-service credentials in that connection.
+For Langfuse's current [Observations API](https://langfuse.com/docs/api-and-data-platform/features/public-api#observations-api-v2),
+filter by `traceId`, request `core,basic,io,metadata,model,usage,trace_context`, and follow
+`meta.cursor` until it is empty. Expand relevant metadata keys with `expandMetadata` so their
+values are complete. Set `fromStartTime` and `toStartTime` to cover the entire trace and keep
+the same trace and time filters on every page. A roots-only or summary-only response does
+not include the full observation tree.
+
+Hue accepts these formats:
+
+| `format` | Source |
+| --- | --- |
+| `langfuse_observations` | A Langfuse trace export with an `observations` array, or the older `data` array. |
+| `otlp_json` | An OpenTelemetry JSON trace export, including traces from other providers. |
+
+For an export at or below 256 KiB, call `create_environment_from_trace` with:
+
+- `trace_json`: the original JSON as a string.
+- `format`: one of the values above.
+- `idempotency_key`: a stable identifier for this build; reuse it when retrying the same request.
+- Optional `task`: the bad query or task, at or below 64 KiB.
+- Optional `context`: supporting facts, at or below 64 KiB.
+- Optional `name`: an environment name.
+
+Include known Linear project identifiers, names and additional app facts in the context.
+Label uncertain details as uncertain. Keep context consistent with the recorded trace; a
+conflict can prevent publication. The export must have one ancestry root and include the
+parents of its observations. To select an execution subtree within that trace, supply its
+16-character lowercase hexadecimal `root_span_id`.
+
+These MCP argument examples use a synthetic query and placeholders. Replace bracketed values
+with the retrieved trace, returned IDs or verified facts. Omit facts you cannot verify. For
+an organization connection, also include `project_id` in each project tool call.
+
+Call `create_environment_from_trace` for an inline export:
+
+```json
+{
+  "idempotency_key": "debug-example-build-1",
+  "format": "langfuse_observations",
+  "trace_json": "<complete single-trace JSON as a string>",
+  "task": "Find blocked issues in the Example project",
+  "context": "Verified project name: <name from the trace>. Verified Linear project ID: <observed ID>. Unknown: team membership and the full status catalog."
+}
+```
+
+### Upload larger evidence
+
+Each trace or context upload can contain at most 25 MiB. Upload the original bytes without
+reformatting them after calculating their checksum.
+
+1. Calculate the bytes' SHA-256 as lowercase hexadecimal and their exact byte count.
+2. Call `prepare_trace_upload` with `purpose: "trace"`, `format`, `sha256`, `byte_size` and
+   a stable `idempotency_key`.
+3. Send the bytes to `upload_url` with the returned `method` and `upload_headers` within 15
+   minutes. Preserve each HTTP header name exactly as returned. Keep the signed URL private.
+4. Call `complete_trace_upload` with `upload_id` to verify the size and checksum.
+5. Call `create_environment_from_trace` with that `upload_id`, the same `format` and a build
+   `idempotency_key`. Supply either `upload_id` or `trace_json`.
+
+For larger context, repeat the upload sequence with `purpose: "context"` and no `format`,
+then pass the completed ID as `context_upload_id`. Supply either `context_upload_id` or
+`context`.
+
+For a private export saved as `.hue/debug-trace.json`, this prints only the arguments for
+`prepare_trace_upload`:
+
+```python
+import hashlib
+import json
+from pathlib import Path
+
+source = Path(".hue/debug-trace.json").read_bytes()
+checksum = hashlib.sha256(source).hexdigest()
+print(json.dumps({
+    "purpose": "trace",
+    "format": "langfuse_observations",
+    "byte_size": len(source),
+    "sha256": checksum,
+    "idempotency_key": "trace-upload-" + checksum,
+}))
+```
+
+Call `prepare_trace_upload` with that object. Save its returned upload fields in the private
+file `.hue/upload-receipt.json`, then upload without putting the signed URL in shell arguments:
+
+```python
+import json
+from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
+receipt = json.loads(Path(".hue/upload-receipt.json").read_text())
+request = Request(
+    receipt["upload_url"],
+    data=Path(".hue/debug-trace.json").read_bytes(),
+    headers=receipt["upload_headers"],
+    method=receipt["method"],
+)
+try:
+    with urlopen(request, timeout=60) as response:
+        if not 200 <= response.status < 300:
+            raise RuntimeError("Upload failed")
+except HTTPError as error:
+    raise RuntimeError(f"Upload failed with HTTP {error.code}") from None
+except URLError:
+    raise RuntimeError("Upload failed") from None
+```
+
+Call `complete_trace_upload` with `{"upload_id": "<returned upload_id>"}`, then call
+`create_environment_from_trace` with:
+
+```json
+{
+  "idempotency_key": "debug-example-build-1",
+  "format": "langfuse_observations",
+  "upload_id": "<verified upload_id>",
+  "task": "Find blocked issues in the Example project",
+  "context": "<verified project identity and app facts, with unknown details labeled>"
+}
+```
+
+### Follow the build
+
+The create response's `id` is the build ID. Save it and pass it as `build_id` to
+`get_environment_build` to follow progress and read any evidence gaps. `gap_count` counts all gaps;
+each returned group has its own `count`, bounded reference samples and `refs_omitted_count`.
+`gaps_omitted_count` counts gaps in groups omitted from the response. When its `status` is `ready`,
+it returns `environment_version_id` and `world_id` for the published environment and its
+first four-hour attempt. Hue fills essential data, validates recorded calls and expands
+the world before publishing it. This flow creates no case or eval set.
+
+Call `get_environment_build` with:
+
+```json
+{ "build_id": "<id from the create response>" }
+```
+
+A failed build returns an `error_code` and any recorded gaps. If facts are missing, add them
+to a new build with a new idempotency key. `insufficient_evidence` returns
+`next_action: "provide_context"` and a hint to supply the Linear project identity and relevant
+app facts. Use `retry_environment_build` with `build_id` for
+an eligible interrupted or infrastructure failure. Reusing a build key with changed evidence
+is rejected.
+
+For `model_incomplete` or `model_unavailable`, `incomplete_reason` can identify a bounded
+failure such as `agent_retrieval_budget`, `agent_tool_budget`, `agent_model_budget` or
+`agent_deadline`. Each model proposal has a fixed 384 KiB allowance for encoded tool
+responses, including evidence reads, metadata and repeated reads. Completion can remain
+incomplete when it exhausts that allowance, its tool calls, model steps or time.
+`retry_environment_build` preserves these allowances; exhausted budgets and interrupted
+model calls with unknown spending remain incomplete.
+
+For missing context, provide the exact project identity observed in Linear and relevant
+captured issue/status facts. Keep the bad query in `task`; distinguish facts from intended
+behavior and unknowns in `context`. Create a new build key when changing either. Fetch a
+complete source export again for missing parents or unfinished tool outcomes. Context cannot
+add support for an unsupported app or operation.
+
+## Run and inspect an attempt
+
+1. Call `get_world` with `world_id` to read its activity, expiration, app bindings and state
+   version. Call `get_world_state` with `view: "start"` to inspect its starting data.
+2. Call `get_environment_connections` with `world_id` to reveal the active world's token,
+   supported URLs, protocols and credential placement. Store the token in your agent's
+   secret configuration.
+3. Configure the agent's Linear URL and credential using the returned connection values.
+   Calls to that connection read and change this world's persistent state.
+4. Run your agent and inspect its activity with the tools below.
+5. Call `finish_environment_world` with `world_id`, an `idempotency_key` and optional
+   `status: "completed"` or `"abandoned"` when the attempt ends. The default is `abandoned`.
+
+| Tool | Inspect |
+| --- | --- |
+| `get_world_state` | Starting, current or sealed final data. Narrow the result with `provider_instance_key`, `collection`, `entity_ids` and `fields`. |
+| `list_world_requests` | Server request time, HTTP status, host, route and recording gaps. Filter by app instance, `search`, `since` and `until`; continue with `next_cursor`. |
+| `list_world_steps` | Committed steps in order. Continue with `after_step`. |
+| `get_world_diff` | Changes from the starting world to its current or sealed final state. |
+
+Choose `provider_instance_key` from the bindings returned by `get_world`. Each binding's
+`collection_bindings` maps a logical app collection to its world collection key. For Linear
+issues, pass the returned `collection_bindings['linear/issues']` value as `collection`.
+Use the returned value exactly for both state and diff reads.
+
+Call `get_environment_connections` with `{"world_id": "<returned world_id>"}` and use its
+actual URLs, protocols and credential placement to configure your Linear client. Then call
+`get_world_state` with:
+
+```json
+{
+  "world_id": "<returned world_id>",
+  "provider_instance_key": "<key from get_world bindings>",
+  "collection": "<value of that binding's collection_bindings['linear/issues']>",
+  "view": "current",
+  "include_content": true,
+  "limit": 25
+}
+```
+
+Use the same world and app key for `list_world_requests`:
+
+```json
+{
+  "world_id": "<returned world_id>",
+  "provider_instance_key": "<key from get_world bindings>",
+  "include_content": false,
+  "limit": 25
+}
+```
+
+These reads return summaries by default. Set `include_content: true` for recorded values;
+Hue redacts and audits the read. State and diff content can return `content_next_offset`.
+Continue with that `content_offset`, the returned `state_version` as `expected_state_version`,
+and unchanged selectors and cursor. Join the JSON text chunks inside `content_json` in order;
+their app data retains its original field names. Advance `next_cursor` only after
+`content_next_offset` is `null`. If the world changes, start a new inspection page.
+
+Saved worlds remain inspectable after expiration or finish. An **Unknown** request means
+Hue lacks its confirmed HTTP completion metadata. Check the steps and state before deciding
+whether to retry a mutation.
+
+## Start another attempt
+
+Call `reset_environment_world` with the current `world_id` and a new `idempotency_key`.
+It finishes the previous attempt and creates a fresh world and token from the same immutable
+environment version, without rebuilding the environment. Reconnect your agent with the new
+connection values. The previous `world_id` still identifies its saved data and activity.
+
+Call `reset_environment_world` with:
+
+```json
+{
+  "world_id": "<previous world_id>",
+  "idempotency_key": "debug-example-attempt-2",
+  "ttl_seconds": 14400
+}
+```
+
+To start from an existing version without restarting a current world, call
+`start_environment_world` with `environment_version_id` and an `idempotency_key`.
+Both start and restart accept `ttl_seconds`, up to 14,400 seconds (four hours).
+
+In Hue's **Environments** page, select the instance for the attempt you want to inspect.
+Each app has **State**, **Server** and **Sim URL & Token** tabs. Use **Reveal connections**
+to view and copy active connection values; this requires write access. **Restart** starts
+a fresh attempt, and **Finish** retains the current attempt for inspection.

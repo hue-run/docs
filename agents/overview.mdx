@@ -28,6 +28,7 @@ Then send the prompt from [agent setup](/guides/agent-setup). Your agent guides 
 
 - **The agent can run a shell and is changing application code.** Install the skill and let it use the SDK. Add the MCP server when the agent should also confirm what Hue stored without asking you to open the UI.
 - **You want to know what production is doing.** Connect the MCP server and ask the agent what needs attention, what failed and why, or which requests are slow. The server returns traces, spans, attention states, trace checks and intents; the agent does the analysis. [Investigate production](/agents/investigate-production) has the tool sequences and example prompts.
+- **You want to debug a failed query against a simulated app.** Build a Linear environment from one trace, connect your agent and inspect each attempt. [Using a simulated environment](/agents/debug-environment) covers the `debug` tool profile and fresh worlds.
 - **The agent cannot run a shell**, for example a hosted assistant, **or you want several connected actions in one conversation** ("find yesterday's failing traces, show me the slowest span, compare the last two runs"). Connect the MCP server; a hosted assistant that supports MCP sign-in adds the URL and signs in with Hue. Hue has not yet verified claude.ai or ChatGPT end to end.
 - **You are automating in CI.** Use the SDK evaluation clients and the receipt endpoint directly.
 

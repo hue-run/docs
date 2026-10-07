@@ -4,7 +4,7 @@ sidebarTitle: "Tool reference"
 description: "Every tool on the Hue MCP server by toolset, with the access and role each one needs and the permissions behind them."
 ---
 
-This page lists every tool the [Hue MCP server](/agents/mcp-server) serves, grouped by the toolsets you name in `?toolsets=`. A default connection lists the production reads and the catalog tools; call any other tool through [`search_hue_tools` and the executors](/agents/mcp-server#choose-toolsets), or list it with its toolset. For the prompts and sequences that use these tools, see [what you can do](/agents/mcp-server#what-you-can-do) and [Investigate production](/agents/investigate-production).
+This page lists every tool the [Hue MCP server](/agents/mcp-server) serves, grouped by the toolsets you name in `?toolsets=`. A default connection lists the production reads and the catalog tools; call any other tool through [`search_hue_tools` and the executors](/agents/mcp-server#choose-toolsets), or list it with its toolset. For tool sequences, see [what you can do](/agents/mcp-server#what-you-can-do), [Investigate production](/agents/investigate-production) and [Using a simulated environment](/agents/debug-environment).
 
 The connection itself is the authority on the exact arguments: `search_hue_tools` returns each tool's input schema as your connection publishes it, including `project_id` on an organization connection.
 
@@ -25,9 +25,10 @@ The **Access** column of each table uses these levels. A level can add a role re
 
 | To | You need |
 | --- | --- |
-| Read traces, spans, sessions, findings, trace checks, intents, request answers, eval sets, evaluators, runs, cases, environments, judges, members and keys | Any MCP credential: a **Read** or **Read and write** key, or sign-in. A **Tracing only** key cannot connect. |
+| Read traces, spans, sessions, findings, trace checks, intents, request answers, eval sets, evaluators, runs, cases, environments, saved worlds, judges, members and keys | Any MCP credential: a **Read** or **Read and write** key, or sign-in. A **Tracing only** key cannot connect. |
 | Read recorded content | The same, and the application must have captured it. Each read is recorded in the project's audit log. |
 | Create and change eval sets, evaluators, runs, cases, environments, judge labels and promotions, and launch managed or local runs | **Read and write** access: a **Read and write** key or sign-in, without `?read_only=true`. |
+| Build an environment, start, restart or finish a debugging world, or reveal its connection token | **Read and write** access: a **Read and write** key or sign-in, without `?read_only=true`. Building also requires the project's **AI trace builds** setting. |
 | Revoke keys, change project settings, AI-processing consent or trace-check consent, register managed targets, publish the intent taxonomy, or change the judge alignment bar | **Read and write** access, and an owner or admin: the key's creator, or the signed-in member. |
 | Change trace checks, or archive eval sets and evaluators | **Read and write** access; through sign-in, an owner or admin. |
 | Create a project key | A **Read and write** key created by an owner or admin. Never through sign-in. |
@@ -47,7 +48,8 @@ The **Access** column of each table uses these levels. A level can add a role re
 | `add_api_key` | Write, key only | Creates a project key and returns its token once. |
 | `revoke_api_key` | Destructive, owner or admin | Revokes a project key. A key cannot revoke itself, and revoking a revoked key changes nothing. |
 | `list_members` | Read | Lists the organization members who can open the project, with their roles. |
-| `update_project` | Destructive, owner or admin | Changes the project's name and description and its trace findings, AI trace findings, AI intent classification, AI request judges and AI case suggestions settings. |
+| `update_project` | Destructive, owner or admin | Changes the project's name and description and its trace findings, AI trace findings, AI intent classification, AI request judges and AI trace builds settings. |
+| `submit_product_feedback` | Write | Sends user-requested product feedback with a stable idempotency key and returns a receipt. |
 
 ### `traces`
 
@@ -174,7 +176,7 @@ Managed and local runs, and artifacts.
 
 ### `environments`
 
-Simulated worlds a case can pin.
+Simulated environments, trace builds and saved debugging worlds. The [`debug` profile](/agents/debug-environment) lists the tools for building and trying an environment. Trace builds currently support Linear.
 
 | Tool | Access | What it does |
 | --- | --- | --- |
@@ -183,6 +185,20 @@ Simulated worlds a case can pin.
 | `add_environment` | Write | Creates an environment. |
 | `publish_environment_version` | Write | Publishes an immutable environment version from a definition. |
 | `archive_environment` | Destructive | Stops an environment being attached to new cases; versions already pinned stay readable. |
+| `prepare_trace_upload` | Write | Reserves a private trace or context upload for 15 minutes, with an exact size and SHA-256. Each object can contain up to 25 MiB. |
+| `complete_trace_upload` | Write | Verifies an upload's original bytes against its size, checksum, purpose and project before it can be used by a build. |
+| `create_environment_from_trace` | Write | Builds a Linear environment from one Langfuse or OTLP JSON trace and optional context. Publishes and starts a four-hour world after filling, validation and expansion; requires AI trace builds consent. |
+| `get_environment_build` | Read | Returns build progress, counted evidence gaps, a bounded incomplete reason, source checksum and published environment, version and world IDs. Returns no source content or token. |
+| `retry_environment_build` | Write | Resumes an eligible interrupted or failed build while preserving completed stages and model allowances. Exhausted budgets and unknown interrupted model spending remain incomplete. |
+| `start_environment_world` | Write | Starts a fresh world from an immutable environment version and returns its token and simulation URLs. Maximum lifetime: four hours. |
+| `reset_environment_world` | Destructive | Finishes the previous attempt and creates a fresh world and token from the same environment version. |
+| `finish_environment_world` | Destructive | Finishes an attempt and retains its saved state, committed steps and request records. |
+| `get_environment_connections` | Write | Explicitly reveals an active world's token, supported app URLs, protocols and credential placement. The reveal is audited. |
+| `get_world` | Read | Returns a saved world's activity, lifetime, state version, step count and app bindings, including `collection_bindings` for state/diff selectors. Returns no token. |
+| `get_world_state` | Read | Reads bounded starting, current or sealed final data, with app, collection, entity and field selectors. Values require `include_content: true`. |
+| `list_world_steps` | Read | Reads committed steps in order; continue with `after_step`. Arguments, results and changes require `include_content: true`. |
+| `list_world_requests` | Read | Pages world-scoped server requests and recording gaps, with optional app, search and time filters. Call content requires `include_content: true`. |
+| `get_world_diff` | Read | Compares starting data with current or sealed final data. Returns changed IDs and fields by default; values require `include_content: true`. |
 
 ### `intents`
 
