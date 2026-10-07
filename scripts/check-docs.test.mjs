@@ -91,8 +91,8 @@ test("private workspace pages stay outside documentation navigation", () => {
 });
 
 for (const [name, before, after] of [
-  ["wire", "at or below 1 MiB on the wire", "at or below 2 MiB on the wire"],
-  ["decompressed", "4 MiB after decompression", "1 MiB after decompression"],
+  ["wire", "at or below 4 MiB on the wire", "at or below 2 MiB on the wire"],
+  ["decompressed", "8 MiB after decompression", "1 MiB after decompression"],
   ["per-value", "An individual OTLP value can contain up to 1 MiB.", "An individual OTLP value can contain up to 256 KiB."],
   ["span index", "10,000 spans and", "2,000 spans and"],
   ["log index", "20,000 correlated logs per trace", "10,000 correlated logs per trace"],

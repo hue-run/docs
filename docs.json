@@ -25,6 +25,7 @@
           "agents/mcp-server",
           "agents/mcp-tools",
           "agents/investigate-production",
+          "agents/debug-environment",
           "guides/agent-setup",
           "guides/invited-setup"
         ]

@@ -4,9 +4,9 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "27ae094bb9ce2b8a953d17af8acf6c7a93945e7b",
+      "commit": "ec1ad9ad99b00f63b20c9a5334208be2c2ccfe4f",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:6465fb16725c09a83aa18e91624ad02ac0ffd4f54cc39c017cef58334fe06d51"
+      "sha256": "sha256:5db7c6174183f4e9798196cccf4c056fdf85969984edec1d384a15c8cdff5c67"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
@@ -20,7 +20,7 @@
     "projectMcpUrl": "https://mcp.hue.run/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
     "skillUrl": "https://docs.hue.run/skill.md?v=0.6.5",
-    "pageCount": 27
+    "pageCount": 28
   },
   "serviceKeyPresets": [
     {
@@ -83,6 +83,7 @@
     "tools": [
       "list_projects",
       "get_project_context",
+      "submit_product_feedback",
       "list_api_keys",
       "add_api_key",
       "revoke_api_key",
@@ -160,6 +161,20 @@
       "add_environment",
       "publish_environment_version",
       "archive_environment",
+      "prepare_trace_upload",
+      "complete_trace_upload",
+      "create_environment_from_trace",
+      "get_environment_build",
+      "retry_environment_build",
+      "start_environment_world",
+      "reset_environment_world",
+      "finish_environment_world",
+      "get_environment_connections",
+      "get_world",
+      "get_world_state",
+      "get_world_diff",
+      "list_world_steps",
+      "list_world_requests",
       "get_intent_taxonomy",
       "save_intent_taxonomy",
       "get_intent_summary",
@@ -182,7 +197,7 @@
       "search_hue_docs",
       "load_hue_guide"
     ],
-    "catalogSha256": "c47a9347fad810afb1297d1409e30c1f860e286808a7f48c62801341d1cbba7c"
+    "catalogSha256": "78189185c564eb9b9ac588b10296ddc91a975c04c772aaaa4edf68ce9cf3b26a"
   },
   "pages": [
     "index",
@@ -192,6 +207,7 @@
     "agents/mcp-server",
     "agents/mcp-tools",
     "agents/investigate-production",
+    "agents/debug-environment",
     "guides/agent-setup",
     "guides/invited-setup",
     "sdks/typescript",

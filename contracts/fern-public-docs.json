@@ -44,8 +44,8 @@
     }
   },
   "telemetryLimits": {
-    "requestWireBytes": 1048576,
-    "requestDecodedBytes": 4194304,
+    "requestWireBytes": 4194304,
+    "requestDecodedBytes": 8388608,
     "valueBytes": 1048576,
     "indexedSpansPerTrace": 10000,
     "indexedLogsPerTrace": 20000
@@ -589,11 +589,11 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.13.2"
+      "version": "0.15.0"
     },
     "python": {
       "name": "hue-run",
-      "version": "0.7.1"
+      "version": "0.9.0"
     }
   },
   "mcp": {
@@ -652,6 +652,18 @@
           "destructiveHint": false,
           "idempotentHint": true,
           "openWorldHint": false
+        }
+      },
+      {
+        "name": "submit_product_feedback",
+        "title": "Hue: send product feedback",
+        "toolset": "project",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true
         }
       },
       {
@@ -1579,6 +1591,174 @@
         }
       },
       {
+        "name": "prepare_trace_upload",
+        "title": "Hue: prepare trace upload",
+        "toolset": "environments",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "complete_trace_upload",
+        "title": "Hue: complete trace upload",
+        "toolset": "environments",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "create_environment_from_trace",
+        "title": "Hue: create environment from trace",
+        "toolset": "environments",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_environment_build",
+        "title": "Hue: get environment build",
+        "toolset": "environments",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "retry_environment_build",
+        "title": "Hue: retry environment build",
+        "toolset": "environments",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "start_environment_world",
+        "title": "Hue: start environment world",
+        "toolset": "environments",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "reset_environment_world",
+        "title": "Hue: restart environment world",
+        "toolset": "environments",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "finish_environment_world",
+        "title": "Hue: finish environment world",
+        "toolset": "environments",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_environment_connections",
+        "title": "Hue: get environment connections",
+        "toolset": "environments",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_world",
+        "title": "Hue: get world",
+        "toolset": "environments",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_world_state",
+        "title": "Hue: get world state",
+        "toolset": "environments",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_world_diff",
+        "title": "Hue: get world diff",
+        "toolset": "environments",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_world_steps",
+        "title": "Hue: list world steps",
+        "toolset": "environments",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "list_world_requests",
+        "title": "Hue: list world requests",
+        "toolset": "environments",
+        "access": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
         "name": "get_intent_taxonomy",
         "title": "Hue: get intent taxonomy",
         "toolset": "intents",
@@ -1832,12 +2012,12 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "c47a9347fad810afb1297d1409e30c1f860e286808a7f48c62801341d1cbba7c",
+    "catalogSha256": "78189185c564eb9b9ac588b10296ddc91a975c04c772aaaa4edf68ce9cf3b26a",
     "serverInstructionsSha256": "a57ca5d20b45f22f4e1edcb1935b3555d47afeb0601f7bef597bef4e45d7a2ce",
     "guides": {
       "data-model": {
         "title": "Hue data model",
-        "sha256": "b8184f8249487f340ac9e2788fdeafab7d1be92326cd35a2f00c3c36ea7bb95d"
+        "sha256": "70c23e1fbba48290525b03f2081ef57d388a5e3b7f422a9fe145bd7efaace23f"
       },
       "production": {
         "title": "Read production traces with Hue",
@@ -1943,6 +2123,25 @@
           "list_run_items",
           "get_run_item",
           "get_run_execution"
+        ],
+        "debug": [
+          "load_hue_guide",
+          "list_environments",
+          "get_environment",
+          "prepare_trace_upload",
+          "complete_trace_upload",
+          "create_environment_from_trace",
+          "get_environment_build",
+          "retry_environment_build",
+          "start_environment_world",
+          "reset_environment_world",
+          "finish_environment_world",
+          "get_environment_connections",
+          "get_world",
+          "get_world_state",
+          "list_world_steps",
+          "list_world_requests",
+          "get_world_diff"
         ]
       },
       "default": [

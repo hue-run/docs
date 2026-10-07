@@ -489,7 +489,7 @@ Both Hue SDKs strip recognized content attributes from every record on their exp
 
 ## Observe collector acknowledgements
 
-Keep requests at or below 1 MiB on the wire and 4 MiB after decompression. An individual OTLP value can contain up to 1 MiB. Hue cuts oversized text values at a UTF-8 character boundary and replaces oversized structured values with a truncation marker. The `hue.truncated` attribute lists the affected keys. Oversized requests return HTTP 413.
+Keep requests at or below 4 MiB on the wire and 8 MiB after decompression. An individual OTLP value can contain up to 1 MiB. Hue cuts oversized text values at a UTF-8 character boundary and replaces oversized structured values with a truncation marker. The `hue.truncated` attribute lists the affected keys. Oversized requests return HTTP 413.
 
 Hue indexes up to 10,000 spans and 20,000 correlated logs per trace. Records beyond those index limits remain stored in the trace's evidence segments and counted on the trace.
 
