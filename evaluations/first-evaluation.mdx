@@ -204,11 +204,11 @@ finally:
 </Tab>
 </Tabs>
 
-The setup directory is created before registry writes. If setup stops before `state.json`, the next invocation stops rather than silently creating another run. Inspect **Datasets**, **Scorers**, and **Experiments** before recovery. Registry writes have no automatic retry; the saved request can recover an uncertain acknowledgement with its original idempotency key and payload.
+The setup directory is created before registry writes. If setup stops before `state.json`, the next invocation stops rather than silently creating another run. Inspect **Evals**, **Evaluators**, and **Runs** before recovery. Registry writes have no automatic retry; the saved request can recover an uncertain acknowledgement with its original idempotency key and payload.
 
 ## Read the result
 
-Open **Experiments** and select **Uppercase baseline**. The target should succeed and the exact-match metric should be true. The scoring run uses the same immutable subject ID and saved output. `rescore` has no target callback, so it cannot invoke the uppercase function again.
+Open **Runs** and select **Uppercase baseline**. The target should succeed and the exact-match metric should be true. The scoring run uses the same immutable subject ID and saved output. `rescore` has no target callback, so it cannot invoke the uppercase function again.
 
 To compare a different target configuration, create a new run with the same frozen eval-set and published evaluator versions. Use a new checkpoint directory; do not edit frozen pins or reuse a checkpoint.
 
