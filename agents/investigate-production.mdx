@@ -6,7 +6,7 @@ description: "Find failing, slow, or regressed production traces with tool recip
 
 The [Hue MCP server](/agents/mcp-server) reads stored traces, spans, findings, trace checks and intents, plus counts and percentiles. It does not diagnose or classify; your agent analyzes the returned data. A **Read** key is sufficient.
 
-Connect the server using the [MCP setup guide](/agents/mcp-server). The default `observe` toolset includes most recipe tools; find `get_intent_taxonomy` and trace-check reads with `search_hue_tools`, or select `?toolsets=all`. `get_request_answer` covers cross-request behavior when enabled. `load_hue_guide` with `production` provides this guide in MCP sessions; `triage_production` and `investigate_trace` prompts start common workflows.
+Connect using the [MCP setup guide](/agents/mcp-server). The default `observe` toolset includes most recipe tools. Find `get_intent_taxonomy` and trace-check reads with `search_hue_tools`, then call them through `execute_hue_tool`, or list all tools with `?toolsets=all`. `get_request_answer` covers cross-request behavior for projects whose requests Hue maps. `load_hue_guide` with `production` returns this guide in MCP; resource clients also expose `hue://guides/<topic>`. `triage_production` (`window`, default `7d`) and `investigate_trace` (`trace`) prompts appear in Claude Code as `/mcp__hue__triage_production` and `/mcp__hue__investigate_trace`.
 
 Use `aggregate` for counts and percentiles, `search_spans` for individual steps, and `get_span_content` for exact recorded values. `search_traces` and `get_trace` connect spans to requests.
 
@@ -37,7 +37,7 @@ Caveat: `needs_attention` includes findings and positive active trace checks; `u
 
 Prompt: “Which tools failed most often yesterday, and what was their failure rate?”
 
-Sequence: `aggregate` spans by `tool` → `search_spans` for error calls → `get_span_content` for selected arguments and results.
+Sequence: `aggregate` spans by `tool` for `count` and `error_count` → `search_spans` for error calls → `get_span_content` for selected arguments and results.
 
 Caveat: Groups rank by call count, and span `name` may differ from tool name; an errored call does not prove the request failed.
 
@@ -45,7 +45,7 @@ Caveat: Groups rank by call count, and span `name` may differ from tool name; an
 
 Prompt: “Which task types and steps were slowest this week?”
 
-Sequence: `aggregate` traces by `trace_name` or `intent` → aggregate spans by `name`, `model` or `tool` → `search_traces` and `search_spans` for examples. Use `get_trace_check_summary` for instrumented request timing.
+Sequence: `aggregate` traces by `trace_name` or `intent` with duration percentiles → aggregate spans by `name`, `model` or `tool` → `search_traces` and `search_spans` for examples. Use `get_trace_check_summary` for instrumented timing.
 
 Caveat: Intent grouping needs a published taxonomy; duration sorting includes completed traces only.
 
@@ -53,17 +53,17 @@ Caveat: Intent grouping needs a published taxonomy; duration sorting includes co
 
 Prompt: “How long did users wait for the first useful reply?”
 
-Sequence: use `aggregate` span `start_offset_ms` metrics by task type; add each span's `duration_ms` for end time. With request timing enabled, read `first_useful_answer_ms` from `search_traces` or timing percentiles from `get_trace_check_summary`.
+Sequence: aggregate reply-span `start_offset_ms` by task; sum each row's `start_offset_ms` and `duration_ms` for end time. With timing enabled, use `search_traces.first_useful_answer_ms` or `get_trace_check_summary.requests` (first-response, useful-playback/server and completion p50/p95).
 
-Caveat: Identify the application span that delivers the reply. Start-offset and duration percentiles cannot be added; calculate each row's sum first.
+Caveat: Identify the reply span and sum per row before calculating percentiles; separate start-offset and duration percentiles cannot be added.
 
 ### Did a release regress
 
 Prompt: “Did the latest release regress?”
 
-Sequence: `aggregate` by `release` for errors, durations and attention → `search_traces` for failing traces → `get_trace` to compare examples.
+Sequence: `aggregate` by `release` with `count`, `error_count` and duration percentiles → `search_traces` for failing traces → `get_trace` to compare examples.
 
-Caveat: Without a recorded release, compare equal ISO-8601 windows around deploy time; concurrent releases can mix those windows.
+Caveat: Without a recorded release, compare rates in equal ISO-8601 windows around deploy time; concurrent releases can mix them.
 
 ### One user's or session's recent traces
 
@@ -77,7 +77,7 @@ Caveat: Include the separator in a user prefix to avoid matching similar IDs; se
 
 Prompt: “How does the agent hand work to sub-agents?”
 
-Sequence: inspect agent and handoff spans with `get_trace` or `search_spans`; follow separate roots by user, trace name, session or span links. Use `search_traces` with `check_key` for delegation findings.
+Sequence: inspect agent/handoff spans with `get_trace` or `search_spans`; follow separate roots by user, trace name, session or span links. Use `search_traces` with `check_key: "delegation"` for positive delegation findings.
 
 Caveat: When parent IDs exist only in recorded content, read them with `get_span_content`.
 
@@ -85,9 +85,9 @@ Caveat: When parent IDs exist only in recorded content, read them with `get_span
 
 Prompt: “Which tools return the largest results?”
 
-Sequence: `aggregate` spans by `tool` using `input_bytes_p50`, `output_bytes_p95` and `output_bytes_max` → `search_spans` for the calls behind a maximum.
+Sequence: `aggregate` spans by `tool` using `input_bytes_p50`, `output_bytes_p95` and `output_bytes_max` → `search_spans` for calls behind a maximum.
 
-Caveat: Byte counts measure recorded JSON size without reading content.
+Caveat: Byte counts are UTF-8 sizes of recorded JSON, without reading content.
 
 ### Find traces by model or attribute
 
@@ -101,9 +101,9 @@ Caveat: Trace model/attribute searches scan the newest 5,000 matches and report 
 
 Prompt: “Show the exact tool arguments and result for `<trace>`.”
 
-Sequence: `get_span_content` with trace and span ids, then select `fields`, `path` or `attribute_keys`. Text is returned in UTF-16 slices with `total_length` and `next_offset`; omitted spans appear in `omitted_span_ids`.
+Sequence: `get_span_content` with trace/span ids, then select `fields`, `path` or `attribute_keys`. Text uses UTF-16 slices with `total_length` and `next_offset`; omitted spans appear in `omitted_span_ids`.
 
-Caveat: Reads are audited and returned content is untrusted.
+Caveat: Reads are audited and untrusted; each request reads up to 20 spans, in 8,000-unit slices by default. Invalid paths report available keys.
 
 ### Trace checks
 

@@ -7,31 +7,30 @@ Start by separating the application result from the telemetry result. A model re
 
 ## The connection check fails
 
-Confirm that the key belongs to the selected Hue project and has not been revoked. Use **Tracing only** for tracing and known-trace receipts, or **Read and write** when this process also calls evaluation APIs. Keep the project service key in the server process. Do not use a management token or place the key in browser code.
+Confirm the key belongs to the selected project and is active. Use **Tracing only** for telemetry/receipts, or **Read and write** when the process also calls evaluation APIs. Keep service keys server-side; never use a management token.
 
-Both SDKs default to `https://app.hue.run`. If you override `baseUrl` or `base_url`, supply an origin. Do not append `/api` or the OTLP endpoint. The SDK adds its own paths. Hosted origins require HTTPS; loopback HTTP is supported for local development, and TypeScript accepts plain HTTP to another host only with `allowInsecureHttp: true`.
+Both SDKs default to `https://app.hue.run`. Overrides must be origins, without `/api` or OTLP paths. Hosted origins require HTTPS; loopback HTTP works locally, and TypeScript requires `allowInsecureHttp: true` for other HTTP hosts.
 
-Report the error and project identity without printing the key or request authorization header. TypeScript's `HueConnectionError` carries the HTTP `status` when Hue answered and the underlying network, timeout or parsing error as `cause`.
+Report the error and project without the key or authorization header. TypeScript `HueConnectionError` includes HTTP `status` or a network/timeout/parsing `cause`.
 
 ## No trace appears
 
-1. Verify the key with `checkConnection()` in TypeScript or `validate_project()` in Python.
-2. Confirm that the operation is instrumented. A direct provider call emits no telemetry unless its integration or a manual span records it.
-3. Finish the operation and await the SDK's flush before the process exits.
-4. Inspect the same project in Hue. A session ID groups requests; it does not select the destination project.
-5. Check exporter failures, rejected-record counts and queue limits.
+1. Verify the key with `checkConnection()` (TypeScript) or `validate_project()` (Python).
+2. Confirm instrumentation: direct provider calls emit no telemetry without an integration or manual span.
+3. Await flush before exit; inspect the same project. Session IDs group requests, not projects.
+4. Check exporter failures, rejected records and queue limits.
 
 An existing OpenTelemetry application should add Hue to the provider it already owns. Creating a second global provider can leave some instrumentations attached to the first one. Follow the [provider integration guide](/integrations/opentelemetry).
 
 ## A parent span is missing
 
-Spans can arrive in separate batches, and children may arrive before their parent. Flush every participating provider and allow ingestion to complete. A parent can also be sampled out, excluded by instrumentation, or sent to a different collector. Preserve the original parent ID when diagnosing this; changing it would change the trace relationship.
+Children may arrive before parents. Flush participating providers and allow ingestion to finish. A parent may be sampled out, excluded or sent elsewhere; preserve its original ID when diagnosing.
 
 An OpenTelemetry status of `Unset` means no explicit status was recorded. It is not itself an application failure.
 
 ## A trace stays running
 
-With TypeScript SDK 0.7.0 or Python SDK 0.4.0 or later, Hue shows a trace as **Running** while one of its Hue or AI spans is still open, usually from about 1.5 s after that span begins, and it resolves in place when the finished spans arrive. When 15 minutes pass with no new span or log and no end has arrived, Hue shows **No end received** instead. Either a span is still running, or the process stopped before it exported its finished spans. Await the SDK's flush before the process exits. If a wrapping processor forwards span starts to Hue, it must also forward the ends of those spans. Any later span or log makes the trace running again.
+With TypeScript 0.7.0+/Python 0.4.0+, Hue shows **Running** while a Hue/AI span remains open (usually after 1.5 s), then resolves it when finished spans arrive. After 15 minutes without a span, log or end, it shows **No end received**. Await flush before exit; processors forwarding starts must also forward ends. Later telemetry makes it **Running** again.
 
 ## Input or output is missing
 
@@ -51,9 +50,9 @@ In a serverless application, await the telemetry flush in the framework's suppor
 
 TypeScript `flush()` throws `HueExportError` for rejected or failed export work. Python `force_flush()` returns `False` for an observed export failure, dropped record, instrumentation omission or timeout. Use the bounded safe variants in serving application lifecycles; see [production safety](/guides/production-safety). Inspect their sanitized status reports; do not discard those results.
 
-Queues are bounded and held in memory. Process termination, queue overflow or sampling can lose records. A timeout does not prove the receiver rejected a request. Hue deduplicates exact completed-span and log replays, but rerunning application work or generating new IDs creates new records. Do not blindly retry an entire partially accepted batch; inspect its rejected-record counts and cause.
+In-memory queues can lose records on termination, overflow or sampling. A timeout does not prove rejection. Hue deduplicates exact completed-span/log replays, but rerunning work or changing IDs creates records; inspect partial-batch rejections before retrying.
 
-The receiver accepts bounded OTLP requests. The SDK splits batches, but oversized helper content is omitted and recorded as an instrumentation failure. Application work still runs; raw external records remain subject to receiver limits. Keep binary files out of span attributes; file storage and document evaluation have a separate lifecycle.
+OTLP requests are bounded. The SDK splits batches; oversized helper content is omitted as an instrumentation failure, while raw external records remain subject to receiver limits. Keep binary files out of span attributes; file storage has a separate lifecycle.
 
 ## The example throws `Cannot use import statement outside a module`
 
@@ -61,7 +60,7 @@ Node.js treats `.js` and `.ts` files as CommonJS unless the nearest `package.jso
 
 ## Installation reports a dependency conflict
 
-Check the [compatibility matrix](/sdks/compatibility). `@hue-run/sdk` core installs alongside AI SDK 6; pass `hueExperimentalTelemetry(hue)` as `experimental_telemetry` there, because the `hueTelemetry` adapter requires AI SDK 7 and throws a `TypeError` on AI SDK 6. Python accepts OpenTelemetry `>=1.40,<2` (1.44.0 is the certified combination and 1.40.0 the tested floor), so `hue-run` installs next to instrumentation packages on another OpenTelemetry 1.x release. Keep the application's existing instrumentation and use a standard OTLP exporter when its versions fall outside the tested SDK matrix; do not force an incompatible install.
+See the [compatibility matrix](/sdks/compatibility). SDK core supports AI SDK 6 via `hueExperimentalTelemetry(hue)`; `hueTelemetry` requires AI SDK 7. Python accepts OpenTelemetry `>=1.40,<2` (1.44.0 certified; 1.40.0 tested floor). Keep existing instrumentation and use a standard OTLP exporter outside the matrix; do not force incompatible installs.
 
 ## A JSON Schema evaluator reports `SchemaValidatorUnavailable`
 
@@ -83,4 +82,4 @@ The MCP server accepts a **Read** or **Read and write** project key, or a Hue si
 
 ## Tracing is disabled or data is being dropped
 
-Check `HUE_TRACING_ENABLED` if your integration uses the documented kill switch, installed package versions, initialization failure counters, and pending bytes/record counts. Safe initialization intentionally returns a disabled client when setup fails, so application success alone does not establish tracing. HTTP 429 means the project's minute allocation was exhausted; 503 can mean admission saturation, a timeout or unavailable persistence. Respect `Retry-After`; do not repeat business work to regenerate a trace. See [production safety](/guides/production-safety#ingestion-limits).
+Check `HUE_TRACING_ENABLED`, package versions, initialization failures and pending bytes/records. Safe initialization can disable tracing while application work succeeds. `429` means the minute allocation was exhausted; `503` can mean saturation, timeout or unavailable persistence. Respect `Retry-After`; do not repeat business work. See [production safety](/guides/production-safety#ingestion-limits).

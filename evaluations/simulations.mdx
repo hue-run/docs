@@ -4,7 +4,7 @@ sidebarTitle: "Simulations"
 description: "Run an agent in a fresh simulated world per case and score its sealed journal."
 ---
 
-Your agent runs in your process while a disposable simulated world runs in Hue. The world is authoritative and records an ordered journal of every action. Hue does not execute your agent code or hold your provider credentials.
+Your agent runs in your process; Hue runs a disposable world and records its action journal. Hue neither executes agent code nor holds provider credentials.
 
 `runSimulation()` is available in `@hue-run/sdk` 0.2.0+ for TypeScript; Python 0.5.0+ provides the lower-level [`hue_sdk.environment`](/reference/python#environment-client). Each invocation creates a fresh run, isolated world per case and resumable checkpoint. See the [simulation](/reference/typescript#run-a-simulation) and [environment](/reference/typescript#environment-client) references.
 
@@ -28,7 +28,7 @@ An observation with `status: "error"` is a recorded world answer, for example a 
 
 ## Run a definition like a test
 
-`runSimulation()` is the one-shot developer path. It calls your existing callback directly, so IDE breakpoints and cooperative cancellation work. It does not register a worker, poll for jobs, host your laptop or require an inbound tunnel.
+`runSimulation()` calls your callback directly, enabling breakpoints and cooperative cancellation without registering a worker, polling jobs, hosting your laptop or requiring a tunnel.
 
 ```ts
 import { createHue } from "@hue-run/sdk";
@@ -62,11 +62,11 @@ try {
 
 The referenced run template is app-authored. Each invocation clones its frozen eval set, configuration and evaluator-version pins into a fresh run and creates one isolated world per case. The `run_created` event carries the run URL as soon as it exists, so you can inspect progress while the agent runs.
 
-Repeat the command after an edit for a fresh attempt and world. An interrupted invocation resumes through the private checkpoint directory instead of starting again. Use one directory per definition and add it to `.gitignore`.
+Rerun after edits for a fresh attempt/world. Interruptions resume from the private checkpoint; use one directory per definition and add it to `.gitignore`.
 
 ## Repository-authored definitions
 
-A repository definition keeps the world definition, cases and evaluators next to the agent code. `runSimulation()` publishes them through the same validated environment, eval-set, evaluator and run APIs as definitions authored in Hue. Stable slugs reuse matching immutable content digests; changed definitions, cases or evaluators publish new versions. Hue does not synchronize files back from its UI, and the helper refuses an unrelated mutable eval-set draft instead of overwriting it.
+Repository definitions keep worlds, cases and evaluators beside agent code. `runSimulation()` publishes them through Hue's validated environment, eval-set, evaluator and run APIs. Stable slugs reuse matching immutable digests; changed content publishes new versions. Hue does not sync UI edits to files or overwrite an unrelated mutable eval-set draft.
 
 ```ts
 import { defineLocalScorer } from "@hue-run/sdk/evals";
@@ -130,13 +130,13 @@ await runSimulation({
 });
 ```
 
-Repository publication supports the public `ScorerDefinition` union: exact match, includes, JSON Schema, local code, manual and model-judge definitions. A `LocalScorer` from `defineLocalScorer` publishes its pinned definition and binds the callback in the same step. `runSimulation()` applies the same identity-affecting defaults as Hue before resolving versions and rejects unknown or server-only kinds; in particular, `document_verifier` is not part of this SDK contract and is rejected rather than published with a guessed digest.
+Repository publication supports the `ScorerDefinition` union: exact match, includes, JSON Schema, local code, manual and model judge. `defineLocalScorer` publishes its pinned definition and callback together. `runSimulation()` applies Hue's identity defaults and rejects unknown/server-only kinds, including `document_verifier`.
 
 A definition needs at least one case and one evaluator, and case keys must be unique. Definition defaults are applied before the digest is computed: `required: true` on parameters, an identity observation projection, empty `guards`, a `not_found` error and handwritten provenance. Writing the defaults out does not create a new version.
 
 ## What the callback receives
 
-`target(inputs, context)` is invoked exactly once per attempt. The context contains:
+`target(inputs, context)` runs once per attempt. Its context contains:
 
 | Field | Meaning |
 | --- | --- |
@@ -148,7 +148,7 @@ A definition needs at least one case and one evaluator, and case keys must be un
 | `signal` | Cooperative cancellation. Pass it into the provider or agent call. |
 | `connectionBundle` | Present only after a ready provider-profile preflight. See below. |
 
-Configuration alone does not redirect provider calls: give `tools` or `mcp` to the agent's tool boundary. The MCP token reaches only the callback, never checkpoints or progress events.
+Configuration alone does not redirect provider calls: pass `tools` or `mcp` to the agent. The MCP token is never checkpointed or included in progress events.
 
 Hue-native `tools` and `mcp` are deprecated in favor of the world handoff. `runSimulation()` emits one `DeprecationWarning` (`HUE_NATIVE_SIMULATION_TOOLS`) when it supplies them; `deprecationWarnings: false` silences it. `hue eval` does not emit it.
 
@@ -166,17 +166,17 @@ Pass `agentRevision` to record the tested revision in a gateway world's fingerpr
 
 ## Evidence and scoring
 
-The run URL joins task, trace, world effects and final state, target outcome and evaluator results. Target failures and cancellations seal the world as `abandoned`; evaluator errors remain separate.
+The run URL joins task, trace, world state, target outcome and evaluator results. Target failures/cancellations seal as `abandoned`; evaluator errors remain separate.
 
-Local evaluation resolves the sealed world before calling an evaluator. A local-code evaluator receives `context.environment` with the sealed run, `{ collections }` `initialState`/`finalState` and complete ordered `steps`; the SDK verifies the journal and limits evidence to 8 MiB without truncating history. It runs when environment evidence exists even if the target returned no output.
+Local evaluation resolves the sealed world first. Local-code evaluators receive the run, `{ collections }` initial/final state and complete ordered steps through `context.environment`; the SDK verifies the journal and caps evidence at 8 MiB without truncation. They run even when the target returned no output.
 
-Unreadable sealed evidence records `EnvironmentEvidenceUnavailable` instead of scoring incomplete data; built-in evaluators still score saved output. `rescore({ ..., environmentEvidence: "required" })` reads the same evidence without rerunning the agent. Manual and hosted-judge evaluator pins remain pending for their workflows.
+Unreadable evidence records `EnvironmentEvidenceUnavailable`; built-ins still score saved output. `rescore({ ..., environmentEvidence: "required" })` reads evidence without rerunning the agent. Manual and hosted-judge pins remain pending.
 
 ## Cancellation and uncertainty
 
-Cancellation is cooperative: pass `signal` to `runSimulation()` and forward `context.signal`. A cancelled attempt has execution state `cancelled` and seals its world as `abandoned`.
+Pass `signal` to `runSimulation()` and forward `context.signal`. Cancellation sets execution state `cancelled` and seals the world as `abandoned`.
 
-If an outcome or world seal is uncertain, resume raises `UncertainExecutionError` or `TargetOutcomeUncertainError`, never reacquires credentials or invokes the callback, and requires inspecting side effects before a new attempt. Deleting a checkpoint or lock is not permission to rerun.
+If outcome/seal is uncertain, resume raises `UncertainExecutionError` or `TargetOutcomeUncertainError` without reacquiring credentials or invoking the callback. Inspect side effects before a new attempt; deleting a checkpoint or lock is not permission to rerun.
 
 Changed definitions or revisions fail against unfinished checkpoints; recover or finish first, or use another directory.
 
@@ -206,7 +206,7 @@ console.log(observation.status); // "ok" or "error", a recorded world answer eit
 await client.finishRun(run.id, { idempotencyKey: randomUUID(), status: "completed" });
 ```
 
-Run mutations (`createRun`, `act`, `finishRun`, `recordCoverageGap`) retry transient failures with stable invocation and idempotency identities. Registry writes (`createEnvironment`, `publishVersion`) do not retry automatically, because identity creation and publication have no request key. `HueEnvironmentError` carries the HTTP status when Hue answered and never includes response text or credentials.
+Run mutations retry transient failures with stable identities; registry writes do not, since they have no request key. `HueEnvironmentError` includes an HTTP status, never response text or credentials.
 
 ## Limits
 

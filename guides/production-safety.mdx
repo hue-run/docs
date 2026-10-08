@@ -15,7 +15,7 @@ The APIs below require TypeScript `@hue-run/sdk >= 0.1.5` or Python `hue-run >= 
 
 ## Separate setup verification from serving requests
 
-Run the strict [quickstart](/quickstart), connection check and [trace receipt verification](/sdks/typescript#verify-stored-trace-evidence) during installation or a diagnostic command. They deliberately fail when Hue is unavailable; never make readiness or a customer response depend on them.
+Run the strict [quickstart](/quickstart), connection check and [trace receipt verification](/sdks/typescript#verify-stored-trace-evidence) during setup, not in readiness or customer requests.
 
 Create one client per serving process with the safe constructor and background export. Use safe lifecycle methods at the lifecycle boundary; never rerun an agent after a telemetry error because tools may have caused side effects.
 
@@ -77,21 +77,21 @@ def shutdown_tracing():
 </Tab>
 </Tabs>
 
-`existingAgent` and `existing_agent` stand for your application function. Register shutdown in the process hook, not after client creation. For serverless requests, use `flushSafe` or `force_flush_safe` in the supported after-response lifecycle with a fitting deadline; do not shut down a shared provider per request.
+`existingAgent` and `existing_agent` are your functions. Register shutdown in the process hook. For serverless, flush in the supported after-response lifecycle; do not shut down shared providers per request.
 
 ## Failure behavior
 
-Hue omits unsafe content, including oversized JSON or failing redactors, and records an instrumentation failure while preserving the callback's result and error. Safe initialization returns a disabled client on setup failure; disabled helpers still execute application work.
+Hue omits unsafe content or redactor failures, records instrumentation failure and preserves application results/errors. Safe initialization returns a disabled client on setup failure; helpers still execute application work.
 
-Python redactors receive detached copies. Hue snapshots helper content and the redactor's return value; each snapshot allows 1 MiB, depth 64 and 65,536 visited values/keys. Cycles, custom objects or subclasses, non-finite numbers, integers above 14,000 bits and over-budget inputs are omitted without calling the redactor. The final redacted JSON field is 256 KiB. Redactors must be deterministic and free of external side effects.
+Python redactors receive detached copies. Snapshots allow 1 MiB, depth 64 and 65,536 values/keys; cycles, custom objects, non-finite numbers, integers above 14,000 bits and over-budget inputs are omitted before redaction. Final redacted JSON is capped at 256 KiB. Keep redactors deterministic and side-effect free.
 
-Safe lifecycle methods return failure results instead of raising. A timeout bounds the wait but does not prove delivery or undo an in-flight request. `createHue` / `Hue`, connection checks, verification and strict lifecycle methods remain diagnostic APIs and can reject configuration or report delivery failures.
+Safe lifecycle methods return failure results. A timeout neither proves delivery nor cancels an in-flight request. `createHue` / `Hue`, checks, verification and strict lifecycle methods remain diagnostic and may fail.
 
-Queues have both record and byte limits, including in-flight records. TypeScript's default byte budget is 8 MiB shared by traces and logs; Python's is 8 MiB per signal. Byte accounting bounds queued telemetry, not total process RSS. OTel objects, serialization, dependency code and application payloads consume additional memory. Overflow drops telemetry and updates counters; it never retries the agent's business operation.
+Queues limit records and bytes, including in-flight records. TypeScript's default 8 MiB is shared by traces/logs; Python's is per signal. This bounds queued telemetry, not process RSS. Overflow drops telemetry and updates counters without retrying business work.
 
-Network export has bounded retry work. Python retains one worker per signal; an OS-blocked call can outlive the wait and retain one encoded request up to 1 MiB per signal outside queue counters. Later records queue within limits. Shutdown counts discarded records; process kill, full queues, disabled clients and exporter failures can lose telemetry. There is no disk spool or delivery guarantee.
+Network retries are bounded. Python keeps one worker per signal; an OS-blocked call can outlive the wait and retain one encoded request (up to 1 MiB) outside queue counters. Shutdown counts discards; process kill, full queues, disabled clients and exporter failures can lose telemetry. There is no disk spool or delivery guarantee.
 
-No in-process library can prevent termination, OOM, event-loop stalls or third-party hooks. Keep redactors fast, deterministic and offline; other instrumentors retain their behavior. Safe construction cannot catch import or dependency failures before it runs, so verify startup in CI or load tracing behind an optional guarded integration.
+In-process code cannot prevent termination, OOM, stalls or third-party hooks. Keep redactors fast and offline. Safe construction cannot catch import/dependency failures, so verify startup in CI or guard the integration.
 
 ## Kill switch and monitoring
 
@@ -113,7 +113,7 @@ Telemetry retention is configured per project. A policy removes eligible older t
 
 ## What Hue computes from your traces
 
-Hue assesses stored traces, and some settings send recorded conversation text to a model. Align them with your capture policy. Owners/admins change trace-check consent in **Settings → Trace checks** and other settings in **Settings → Projects → Edit project**; MCP uses `set_trace_checks_consent` and `update_project`. Both require **Read and write** access and owner/admin authority.
+Hue assesses stored traces; some settings send conversation text to a model. Align them with your capture policy. Owners/admins manage consent in **Settings → Trace checks** and other settings in **Settings → Projects → Edit project**; MCP uses `set_trace_checks_consent` and `update_project`. Both require **Read and write** and owner/admin authority.
 
 | Setting | Default | What it does and sends |
 | --- | --- | --- |
@@ -128,10 +128,10 @@ Traces from scoring runs are not assessed. The [production investigation guide](
 
 ## Ingestion limits
 
-The default project allowance for customer telemetry uploads is 600 ingestion requests, 20,000 new records and 32 MiB of logical payload per one-minute window. Uploaded spans and logs share it. Hue's internally generated managed-evaluation root spans use a separate persistence path, so exhausting an upload allowance cannot prevent a completed managed job from recording its own orchestration evidence. That internal path retains tenant checks, transaction deadlines, trace limits and deduplication; an uploaded attribute or header cannot select it. The first window starts with an admitted request; after 60 seconds, the next request reservation or final evidence charge starts a new window. Requests count at admission; records and payload count at their final storage charge. Decoded authenticated attempts, including failed writes and exact retries, consume request allowance; exact retries do not consume additional record or payload allowance. Temporary admission limits return 429 or 503 with `Retry-After`; client queues can still overflow during a long outage.
+Each project allows 600 telemetry requests, 20,000 new records and 32 MiB logical payload per one-minute window; spans and logs share it. Managed-evaluation root spans use a separate path, so upload limits cannot block orchestration evidence. That path retains tenant checks, deadlines, trace limits and deduplication; uploads cannot select it. The window starts on admission; the next reservation or final evidence charge after 60 seconds starts another. Requests count at admission; records/payload at storage. Authenticated attempts, including failed writes/retries, use request allowance; exact retries do not add records/payload. Admission limits return 429/503 with `Retry-After`; client queues can still overflow.
 
-Tracing authentication and storage use a separate bounded database pool from ordinary application queries. Naming a trace that a page finds unnamed also uses that pool, at most thirty traces per visit and one at a time; a failure leaves the trace unnamed until a later visit, so completed uploads never accumulate an unbounded naming queue.
+Tracing uses a bounded database pool separate from application queries. Page-triggered naming uses that pool for at most 30 traces per visit, one at a time; failures leave traces unnamed for a later visit.
 
-These are protective limits, not a throughput SLA. Ask Hue to size your project's allowance for your expected instances, requests per minute, spans per request and average payload. Measure latency and resource overhead with your application's expected payload and concurrency. Do not assume local benchmark results establish production capacity.
+These are protective limits, not an SLA. Ask Hue to size the allowance for your instances, request rate, spans and payload; measure latency/overhead under expected concurrency. Local benchmarks do not establish production capacity.
 
-If longer outage buffering is required, consider a separately operated OpenTelemetry Collector with explicit memory, queue and storage limits. A durable queue has its own disk and retention failure modes; it does not remove instrumentation overhead inside your application. See OpenTelemetry's [Collector resilience guidance](https://opentelemetry.io/docs/collector/resiliency/).
+For longer outage buffering, consider a separately operated OpenTelemetry Collector with explicit memory, queue and storage limits. Durable queues add disk/retention failure modes and do not remove instrumentation overhead. See [Collector resilience guidance](https://opentelemetry.io/docs/collector/resiliency/).
