@@ -20,7 +20,7 @@
     "projectMcpUrl": "https://mcp.hue.run/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
     "skillUrl": "https://docs.hue.run/skill.md?v=0.6.5",
-    "pageCount": 29
+    "pageCount": 30
   },
   "serviceKeyPresets": [
     {
@@ -202,6 +202,7 @@
   "pages": [
     "index",
     "concepts",
+    "guides/hue-app",
     "quickstart",
     "installation",
     "guides/agent-setup",

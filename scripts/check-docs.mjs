@@ -114,9 +114,10 @@ if (JSON.stringify(mdxFiles) !== JSON.stringify(expectedMdxFiles)) {
 // evaluations/eval-ready-agent is the one committed change that points an agent's own app clients
 // at Hue's mirrors during an evaluation, and evaluations/case-from-trace is the review path that
 // turns one production trace into a published case. agents/debug-environment describes the
-// distinct trace-to-environment debugging workflow, private uploads and fresh world attempts.
-if (pages.length !== 28 || pages.length + 1 !== 29) {
-  fail(`expected 28 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
+// distinct trace-to-environment debugging workflow, private uploads and fresh world attempts, and
+// guides/hue-app maps the customer-facing app sidebar to its owning documentation.
+if (pages.length !== 29 || pages.length + 1 !== 30) {
+  fail(`expected 29 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
 }
 
 for (const page of expectedMdxFiles) {

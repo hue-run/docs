@@ -15,6 +15,7 @@
         "pages": [
           "index",
           "concepts",
+          "guides/hue-app",
           "quickstart",
           "installation",
           "guides/agent-setup",
