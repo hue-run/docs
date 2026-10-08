@@ -114,12 +114,12 @@ handler = ManagedTargetHandler(
 
 Your POST route calls `handler.handle(raw_body_bytes, request_headers)` and returns its JSON `body`, `status_code` and `headers`. Enforce a 1 MiB request-body limit before reading the body. Use `asyncio.to_thread` from an async route.
 
-The target must honor `cancelled` and `deadline_monotonic`; Python cannot forcibly stop a running callback. If you own the providers, check every trace/log flush result and raise on failure.
+The target must honor `cancelled` and `deadline_monotonic`; Python cannot forcibly stop a running callback. If you own the providers, check every trace or log flush result and raise on failure.
 
 </Tab>
 </Tabs>
 
-The helper defaults to Hue Cloud. An optional configured `baseUrl`/`base_url` supports another Hue deployment; never take a callback origin from a request.
+The helper defaults to Hue Cloud. An optional configured `baseUrl` or `base_url` supports another Hue deployment; never take a callback origin from a request.
 
 Use a 120-second host request limit for the default 90-second execution plus 30-second finalization allowance. V1 uses synchronous target requests. Work still running at the deadline remains uncertain; Hue does not automatically invoke it again.
 
@@ -127,7 +127,7 @@ Use a 120-second host request limit for the default 90-second execution plus 30-
 
 Create a dedicated random server credential in your normal secret manager. Configure it as `HUE_MANAGED_TARGET_SECRET` in your application.
 
-In Hue, save your eval-set version, select **Run**, then **Register target**. Enter:
+In Hue, save your eval-set version, select **Run experiment**, then **Register target**. Enter:
 
 - A recognizable target name and its public HTTPS endpoint.
 - The same dedicated target credential. Keep your tracing `HUE_API_KEY` separate.
@@ -140,7 +140,7 @@ Hue stores the credential encrypted and pins the target revision for each run. C
 
 Eval-set rows show a one-line input and the case's defined **Checks**. Hover or focus an icon for its name; `+N` lists additional requirements. Open the case to read its full input and expected output. Scores appear after a run.
 
-Choose the target, checks and application configuration in **Run**. Review the case count and unsupported-case summary before selecting **Run**.
+Choose the target, checks and application configuration in **Run experiment**. Review the case count and unsupported-case summary before selecting **Run**.
 
 A run keeps its eval-set version and covers all cases, with one execution per supported case and at most two active or unresolved target calls per project. Unsupported cases remain visible and receive no fabricated quality score.
 

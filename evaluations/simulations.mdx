@@ -62,7 +62,7 @@ try {
 
 The referenced run template is app-authored. Each invocation clones its frozen eval set, configuration and evaluator-version pins into a fresh run and creates one isolated world per case. The `run_created` event carries the run URL as soon as it exists, so you can inspect progress while the agent runs.
 
-Rerun after edits for a fresh attempt/world. Interruptions resume from the private checkpoint; use one directory per definition and add it to `.gitignore`.
+Rerun after edits for a fresh attempt or world. Interruptions resume from the private checkpoint; use one directory per definition and add it to `.gitignore`.
 
 ## Repository-authored definitions
 
@@ -130,7 +130,7 @@ await runSimulation({
 });
 ```
 
-Repository publication supports the `ScorerDefinition` union: exact match, includes, JSON Schema, local code, manual and model judge. `defineLocalScorer` publishes its pinned definition and callback together. `runSimulation()` applies Hue's identity defaults and rejects unknown/server-only kinds, including `document_verifier`.
+Repository publication supports the `ScorerDefinition` union: exact match, includes, JSON Schema, local code, manual and model judge. `defineLocalScorer` publishes its pinned definition and callback together. `runSimulation()` applies Hue's identity defaults and rejects unknown or server-only kinds, including `document_verifier`.
 
 A definition needs at least one case and one evaluator, and case keys must be unique. Definition defaults are applied before the digest is computed: `required: true` on parameters, an identity observation projection, empty `guards`, a `not_found` error and handwritten provenance. Writing the defaults out does not create a new version.
 
@@ -166,9 +166,9 @@ Pass `agentRevision` to record the tested revision in a gateway world's fingerpr
 
 ## Evidence and scoring
 
-The run URL joins task, trace, world state, target outcome and evaluator results. Target failures/cancellations seal as `abandoned`; evaluator errors remain separate.
+The run URL joins task, trace, world state, target outcome and evaluator results. Target failures or cancellations seal as `abandoned`; evaluator errors remain separate.
 
-Local evaluation resolves the sealed world first. Local-code evaluators receive the run, `{ collections }` initial/final state and complete ordered steps through `context.environment`; the SDK verifies the journal and caps evidence at 8 MiB without truncation. They run even when the target returned no output.
+Local evaluation resolves the sealed world first. Local-code evaluators receive the run, `{ collections }` initial and final state and complete ordered steps through `context.environment`; the SDK verifies the journal and caps evidence at 8 MiB without truncation. They run even when the target returned no output.
 
 Unreadable evidence records `EnvironmentEvidenceUnavailable`; built-ins still score saved output. `rescore({ ..., environmentEvidence: "required" })` reads evidence without rerunning the agent. Manual and hosted-judge pins remain pending.
 
@@ -176,7 +176,7 @@ Unreadable evidence records `EnvironmentEvidenceUnavailable`; built-ins still sc
 
 Pass `signal` to `runSimulation()` and forward `context.signal`. Cancellation sets execution state `cancelled` and seals the world as `abandoned`.
 
-If outcome/seal is uncertain, resume raises `UncertainExecutionError` or `TargetOutcomeUncertainError` without reacquiring credentials or invoking the callback. Inspect side effects before a new attempt; deleting a checkpoint or lock is not permission to rerun.
+If the outcome or seal is uncertain, resume raises `UncertainExecutionError` or `TargetOutcomeUncertainError` without reacquiring credentials or invoking the callback. Inspect side effects before a new attempt; deleting a checkpoint or lock is not permission to rerun.
 
 Changed definitions or revisions fail against unfinished checkpoints; recover or finish first, or use another directory.
 
@@ -214,7 +214,7 @@ A provider adapter can record a known valid but unsupported request with `client
 
 Hue preserves the first report, marks the run `validity: "environment_incomplete"`, refuses new actions and replays recorded invocation receipts. `coverageGap` retains the request and provenance; no gap means `not_assessed`, not provider parity.
 
-Local and historical rescoring skip incomplete evidence with `Environment incomplete: provider behavior is not implemented.` Unsupported syntax and real provider errors are not gaps; the adapter must identify missing provider behavior. If the callback throws, a durable gap finishes the attempt as environment-incomplete; an unconfirmed gap or seal stays uncertain and never replays the agent.
+Local scoring and historical rescoring skip incomplete evidence with `Environment incomplete: provider behavior is not implemented.` Unsupported syntax and real provider errors are not gaps; the adapter must identify missing provider behavior. If the callback throws, a durable gap finishes the attempt as environment-incomplete; an unconfirmed gap or seal stays uncertain and never replays the agent.
 
 - `runSimulation()` is TypeScript-only. Python's `hue_sdk.environment` drives worlds directly but binds no tools or agent. Checkpoint directories need POSIX filesystem semantics; use WSL2 or Linux on Windows.
 - Definitions use `schemaVersion: 1`, flat parameters and the fixed `SemanticEntry` catalog; identity is the only observation projection.

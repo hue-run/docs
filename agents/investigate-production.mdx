@@ -29,7 +29,7 @@ Each recipe is a short sequence of tool calls with their key arguments. Replace 
 
 Prompt: “What needs attention in the last 24 hours, and why? Link the traces.”
 
-Sequence: `get_project_context` → `aggregate` by `attention_state` and `finding` → `search_traces` by `attention` or `status` → `get_trace` → `get_span_content` for exact evidence.
+Sequence: `get_project_context` → `aggregate` with `{"since": "24h", "group_by": ["attention_state"]}` and `{"since": "24h", "group_by": ["finding"]}` → `search_traces` with `{"since": "24h", "attention": "needs_attention"}` or `{"since": "24h", "status": "error"}` → `get_trace` → `get_span_content` for exact evidence.
 
 Caveat: `needs_attention` includes findings and positive active trace checks; `uncertain` means Hue could not settle a finding.
 
@@ -37,15 +37,15 @@ Caveat: `needs_attention` includes findings and positive active trace checks; `u
 
 Prompt: “Which tools failed most often yesterday, and what was their failure rate?”
 
-Sequence: `aggregate` spans by `tool` for `count` and `error_count` → `search_spans` for error calls → `get_span_content` for selected arguments and results.
+Sequence: `aggregate` with `{"entity": "spans", "since": "24h", "kind": "tool", "group_by": ["tool"], "metrics": ["count", "error_count", "duration_p95_ms"], "top": 25}` → `search_spans` with `{"since": "24h", "kind": "tool", "status": "error", "name": "<span name>"}` → `get_span_content` with `{"attribute_keys": ["gen_ai.tool.call.arguments", "gen_ai.tool.call.result"]}`.
 
-Caveat: Groups rank by call count, and span `name` may differ from tool name; an errored call does not prove the request failed.
+Caveat: Groups rank by call count, and span `name` may differ from tool name; an errored call does not prove the request failed. `search_traces` with `"finding": "unrecovered_tool_error"` lists traces where the agent did not recover.
 
 ### Which task types and steps are slow
 
 Prompt: “Which task types and steps were slowest this week?”
 
-Sequence: `aggregate` traces by `trace_name` or `intent` with duration percentiles → aggregate spans by `name`, `model` or `tool` → `search_traces` and `search_spans` for examples. Use `get_trace_check_summary` for instrumented timing.
+Sequence: `aggregate` with `{"since": "7d", "group_by": ["trace_name"], "metrics": ["count", "duration_p50_ms", "duration_p95_ms", "duration_p99_ms"]}` → aggregate spans with `{"entity": "spans", "since": "7d", "trace_name": "<name>", "group_by": ["name"], "metrics": ["count", "duration_p50_ms", "duration_p95_ms"]}` → `search_traces` and `search_spans` with `{"since": "7d", "trace_name": "<name>", "sort": "duration"}` → `get_trace_check_summary` with `{"since": "7d"}`.
 
 Caveat: Intent grouping needs a published taxonomy; duration sorting includes completed traces only.
 
@@ -53,7 +53,7 @@ Caveat: Intent grouping needs a published taxonomy; duration sorting includes co
 
 Prompt: “How long did users wait for the first useful reply?”
 
-Sequence: aggregate reply-span `start_offset_ms` by task; sum each row's `start_offset_ms` and `duration_ms` for end time. With timing enabled, use `search_traces.first_useful_answer_ms` or `get_trace_check_summary.requests` (first-response, useful-playback/server and completion p50/p95).
+Sequence: `aggregate` with `{"entity": "spans", "since": "7d", "name": "<span that delivers the reply>", "group_by": ["trace_name"], "metrics": ["count", "start_offset_p50_ms", "start_offset_p95_ms"]}` → sum each row's `start_offset_ms` and `duration_ms` for end time. With timing enabled, use `search_traces.first_useful_answer_ms` or `get_trace_check_summary.requests` for first-response, useful-playback, useful-server and completion p50 and p95 values.
 
 Caveat: Identify the reply span and sum per row before calculating percentiles; separate start-offset and duration percentiles cannot be added.
 
@@ -61,7 +61,7 @@ Caveat: Identify the reply span and sum per row before calculating percentiles; 
 
 Prompt: “Did the latest release regress?”
 
-Sequence: `aggregate` by `release` with `count`, `error_count` and duration percentiles → `search_traces` for failing traces → `get_trace` to compare examples.
+Sequence: `aggregate` with `{"since": "7d", "group_by": ["release"], "metrics": ["count", "error_count", "duration_p50_ms", "duration_p95_ms"]}` → `search_traces` with `{"since": "7d", "release": "<release>", "status": "error"}` → `get_trace` to compare examples → `aggregate` with `{"since": "<T minus 24h>", "until": "<T>"}` and `{"since": "<T>", "until": "<T plus 24h>"}`.
 
 Caveat: Without a recorded release, compare rates in equal ISO-8601 windows around deploy time; concurrent releases can mix them.
 
@@ -69,7 +69,7 @@ Caveat: Without a recorded release, compare rates in equal ISO-8601 windows arou
 
 Prompt: “Show user `<id>`'s traces and sub-agent activity from the last seven days.”
 
-Sequence: `search_traces` by `user` or `user_prefix` → `aggregate` by user or trace name; use `list_sessions` and `search_traces` by `session_id` to inspect a session.
+Sequence: `search_traces` with `{"since": "7d", "user": "<user id>"}` or `{"since": "7d", "user_prefix": "<user id>:"}` → `aggregate` with `{"since": "7d", "group_by": ["user"], "metrics": ["count", "error_count"]}` → `list_sessions` with `{"query": "<session key or part of it>", "since": "7d"}` → `search_traces` by `session_id`.
 
 Caveat: Include the separator in a user prefix to avoid matching similar IDs; sessions group users only when the application records one session per user.
 
@@ -77,7 +77,7 @@ Caveat: Include the separator in a user prefix to avoid matching similar IDs; se
 
 Prompt: “How does the agent hand work to sub-agents?”
 
-Sequence: inspect agent/handoff spans with `get_trace` or `search_spans`; follow separate roots by user, trace name, session or span links. Use `search_traces` with `check_key: "delegation"` for positive delegation findings.
+Sequence: inspect agent and handoff spans with `get_trace` or `search_spans` using `{"since": "24h", "kind": "agent"}`; follow separate roots by user, trace name, session or span links. Use `search_traces` with `{"since": "7d", "check_key": "delegation"}` for positive delegation trace-check results.
 
 Caveat: When parent IDs exist only in recorded content, read them with `get_span_content`.
 
@@ -85,7 +85,7 @@ Caveat: When parent IDs exist only in recorded content, read them with `get_span
 
 Prompt: “Which tools return the largest results?”
 
-Sequence: `aggregate` spans by `tool` using `input_bytes_p50`, `output_bytes_p95` and `output_bytes_max` → `search_spans` for calls behind a maximum.
+Sequence: `aggregate` with `{"entity": "spans", "since": "24h", "kind": "tool", "group_by": ["tool"], "metrics": ["count", "input_bytes_p50", "output_bytes_p95", "output_bytes_max"]}` → `search_spans` for calls behind a maximum.
 
 Caveat: Byte counts are UTF-8 sizes of recorded JSON, without reading content.
 
@@ -93,15 +93,15 @@ Caveat: Byte counts are UTF-8 sizes of recorded JSON, without reading content.
 
 Prompt: “Find traces for model `<model>` or attribute `app.plan=enterprise`.”
 
-Sequence: filter `search_traces` by `model` or root `attribute`; use `search_spans` for attributes on any span.
+Sequence: `search_traces` with `{"since": "24h", "model": "<model>"}` or `{"since": "24h", "attribute": {"key": "app.plan", "value": "enterprise"}}` → `search_spans` for attributes on any span.
 
-Caveat: Trace model/attribute searches scan the newest 5,000 matches and report `scan_capped`; content attributes are refused.
+Caveat: Trace model or attribute searches scan the newest 5,000 matches and report `scan_capped`; content attributes are refused.
 
 ### Read exact values
 
 Prompt: “Show the exact tool arguments and result for `<trace>`.”
 
-Sequence: `get_span_content` with trace/span ids, then select `fields`, `path` or `attribute_keys`. Text uses UTF-16 slices with `total_length` and `next_offset`; omitted spans appear in `omitted_span_ids`.
+Sequence: `get_span_content` with `{"attribute_keys": ["gen_ai.tool.call.result"]}` for trace and span IDs, then select `fields`, `path` or `attribute_keys`. Text uses UTF-16 slices with `total_length` and `next_offset`; omitted spans appear in `omitted_span_ids`.
 
 Caveat: Reads are audited and untrusted; each request reads up to 20 spans, in 8,000-unit slices by default. Invalid paths report available keys.
 
@@ -109,7 +109,7 @@ Caveat: Reads are audited and untrusted; each request reads up to 20 spans, in 8
 
 Prompt: “Which traces did the delegation check flag this week, and what evidence did it use?”
 
-Sequence: `list_trace_checks` → `get_trace_check_summary` → `search_traces` → `get_trace_check_results`; follow `next_cursor`. See the [trace-check data model](#trace-checks) for definitions and states.
+Sequence: `list_trace_checks` → `get_trace_check_summary` with `{"since": "7d", "check_key": "delegation"}` → `search_traces` with `{"since": "7d", "check_key": "delegation"}` → `get_trace_check_results` with `{"check_key": "delegation", "state": "present"}`; follow `next_cursor`. See the [trace-check data model](#trace-checks) for definitions and states.
 
 Caveat: Excerpts require `include_content: true` and are evidence, not explanations.
 

@@ -7,12 +7,12 @@ Send existing OpenTelemetry records to Hue with an OTLP/HTTP exporter or Collect
 
 ## Ownership and boundaries
 
-Your provider owns instrumentation/propagation; Hue stores what it sends.
+Your provider owns instrumentation and propagation; Hue stores what it sends.
 
-- Hue never replaces global providers, propagators or context managers. Set `service.name`, `service.version` and `deployment.environment.name`; keep your sampler/W3C propagation. Run traces are labeled separately, hidden from production searches by default and linked from their run.
+- Hue never replaces global providers, propagators or context managers. Set `service.name`, `service.version` and `deployment.environment.name`; keep your sampler and W3C propagation. Run traces are labeled separately, hidden from production searches by default and linked from their run.
 - Hue observes only instrumented calls; it does not proxy model providers, patch libraries or infer spans.
-- Hue SDK `captureContent: false` / `capture_content=False` strips recognized content attributes, including third-party spans; custom keys pass through. Python `redactor` changes helper values; TypeScript `redact` runs on export. Other exporters/Collectors need their own controls.
-- Hue processors send a separate provider copy; existing exporters/filters are unchanged. Test each destination with synthetic content.
+- Hue SDK `captureContent: false` or `capture_content=False` strips recognized content attributes, including third-party spans; custom keys pass through. Python `redactor` changes helper values; TypeScript `redact` runs on export. Other exporters and Collectors need their own controls.
+- Hue processors send a separate provider copy; existing exporters and filters are unchanged. Test each destination with synthetic content.
 
 ## Configure the destination
 
@@ -196,13 +196,13 @@ The Collector replaces the SDK key, so `apiKey` / `api_key` can be a non-empty p
 
 Pass `redact` when creating the transport to scrub exported content; see the [redaction recipe](/guides/redaction#use-the-same-callback-with-an-existing-provider).
 
-To keep provider ownership while using Hue content controls/diagnostics, attach its processors during construction. [Install the TypeScript package](/installation#typescript) and these dependencies:
+To keep provider ownership while using Hue content controls and diagnostics, attach its processors during construction. [Install the TypeScript package](/installation#typescript) and these dependencies:
 
 ```sh
 bun add @opentelemetry/sdk-trace@2.11.0 @opentelemetry/sdk-logs@0.222.0 @opentelemetry/resources@2.11.0
 ```
 
-Save as `otel.ts`. In an existing app, add processors to existing provider construction and retain global registration/propagation.
+Save as `otel.ts`. In an existing app, add processors to existing provider construction and retain global registration and propagation.
 
 ```ts
 import { createHue, createHueTransport } from "@hue-run/sdk";
@@ -297,9 +297,9 @@ Langfuse's `mask` hook does not redact Hue's copy. Apply policy to both exports,
 
 Hue reads Langfuse attributes directly. `langfuse.observation.type`, `.model.name`, `.usage_details`, `.input`, `.output`, `langfuse.session.id` and `langfuse.user.id` fill Hue fields when GenAI attributes are absent; GenAI wins. `langfuse.trace.name` names traces without request text; `langfuse.release` supplies `release` absent `service.version`. Metadata, environment, tags and levels stay raw; OpenTelemetry status marks failure. See the [field glossary](/agents/investigate-production#field-glossary).
 
-TypeScript `0.13.0`/Python `0.7.0+` strip recognized Langfuse content in metadata-only mode; earlier SDKs need producer/Collector controls. Metadata and custom fields pass through. Verify each independent capture policy; see [compatibility](/sdks/compatibility).
+TypeScript `0.13.0` or Python `0.7.0+` strip recognized Langfuse content in metadata-only mode; earlier SDKs need producer or Collector controls. Metadata and custom fields pass through. Verify each independent capture policy; see [compatibility](/sdks/compatibility).
 
-Test a real request with model/tool spans, preserved IDs/parentage and both exporters flushed by the host deadline. Check content and fields in both destinations. Hue's [trace receipt](/sdks/typescript#verify-stored-trace-evidence) checks span/field presence, not payload correctness or Langfuse delivery; also test errors and cancellation.
+Test a real request with model and tool spans, preserved IDs and parentage and both exporters flushed by the host deadline. Check content and fields in both destinations. Hue's [trace receipt](/sdks/typescript#verify-stored-trace-evidence) checks span and field presence, not payload correctness or Langfuse delivery; also test errors and cancellation.
 
 Exporters cannot recover truncated data. Instrument reductions when analysis needs original and retained results.
 
@@ -335,21 +335,21 @@ consumeSseStream: ({ stream }) => {
 },
 ```
 
-The reader starts immediately so completion/abort callbacks finish before export. Keep `request.signal` on generation; callbacks stay unchanged.
+The reader starts immediately so completion and abort callbacks finish before export. Keep `request.signal` on generation; callbacks stay unchanged.
 
-`hue.flushSafe()` flushes borrowed providers/transport, returns counters and waits at most one second. Timeout does not cancel third-party work; `transport.flush()` is strict.
+`hue.flushSafe()` flushes borrowed providers or transport, returns counters and waits at most one second. Timeout does not cancel third-party work; `transport.flush()` is strict.
 
 Log delivery counters to an independent, non-throwing sink. Do not shut down shared transport per request. See the [AI SDK stream-abort guide](https://ai-sdk.dev/docs/troubleshooting/stream-abort-handling).
 
 ## Map agent data without inventing it
 
-Hue preserves original resource, scope, status, events, links, dropped counts, typed attributes, and external trace/span IDs. It derives AI fields alongside those records using versioned normalization profiles.
+Hue preserves original resource, scope, status, events, links, dropped counts, typed attributes, and external trace and span IDs. It derives AI fields alongside those records using versioned normalization profiles.
 
-Supported profile families include generic OpenTelemetry, GenAI conventions, OpenInference, OpenLLMetry, Vercel AI SDK 6/7, and Langfuse. A profile family is not a guarantee that every package version or API surface has been tested. The TypeScript adapter is verified with AI SDK / OTel pairs `7.0.99 / 1.0.99` and `7.0.100 / 1.0.100`.
+Supported profile families include generic OpenTelemetry, GenAI conventions, OpenInference, OpenLLMetry, Vercel AI SDK 6 and 7, and Langfuse. A profile family is not a guarantee that every package version or API surface has been tested. The TypeScript adapter is verified with AI SDK and OTel pairs `7.0.99 / 1.0.99` and `7.0.100 / 1.0.100`.
 
 Prefer current GenAI attributes when your instrumentation supports them, including `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, and `gen_ai.usage.output_tokens`. Preserve unavailable fields as absent. Do not submit `0` for unknown usage or `null` for an output that was never captured.
 
-A child can arrive before its parent, and a correlated log can arrive before its span. Preserve the same trace ID and the correct parent/span IDs across services. Root-span completion does not prove that the whole distributed trace has arrived. Evaluations use a pinned evidence revision.
+A child can arrive before its parent, and a correlated log can arrive before its span. Preserve the same trace ID and the correct parent and span IDs across services. Root-span completion does not prove that the whole distributed trace has arrived. Evaluations use a pinned evidence revision.
 
 ## Make traces useful to a coding agent
 
@@ -365,7 +365,7 @@ A coding agent that reads your traces over the [Hue MCP server](/agents/investig
 
 ## Instrument for trace checks and request timing
 
-[Trace checks](/agents/investigate-production#trace-checks) assess delegation, scope and omitted output; request timing measures time to a useful answer. They use recorded attributes/events, not inferred data, and require owner/admin consent plus an activated tested version. Run traces are excluded.
+[Trace checks](/agents/investigate-production#trace-checks) assess delegation, scope and omitted output; request timing measures time to a useful answer. They use recorded attributes and events, not inferred data, and require owner or admin consent plus an activated tested version. Run traces are excluded.
 
 ### Mark the request on the root span
 
@@ -430,7 +430,7 @@ export function handleRequest(input: string) {
 
 Mark `hue.response.useful` when the answer is ready, not when sending a placeholder.
 
-The example assumes `agent.support_reply` is root. If not, put attributes/events and manifest on the active root Hue reads.
+The example assumes `agent.support_reply` is root. If not, put attributes and events and the manifest on the active root Hue reads.
 
 ### Declare the checked boundaries
 
@@ -452,7 +452,7 @@ Put one manifest on the root span's `hue.trace_checks` attribute: a JSON object 
 ```
 
 - `requestKind` is `task` (requires an `action` boundary) or `conversation`. `request` identifies the whole user request; `authorization` identifies up to eight whole earlier messages authorizing extra work.
-- `boundaries` lists up to 32 agent actions (`action_scope`), delegations (`delegation_scope`, parent task given to the delegating agent), or pre-use tool-output reductions (`output_omission`). A reduction points to its task, full original/retained outputs, code, next decision and later use. Delegation checks read the request plus each action and handoff.
+- `boundaries` lists up to 32 agent actions (`action_scope`), delegations (`delegation_scope`, parent task given to the delegating agent), or pre-use tool-output reductions (`output_omission`). A reduction points to its task, full original and retained outputs, code, next decision and later use. Delegation checks read the request plus each action and handoff.
 - Boundary spans carry `hue.agent.role` (`orchestrator` or `subagent`) and `spanId`; linked spans also name `traceId`.
 - `linkedTraces` lists up to four child traces and their handoff spans. `complete: true` declares all request boundaries.
 
@@ -471,11 +471,11 @@ An `output_reduction` boundary has this shape, for code that trimmed a tool's re
 }
 ```
 
-`original`/`retained` cover the whole output; `task`, `code`, `decision` and `use` identify the reduction purpose, code and downstream use.
+The `original` and `retained` references cover the whole output; `task`, `code`, `decision` and `use` identify the reduction purpose, code and downstream use.
 
-A source reference names a 16-hex `spanId` (and linked `traceId`), `field` (`input`, `output` or `attributes`), key/index `path`, and half-open UTF-16 `start`/`end` offsets in the exact recorded string (max 8,000 chars). A string attribute (`field: "attributes"`, path=key) keeps offsets exact; use its length for a whole-value reference. The model reads only referenced text, up to 16,000 chars per check.
+A source reference names a 16-hex `spanId` (and linked `traceId`), `field` (`input`, `output` or `attributes`), key/index `path`, and half-open UTF-16 `start` and `end` offsets in the exact recorded string (max 8,000 chars). A string attribute (`field: "attributes"`, path=key) keeps offsets exact; use its length for a whole-value reference. The model reads only referenced text, up to 16,000 chars per check.
 
-Checks read the manifest/named spans and, in linked traces, the first span plus handoff continuation—not every trace span. Trace size is not the cap: at most 128 spans are read, each with attributes/input/output up to 64 KiB. Missing/invalid manifests or over-limit evidence yield `unavailable`; delegation is `not_applicable` without task actions/handoffs, and other checks when no boundary is declared.
+Checks read the manifest and named spans and, in linked traces, the first span plus handoff continuation—not every trace span. Trace size is not the cap: at most 128 spans are read, each with attributes, input and output up to 64 KiB. Missing or invalid manifests or over-limit evidence yield `unavailable`; delegation is `not_applicable` without task actions or handoffs, and other checks when no boundary is declared.
 
 ## Control content at its source
 

@@ -20,7 +20,7 @@ Setting the first switch to `false` sends metadata-only telemetry without changi
 
 Eval-set inputs and reference answers are intentionally uploaded during setup. The second switch also controls target error messages, evaluator evidence, arbitrary explanations, and their local-checkpoint copies. With it disabled, local scores can still be uploaded, but historical evaluators skip unavailable output instead of invoking a callback on invented data. Declared metric values are always uploaded, including custom text metrics.
 
-## Create and run a scoring run
+## Create and run the evaluation
 
 Choose one language. The program creates setup once and saves IDs locally; later invocations reuse the same run and checkpoint directories. Add `.hue-first-evaluation-*` to `.gitignore`.
 
@@ -204,11 +204,11 @@ finally:
 </Tab>
 </Tabs>
 
-The setup directory is created before registry writes. If setup stops before `state.json`, the next invocation stops rather than silently creating another run. Inspect **Evals**, **Evaluators**, and **Runs** before recovery. Registry writes have no automatic retry; the saved request can recover an uncertain acknowledgement with its original idempotency key and payload.
+The setup directory is created before registry writes. If setup stops before `state.json`, the next invocation stops rather than silently creating another run. Inspect **Datasets**, **Scorers**, and **Experiments** before recovery. Registry writes have no automatic retry; the saved request can recover an uncertain acknowledgement with its original idempotency key and payload.
 
 ## Read the result
 
-Open **Runs** and select **Uppercase baseline**. The target should succeed and the exact-match metric should be true. The scoring run uses the same immutable subject ID and saved output. `rescore` has no target callback, so it cannot invoke the uppercase function again.
+Open **Experiments** and select **Uppercase baseline**. The target should succeed and the exact-match metric should be true. The scoring run uses the same immutable subject ID and saved output. `rescore` has no target callback, so it cannot invoke the uppercase function again.
 
 To compare a different target configuration, create a new run with the same frozen eval-set and published evaluator versions. Use a new checkpoint directory; do not edit frozen pins or reuse a checkpoint.
 
@@ -224,6 +224,6 @@ Keep the same run ID, content settings and checkpoint directory when retrying an
 
 If the process crashes after invoking a target but before saving its outcome, the runner raises `UncertainExecutionError`. Inspect the execution and its side effects. Removing the checkpoint or its lock is not permission to run the target again. Checkpoints are private local files, not encrypted storage. Confirm the old process has stopped before explicitly removing a leftover `.lock`.
 
-The example requires trace evidence. The runner ends the root span and waits for trace/log acknowledgement before completing the execution. An export failure does not silently become omitted evidence, and a fresh exporter cannot prove that an earlier export succeeded. Explicit omission is a separate policy: TypeScript `{ mode: "omit", reason: "This local run does not retain a trace snapshot." }` or Python `TraceEvidence("omit", "This local run does not retain a trace snapshot.")`; supply a meaningful reason if you choose it.
+The example requires trace evidence. The runner ends the root span and waits for trace or log acknowledgement before completing the execution. An export failure does not silently become omitted evidence, and a fresh exporter cannot prove that an earlier export succeeded. Explicit omission is a separate policy: TypeScript `{ mode: "omit", reason: "This local run does not retain a trace snapshot." }` or Python `TraceEvidence("omit", "This local run does not retain a trace snapshot.")`; supply a meaningful reason if you choose it.
 
 Local built-ins also include string inclusion and JSON Schema draft 2020-12. Custom callbacks run on your machine without claimed side-effect cancellation. Manual and hosted-judge evaluator pins stay pending for their workflows; this example does not dispatch them or claim live hosted-model acceptance.
