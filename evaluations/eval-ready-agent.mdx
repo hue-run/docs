@@ -6,7 +6,7 @@ description: "Point your agent's app clients at Hue mirrors during evaluations w
 
 In a Hue evaluation your agent runs in your process. A case with app calls gets a fresh simulated world; an answer-only case gets reviewed task and context without one. Hue never executes the agent, intercepts traffic or adds tools. Commit one helper to point the agent's own app clients at mirrors.
 
-This guide covers agents that call apps over MCP or REST, including meta-tools and model-written code. The pinned `@hue-run/sdk` is needed for the examples; a `--command` agent in any language needs no Hue package. See [simulations](/evaluations/simulations) for the callback path and [`hue eval`](/sdks/cli#run-an-evaluation) for commands.
+Connect agents calling apps over MCP or REST. Examples use the pinned `@hue-run/sdk`; `--command` supports any language without a Hue package. See [simulations](/evaluations/simulations) for callbacks and [`hue eval`](/sdks/cli#run-an-evaluation) for commands.
 
 <Note>
 Preview: Hue's mirrors answer at `https://app.hue.run/api/sim/…`, but the simulation gateway is not yet a released Hue Cloud capability. Gmail (MCP, REST) and Slack (Web API, MCP) are its established mirrors; other apps' mirrors are experimental and certify no fidelity.
@@ -28,7 +28,7 @@ Mirrors serve the app's captured catalog or the tool list recorded by the source
 
 Read each app URL and credential through a helper that detects evaluation and otherwise returns production values. `hue eval --command` sets `HUE_EXECUTION_ID`; world cases also set `HUE_WORLD_TOKEN`. Connect optional apps only when `appInWorld(variable)` is true. Required app or MCP connections **fail closed** without a world token or mirror URL, before requests and without reading the real credential. With neither variable, production values are unchanged.
 
-Every function accepts an environment defaulting to the process environment, so tests and in-process adapters can pass a mapping or world's `env`. Copy only the functions you use, commit them with call sites and an optional entry point or test, and run tests without Hue credentials. Do not commit variable-name diagnostics.
+Functions default to the process environment; tests and in-process adapters can pass a mapping or world's `env`. Copy only needed functions, commit them with call sites and an optional entry point or test, and test without Hue credentials. Never commit variable-name diagnostics.
 
 <Tabs>
 <Tab title="TypeScript">
