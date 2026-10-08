@@ -18,15 +18,15 @@ Hue observes your application through OpenTelemetry traces, then turns traces in
 
 ## Evaluate
 
-| Term | What it is | In Hue | SDK name |
-| --- | --- | --- | --- |
-| Eval set | A versioned collection of cases. A run pins one eval set version. | **Evals** | dataset |
-| Case | One example: the task, its inputs, optional expected values and reviewed success criteria. You can create one from a trace. | [**Evals**](/evaluations/case-from-trace) | case |
-| Evaluator | How quality is measured: a deterministic **verifier** or a hosted LLM **judge** with a pinned model and rubric. | [**Evaluators**](/evaluations/first-evaluation) | scorer |
-| Run | Your agent executed over an eval set version, with each case's output, trace and scores. Compare runs to catch regressions. | [**Runs**](/evaluations/first-evaluation) | experiment |
-| Scoring run | Evaluators applied to outputs a run already stored, without running the agent again. | [**Runs**](/evaluations/first-evaluation) | evaluation run, `rescore` |
-| Environment | A simulated app (for example Linear or Gmail): its starting data and the actions an agent can take. | [**Environments**](/evaluations/simulations) | environment |
-| World | A fresh instance of an environment version for one execution. Its journal of actions is scoring evidence. | [**Environments**](/evaluations/simulations) | world |
+| Term | What it is | In Hue |
+| --- | --- | --- |
+| Eval set | A versioned collection of cases. A run pins one eval set version. | **Evals** |
+| Case | One example: the task, its inputs, optional expected values and reviewed success criteria. You can create one from a trace. | [**Evals**](/evaluations/case-from-trace) |
+| Evaluator | How quality is measured: a deterministic **verifier** or a hosted LLM **judge** with a pinned model and rubric. | [**Evaluators**](/evaluations/first-evaluation) |
+| Run | Your agent executed over an eval set version, with each case's output, trace and scores. Compare runs to catch regressions. | [**Runs**](/evaluations/first-evaluation) |
+| Scoring run | Evaluators applied to outputs a run already stored, without running the agent again. | [**Runs**](/evaluations/first-evaluation) |
+| Environment | A simulated app (for example Linear or Gmail): its starting data and the actions an agent can take. | [**Environments**](/evaluations/simulations) |
+| World | A fresh instance of an environment version for one execution. Its journal of actions is scoring evidence. | [**Environments**](/evaluations/simulations) |
 
 ## Access
 
@@ -38,4 +38,4 @@ Hue observes your application through OpenTelemetry traces, then turns traces in
 
 ## Naming in code
 
-The SDKs and REST API keep earlier identifiers: TypeScript exports `createDataset`, `createScorer`, and `runExperiment`; Python exports `create_dataset`, `create_scorer`, and `run_experiment`. MCP tools use product names (`eval_set_id`, `evaluator_version_id`, `run_id`, `scoring_run_id`). Docs prose uses product terms; code samples use identifiers.
+The SDK evaluation clients and MCP tools use these product names: `createEvalSet`, `createEvaluator` and `createRun` in TypeScript, `create_eval_set`, `create_evaluator` and `create_run` in Python, and fields such as `eval_set_id`, `evaluator_version_id`, `run_id` and `scoring_run_id`. Older methods, REST paths and response fields still say dataset, scorer and experiment; the [TypeScript](/reference/typescript) and [Python](/reference/python) references mark which ones are deprecated.
