@@ -591,6 +591,12 @@ for (const [path, text] of Object.entries(publicText)) {
     if (text.toLowerCase().includes(phrase.toLowerCase())) fail(`${path} contains retired access-gate text: ${phrase}`);
   }
 }
+const redirects = Array.isArray(config.redirects) ? config.redirects : [];
+if (!redirects.some((redirect) =>
+  redirect?.source === "/guides/invited-setup" && redirect?.destination === "/guides/agent-setup",
+)) {
+  fail("docs.json must redirect /guides/invited-setup to /guides/agent-setup");
+}
 
 let generated;
 try {
