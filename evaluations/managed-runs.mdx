@@ -4,13 +4,13 @@ sidebarTitle: "Managed runs"
 description: "Run an agent from Hue, then inspect outputs, files, checks, and traces."
 ---
 
-Start an experiment in Hue, run your existing agent in your own environment, and inspect its saved output, generated files, checks and trace.
+Start a run in Hue, execute your existing agent in your environment, and inspect its saved output, generated files, checks and trace.
 
-Hue manages dataset versions, dispatch and scoring. Your application keeps its model provider, instructions, tools and telemetry. Local and CI [evaluation runners](/evaluations/first-evaluation) remain available.
+Hue manages eval-set versions, dispatch and scoring. Your application keeps its model provider, instructions, tools and telemetry. Local and CI [evaluation runners](/evaluations/first-evaluation) remain available.
 
 ## 1. Wrap your existing function
 
-Install `@hue-run/sdk@0.14.0` for Node.js 22 or 24 or `hue-run==0.8.0` for Python 3.10+. Configure a **Read and write** key in the same Hue project as the dataset, then set up [tracing](/quickstart).
+Install `@hue-run/sdk@0.14.0` for Node.js 22 or 24 or `hue-run==0.8.0` for Python 3.10+. Configure a **Read and write** key in the same Hue project as the eval set, then set up [tracing](/quickstart).
 
 This guide creates a dedicated evaluation endpoint. Its delivery checks record whether evaluation evidence arrived; use [safe initialization and bounded lifecycle hooks](/guides/production-safety) for ordinary customer requests. A telemetry failure must not rerun the agent's business work.
 
@@ -127,7 +127,7 @@ Use a 120-second host request limit for the default 90-second execution plus 30-
 
 Create a dedicated random server credential in your normal secret manager. Configure it as `HUE_MANAGED_TARGET_SECRET` in your application.
 
-In Hue, save your dataset version, select **Run experiment**, then **Register target**. Enter:
+In Hue, save your eval-set version, select **Run**, then **Register target**. Enter:
 
 - A recognizable target name and its public HTTPS endpoint.
 - The same dedicated target credential. Keep your tracing `HUE_API_KEY` separate.
@@ -136,13 +136,13 @@ In Hue, save your dataset version, select **Run experiment**, then **Register ta
 
 Hue stores the credential encrypted and pins the target revision for each run. Changing an endpoint or credential requires a new target registration. Redirects and unsafe destinations are rejected.
 
-## 3. Run the dataset
+## 3. Run the eval set
 
-Dataset rows show a one-line input and the case's defined **Checks**. Hover or focus an icon for its name; `+N` lists additional requirements. Open the case to read its full input and expected output. Scores appear after a run.
+Eval-set rows show a one-line input and the case's defined **Checks**. Hover or focus an icon for its name; `+N` lists additional requirements. Open the case to read its full input and expected output. Scores appear after a run.
 
-Choose the target, checks and application configuration in **Run experiment**. Review the case count and unsupported-case summary before selecting **Run**.
+Choose the target, checks and application configuration in **Run**. Review the case count and unsupported-case summary before selecting **Run**.
 
-A run keeps the dataset version it started with and covers all its cases, with one execution per supported case and at most two active or unresolved target calls per project. Cases with unsupported requirements remain visible and receive no fabricated quality score.
+A run keeps its eval-set version and covers all cases, with one execution per supported case and at most two active or unresolved target calls per project. Unsupported cases remain visible and receive no fabricated quality score.
 
 This release runs built-in deterministic checks and configured document verifiers. Hosted AI judges, custom hosted code and manual evaluators are separate workflows.
 
@@ -156,9 +156,9 @@ Hue saves the outcome before the target finishes its response, then verifies dec
 
 ## Inspect and recover
 
-Use **Outputs** to inspect individual cases and **Charts** for results across the entire selected scoring run. Charts keep missing values, unsupported cases, execution failures and scorer errors separate. Hover or focus a chart for its counts, or expand its data table for exact values.
+Use **Outputs** to inspect cases and **Charts** for the selected scoring run. Charts keep missing values, unsupported cases, execution failures and evaluator errors separate. Hover or focus a chart for counts, or expand its data table for exact values.
 
-Choose a baseline experiment to compare runs of the same dataset version. Metric comparisons require the same evaluator version on both sides. Higher values are not always better—for example, fewer failed checks is better. Missing evidence stays visible instead of becoming a zero or a pass.
+Choose a baseline run to compare runs of the same eval-set version. Metric comparisons require the same evaluator version on both sides. Higher values are not always better—for example, fewer failed checks is better. Missing evidence stays visible instead of becoming zero or pass.
 
 Open a result's **Output**, **Files**, **Checks** and **Trace** views. Downloads require current project access. Active runs update automatically while their tab is visible. Unresolved attempts refresh less frequently so a delayed outcome can appear without a reload. Completed runs stop refreshing; reloading never relaunches the agent.
 

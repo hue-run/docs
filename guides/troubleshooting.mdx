@@ -63,11 +63,11 @@ Node.js treats `.js` and `.ts` files as CommonJS unless the nearest `package.jso
 
 Check the [compatibility matrix](/sdks/compatibility). `@hue-run/sdk` core installs alongside AI SDK 6; pass `hueExperimentalTelemetry(hue)` as `experimental_telemetry` there, because the `hueTelemetry` adapter requires AI SDK 7 and throws a `TypeError` on AI SDK 6. Python accepts OpenTelemetry `>=1.40,<2` (1.44.0 is the certified combination and 1.40.0 the tested floor), so `hue-run` installs next to instrumentation packages on another OpenTelemetry 1.x release. Keep the application's existing instrumentation and use a standard OTLP exporter when its versions fall outside the tested SDK matrix; do not force an incompatible install.
 
-## A JSON Schema scorer reports `SchemaValidatorUnavailable`
+## A JSON Schema evaluator reports `SchemaValidatorUnavailable`
 
-The validator is optional in both SDKs. Run `npm install ajv` (8.17 or later) for `builtins.jsonSchema` in TypeScript, or `pip install 'hue-run[evals]'` for `builtin_scorers.json_schema` in Python; without it the Python helper raises `ImportError`. Other built-in scorers do not need these packages. Separately, importing `@hue-run/sdk/evals` at all needs the optional `zod` peer (`npm install zod`, 4.6.5 or later).
+The validator is optional in both SDKs. Run `npm install ajv` (8.17 or later) for `builtins.jsonSchema` in TypeScript, or `pip install 'hue-run[evals]'` for `builtin_scorers.json_schema` in Python; without it the Python helper raises `ImportError`. Other built-in evaluators do not need these packages. Separately, importing `@hue-run/sdk/evals` needs the optional `zod` peer (`npm install zod`, 4.6.5 or later).
 
-## Listing dataset cases fails for a large page
+## Listing eval-set cases fails for a large page
 
 Evaluation clients cap responses at 4 MiB. A valid page of full cases can exceed that cap when inputs or references are large. Request a smaller explicit page limit and follow `nextCursor`, for example `client.listCases(versionId, { limit: 10 })` or `client.list_cases(version_id, limit=10)`. The local runner reads summaries and individual cases and does not use this full-case page path.
 
@@ -75,17 +75,11 @@ A response-size or connection failure does not prove that a mutation was rejecte
 
 ## The trace is present but the evaluation fails
 
-Check which outcome failed: the original application execution, the scorer's execution, or the quality assessment. A boolean `false` is a valid scored result. Historical rescoring assesses frozen evidence and does not rerun your application.
+Check which outcome failed: the original application execution, the evaluator's execution, or the quality assessment. A boolean `false` is a valid scored result. Historical rescoring assesses frozen evidence and does not rerun your application.
 
 ## The MCP server rejects the agent
 
-The [Hue MCP server](/agents/mcp-server) accepts a **Read** or **Read and write** project key, or a connection made by signing in with Hue. An unauthenticated `401` starts browser sign-in for an OAuth connection; for an existing connection, it can mean a missing, expired or revoked credential. Follow the [MCP troubleshooting guide](/agents/mcp-server#troubleshooting) for the remedy that matches your authentication method, then [verify the connection](/agents/mcp-server#verify-the-connection).
-
-`forbidden_capability` saying the tool `is not listed on this connection` means your access allows the tool but the connection does not list it; by default it lists the production reads. Call it through `execute_hue_tool` or `execute_hue_write_tool`, as the hint says, or add `?toolsets=all` to the server URL; `search_hue_tools` finds other tools. An unknown-tool error means the name is wrong or the connection cannot call the tool at all. Write tools are hidden for a **Read** key and for a read-only request: `read_only` on the URL or the `X-Hue-MCP-Read-Only` header set to any value but `false`, `0`, `no`, `off` or empty.
-
-A list that returns `omitted_count` with a cursor was paged, not cut: pass the cursor back for the rest. `truncated: true` means content, detail or groups were left out, or a single row did not fit, to stay within `max_chars`: follow its `hint`, raise `max_chars`, lower `max_spans`, or fetch one object at a time. Recorded prompts and outputs are absent unless you read them with `get_span_content` or call a tool with `include_content: true`, and the application captured content. An empty search does not prove nothing happened; widen `since` or drop filters.
-
-A `check_state` of `null` means trace checks do not apply to that trace: no version is active, trace-check consent is off, or the trace predates the version's activation. `list_trace_checks` shows the active version and whether consent is on. Empty `get_trace_check_results` for a recent window have the same causes, or the results are still pending; `get_trace_check_summary` counts pending traces. Intent buckets stay `pending` until the project publishes a taxonomy with AI intent classification on; `get_intent_taxonomy` and `get_intent_summary`'s `consent` show both. An `attention_state` of `null` means the trace is still running, has not been assessed yet, or comes from an evaluation run, which is never assessed. See [Investigate production](/agents/investigate-production#data-model).
+The MCP server accepts a **Read** or **Read and write** project key, or a Hue sign-in connection. For authentication, connection and tool-list issues, see [MCP troubleshooting](/agents/mcp-server#troubleshooting); for trace fields, limits and errors, see [Investigate production](/agents/investigate-production#limits-and-errors).
 
 ## Tracing is disabled or data is being dropped
 

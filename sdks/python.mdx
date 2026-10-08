@@ -15,7 +15,7 @@ Use Python 3.10 or later. [Install the Python SDK](/installation#python), then c
 
 Create a **Tracing only** project service key in **Settings → Integrations & API keys** and set `HUE_API_KEY` in your server environment. Keep it out of browser code and Git.
 
-**Tracing only** covers ingestion, connection checks, and known-trace receipt verification. Use **Read and write** instead when the same process also creates datasets, scorers, experiments, or managed runs. See [project keys](/guides/project-keys) for access and rotation. The SDK connects to Hue Cloud by default. Other origins are covered in [connection settings](/guides/project-keys#connection-settings).
+**Tracing only** covers ingestion, connection checks, and known-trace receipt verification. Use **Read and write** when the same process also creates eval sets, evaluators, runs or managed runs. See [project keys](/guides/project-keys) for access and rotation. The SDK connects to Hue Cloud by default. Other origins are covered in [connection settings](/guides/project-keys#connection-settings).
 
 Pass the key as the `api_key=` keyword. The first positional parameter is `base_url`, so a bare key in that position raises `TypeError` naming `api_key=`; existing `Hue(base_url, api_key)` calls keep working. The constructor reads no environment variables.
 
@@ -124,7 +124,7 @@ Hue shutdown leaves borrowed providers and their other processors usable. Your a
 
 ## Evaluate locally
 
-Import the built-in scorer bundle as `from hue_sdk.evals import builtin_scorers`. `builtins` remains an alias, but it shadows the standard-library module of the same name in any file that imports it. `builtin_scorers.json_schema` needs the optional extra, `pip install 'hue-run[evals]'`; without it the helper raises `ImportError` and stored schema scorers report `SchemaValidatorUnavailable`. The tracing core depends only on the OpenTelemetry packages and `requests`. See [your first evaluation](/evaluations/first-evaluation) and the [Python API reference](/reference/python#run-locally-and-rescore).
+Import the built-in evaluator bundle as `from hue_sdk.evals import builtin_scorers`. `builtins` remains an alias, but shadows the standard-library module in files that import it. `builtin_scorers.json_schema` needs `pip install 'hue-run[evals]'`; otherwise the helper raises `ImportError` and stored schema evaluators report `SchemaValidatorUnavailable`. The tracing core depends only on OpenTelemetry packages and `requests`. See [your first evaluation](/evaluations/first-evaluation) and the [Python API reference](/reference/python#run-locally-and-rescore).
 
 ## Run an agent from Hue
 

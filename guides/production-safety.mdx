@@ -3,11 +3,11 @@ title: "Production safety"
 description: "Keep telemetry failures from blocking your application and control which content it captures."
 ---
 
-Keep tracing best effort in a serving application. A Hue outage should reduce observability without preventing your agent from answering. Hue follows OpenTelemetry's [runtime error containment](https://opentelemetry.io/docs/specs/otel/error-handling/) and [nonblocking, bounded-resource principles](https://opentelemetry.io/docs/specs/otel/performance/): preserve business behavior, drop telemetry when budgets are exhausted, and make the loss observable.
+Keep tracing best effort in a serving application: an outage should reduce observability, not prevent an answer. Hue follows OpenTelemetry's [runtime error containment](https://opentelemetry.io/docs/specs/otel/error-handling/) and [bounded-resource principles](https://opentelemetry.io/docs/specs/otel/performance/).
 
 Use a **Tracing only** project service key for these serving examples. A **Read and write** key is necessary only when the same process also calls evaluation APIs; it can also read project data, so keep it off production servers.
 
-The supported SDKs suppress OpenTelemetry instrumentation while exporting so an HTTP instrumentor does not recursively trace Hue's own uploads. If an OpenTelemetry release in Python's accepted range stops exposing its suppression key, Hue warns once and exports without suppression while its own queues still ignore its export work. Snapshot boundaries reject unsupported custom objects; TypeScript also rejects Proxies without invoking their traps, measures typed-byte values through native accessors, and copies them into a fixed-size allocation so concurrent shared-buffer growth cannot bypass the queue budget. These protections complement the limits below. Verify your application's actual dependency and instrumentor combination in CI; a successful trace is not by itself a failure-isolation test.
+The SDKs suppress their export traffic from OpenTelemetry instrumentation. If Python's suppression key is unavailable, Hue warns once and exports without it while its queues still ignore export work. Snapshot boundaries reject unsupported values; TypeScript also handles Proxies and typed bytes without bypassing queue budgets. Verify your dependency and instrumentor combination in CI.
 
 <Note>
 The APIs below require TypeScript `@hue-run/sdk >= 0.1.5` or Python `hue-run >= 0.1.3`. Confirm the installed version before using them. Older SDKs can propagate capture or lifecycle errors.
@@ -15,9 +15,9 @@ The APIs below require TypeScript `@hue-run/sdk >= 0.1.5` or Python `hue-run >= 
 
 ## Separate setup verification from serving requests
 
-Run the strict [quickstart](/quickstart), connection check and [trace receipt verification](/sdks/typescript#verify-stored-trace-evidence) during installation or a dedicated diagnostic command. These checks deliberately fail when Hue is unavailable. Do not make application readiness, a customer request or its response depend on them.
+Run the strict [quickstart](/quickstart), connection check and [trace receipt verification](/sdks/typescript#verify-stored-trace-evidence) during installation or a diagnostic command. They deliberately fail when Hue is unavailable; never make readiness or a customer response depend on them.
 
-Create one client per serving process. Use the safe constructor in application startup, leave background export enabled, and use safe lifecycle methods only at the appropriate lifecycle boundary. Do not catch and rerun the agent after a telemetry error: tools may already have caused side effects.
+Create one client per serving process with the safe constructor and background export. Use safe lifecycle methods at the lifecycle boundary; never rerun an agent after a telemetry error because tools may have caused side effects.
 
 <Tabs>
 <Tab title="TypeScript">
@@ -77,43 +77,43 @@ def shutdown_tracing():
 </Tab>
 </Tabs>
 
-`existingAgent` and `existing_agent` above stand for your current application function. Register the shutdown code in your process's shutdown hook; do not execute it immediately after client creation. For serverless requests, use `flushSafe` or `force_flush_safe` in the platform's supported after-response lifecycle, with a deadline that fits that lifecycle. Do not shut down a shared provider after each request.
+`existingAgent` and `existing_agent` stand for your application function. Register shutdown in the process hook, not after client creation. For serverless requests, use `flushSafe` or `force_flush_safe` in the supported after-response lifecycle with a fitting deadline; do not shut down a shared provider per request.
 
 ## Failure behavior
 
-Hue helpers omit content that cannot be safely captured, including oversized JSON or a failing redactor, and record an instrumentation failure. They preserve the business callback's return value and original error. Safe initialization returns a disabled client if configuration or provider setup fails. Disabled helpers still execute the application work.
+Hue omits unsafe content, including oversized JSON or failing redactors, and records an instrumentation failure while preserving the callback's result and error. Safe initialization returns a disabled client on setup failure; disabled helpers still execute application work.
 
-Python redactors receive detached copies of supported built-in content containers, so mutating the redactor's argument cannot change the application's inputs or results. Hue snapshots helper content even when no redactor is configured, and snapshots a redactor's return value again before serialization. Each snapshot has a conservative 1 MiB value budget, depth 64 and 65,536 visited values/keys. Cycles, custom objects or subclasses, non-finite numbers, integers above 14,000 bits and over-budget inputs are omitted and counted as instrumentation failures without calling the redactor. The final redacted JSON field still has a 256 KiB limit. Redactors must remain free of side effects through globals, captured references or external services; copying their argument cannot isolate those effects.
+Python redactors receive detached copies. Hue snapshots helper content and the redactor's return value; each snapshot allows 1 MiB, depth 64 and 65,536 visited values/keys. Cycles, custom objects or subclasses, non-finite numbers, integers above 14,000 bits and over-budget inputs are omitted without calling the redactor. The final redacted JSON field is 256 KiB. Redactors must be deterministic and free of external side effects.
 
-The safe lifecycle methods return a failure result instead of raising. A timeout bounds the caller's wait; it is not proof of delivery and does not undo an in-flight request. Ordinary `createHue` / `Hue`, connection checks, verification methods, and strict lifecycle methods remain useful for diagnostics and can reject invalid configuration or report delivery failures.
+Safe lifecycle methods return failure results instead of raising. A timeout bounds the wait but does not prove delivery or undo an in-flight request. `createHue` / `Hue`, connection checks, verification and strict lifecycle methods remain diagnostic APIs and can reject configuration or report delivery failures.
 
 Queues have both record and byte limits, including in-flight records. TypeScript's default byte budget is 8 MiB shared by traces and logs; Python's is 8 MiB per signal. Byte accounting bounds queued telemetry, not total process RSS. OTel objects, serialization, dependency code and application payloads consume additional memory. Overflow drops telemetry and updates counters; it never retries the agent's business operation.
 
-Network export has a deadline and bounded retry work. Python limits retained network workers to one per signal; an OS-level blocked call can outlive the caller's wait and retain one encoded request of up to 1 MiB per signal outside the queue counters. Later records stay queued within their limits until that worker finishes. Shutdown counts queued records it must discard. A process kill, full queue, disabled client or exporter failure can lose telemetry. There is no disk spool or delivery guarantee.
+Network export has bounded retry work. Python retains one worker per signal; an OS-blocked call can outlive the wait and retain one encoded request up to 1 MiB per signal outside queue counters. Later records queue within limits. Shutdown counts discarded records; process kill, full queues, disabled clients and exporter failures can lose telemetry. There is no disk spool or delivery guarantee.
 
-No library executing inside your process can promise immunity to process termination, out-of-memory conditions, an event-loop stall, or arbitrary third-party hooks. Keep redactors fast, deterministic and free of network calls. Existing instrumentors and other exporters retain their own behavior. Safe construction cannot catch a package import or dependency-resolution failure that happens before it is called; verify the dependency lockfile and application startup in CI. If tracing must be optional even when its package cannot load, place the import behind your application's guarded optional-integration loader and fall back to calling the existing agent directly.
+No in-process library can prevent termination, OOM, event-loop stalls or third-party hooks. Keep redactors fast, deterministic and offline; other instrumentors retain their behavior. Safe construction cannot catch import or dependency failures before it runs, so verify startup in CI or load tracing behind an optional guarded integration.
 
 ## Kill switch and monitoring
 
-The snippets explicitly read `HUE_TRACING_ENABLED`. Set it to `false` and restart the process to bypass Hue initialization and export without changing the application function. It is not an automatically polled remote flag. The strict constructors also accept `enabled: false` / `enabled=False`; a disabled client needs neither a key nor a `captureContent` / `capture_content` choice.
+The snippets read `HUE_TRACING_ENABLED`; set it to `false` and restart to bypass Hue without changing application code. It is not a remote flag. Strict constructors also accept `enabled: false` / `enabled=False`; a disabled client needs neither a key nor capture settings.
 
-Inspect TypeScript's `hue.transport.getReport()` and Python's `hue.export_status` for instrumentation failures, dropped records, pending bytes and failed exports. Failure and delivery counters are cumulative for a client lifetime; pending bytes and records are current queue gauges. Emit only counts and sanitized status; never log credentials, prompts, responses or raw provider exceptions. Do not route these health signals exclusively through Hue.
+Inspect TypeScript's `hue.transport.getReport()` and Python's `hue.export_status` for failures, drops, pending bytes and exports. Counters are cumulative; pending bytes and records are current gauges. Emit only sanitized counts and status, never credentials, content or raw provider exceptions, and do not send health signals only through Hue.
 
 Before rollout, test your real entry point against a loopback receiver that returns 503, rejects its key, delays its response and exceeds queue capacity. Verify that each tool runs once, results and errors match an uninstrumented request, and shutdown meets your deadline. Start with a small canary.
 
 ## Capture, titles and retention
 
-The snippets capture content when `HUE_CAPTURE_CONTENT` is unset. Hue can only show and evaluate what a trace records, so they capture supplied prompts, responses and tool inputs and outputs alongside model, usage, timing and errors. Set `HUE_CAPTURE_CONTENT=false` explicitly for metadata-only export, for example when an application or data policy forbids sending content to another service. Content capture does not turn off your redactor or Hue's credential scrubbing. Use the [redaction recipe](/guides/redaction) to mask email addresses and add your own field rules before supported content leaves your application.
+The snippets capture content when `HUE_CAPTURE_CONTENT` is unset. Hue can show and evaluate only recorded data, including prompts, responses and tool inputs and outputs. Set `HUE_CAPTURE_CONTENT=false` for metadata-only export; this does not disable redaction or credential scrubbing. Use the [redaction recipe](/guides/redaction) for email and custom field rules.
 
-In metadata-only mode, both SDKs strip recognized third-party content attributes on Hue's export path, but unrecognized custom keys pass through, so configure third-party instrumentors' own capture controls to match your choice. Custom names and arbitrary attributes are application-controlled.
+In metadata-only mode, both SDKs strip recognized third-party content attributes on Hue's export path, but custom keys pass through; configure third-party instrumentors separately.
 
 Hue names each trace from its own recorded request text, or from a trace name the producer set, inside Hue. Naming sends nothing to a model provider and needs no setting.
 
-Telemetry retention is configured per project with Hue. Projects with a retention policy have eligible older traces and their telemetry removed by a periodic sweep; without a policy, telemetry does not expire automatically. Confirm your project’s retention period and deletion process with Hue. Saved snapshots retain their own evidence after the original trace expires and need separate deletion handling. Archiving a project does not delete its data. Project quotas provide admission protection, not a storage-retention policy.
+Telemetry retention is configured per project. A policy removes eligible older traces by periodic sweep; without one, telemetry does not expire automatically. Saved snapshots retain evidence after the source trace expires and need separate deletion; archiving does not delete data. Quotas protect admission, not retention.
 
 ## What Hue computes from your traces
 
-Hue assesses the traces it stores. Some of that work sends recorded conversation text to a model, so agree these settings with your capture policy. Owners and admins change trace-check consent in **Settings → Trace checks** and every other setting below in **Settings → Projects → Edit project**. Over MCP, `set_trace_checks_consent` changes trace-check consent and `update_project` the others. Both need **Read and write** access and an owner or admin: the signed-in member, or the member who created the key.
+Hue assesses stored traces, and some settings send recorded conversation text to a model. Align them with your capture policy. Owners/admins change trace-check consent in **Settings → Trace checks** and other settings in **Settings → Projects → Edit project**; MCP uses `set_trace_checks_consent` and `update_project`. Both require **Read and write** access and owner/admin authority.
 
 | Setting | Default | What it does and sends |
 | --- | --- | --- |
@@ -124,7 +124,7 @@ Hue assesses the traces it stores. Some of that work sends recorded conversation
 | **AI trace builds** | On | When someone builds a case or environment from a trace, sends redacted trace content and supplied context to models to populate the world, build and check the case, suggest criteria and calibrate judges. Turning it off stops new model calls for these builds. The MCP setting is `ai_case_conversion_suggestions`. |
 | Trace-check consent | Off | Trace checks run only after a project gives this separate consent and activates a version. They then send bounded recorded requests, replies, delegation instructions, tool outputs and reduced context to the trace-check model through the Vercel AI Gateway. Withdrawing consent stops new model work. |
 
-Traces from evaluation runs are not assessed. The [production investigation guide](/agents/investigate-production#data-model) describes the attention states, findings, trace checks and intents that these settings produce.
+Traces from scoring runs are not assessed. The [production investigation guide](/agents/investigate-production#data-model) describes the attention states, findings, trace checks and intents that these settings produce.
 
 ## Ingestion limits
 
