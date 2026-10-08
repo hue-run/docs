@@ -82,13 +82,13 @@ Open **Traces** in the project that owns the key. The root span and its `execute
 
 `checkConnection()` rejects with `HueConnectionError` when the key or origin is wrong. Its fixed message is safe to log; `status` carries the HTTP status when Hue answered, and `cause` carries the underlying network, timeout or parsing error.
 
-## Choose what you capture
+## Content capture
 
-For a copyable email-masking callback and guidance on custom field rules, follow [redact sensitive trace content](/guides/redaction).
+For a copyable email-masking callback and guidance on custom field rules, follow [Redaction](/guides/redaction).
 
 `captureContent` defaults to `true` for an enabled client; set it to `false` to opt out. Use `true`: Hue can only show and evaluate what a trace records. Use `false` for metadata-only capture when you'd rather not send content, or when an application or data policy forbids sending it to another service. A disabled client (`enabled: false`) exports nothing and defaults it to `false`.
 
-- `true`, the recommended setting, captures content you provide to supported helpers and instrumentations: prompts and messages, responses and tool inputs and outputs, alongside model, usage, timing and errors. Hue stores received content under your project’s [retention policy](/guides/production-safety#capture-titles-and-retention). Before export, the SDK replaces credentials in recorded tool definitions with `"[redacted]"` and exports an inline file over 64 KiB in recorded messages as its `sha256` and `size`; see the [content policy](/reference/typescript#content-policy).
+- `true`, the recommended setting, captures content you provide to supported helpers and instrumentations: prompts and messages, responses and tool inputs and outputs, alongside model, usage, timing and errors. Hue stores received content under your project’s [retention policy](/guides/production-safety#content-capture-and-retention). Before export, the SDK replaces credentials in recorded tool definitions with `"[redacted]"` and exports an inline file over 64 KiB in recorded messages as its `sha256` and `size`; see the [content policy](/reference/typescript#content-policy).
 - `false` disables Hue helper content and removes recognized GenAI, Vercel AI SDK, OpenInference, and OpenLLMetry content fields before Hue exports them, including spans from other instrumentations on a shared provider. It also removes log bodies, status descriptions and exception text. The exported `contentPrefixes` array lists the removed keys.
 - `redact(value, path)` can transform supported strings before export. Redactor and capture failures omit unsafe content and increment instrumentation failure counters without changing application results.
 
@@ -100,7 +100,7 @@ Custom attribute names cannot be classified automatically. Keep secrets and unne
 
 Missing usage stays missing: the SDK does not estimate tokens or cost. Captured JSON `null`, `false`, `0`, and an empty string remain distinct from absent content.
 
-## Add model spans and propagate context
+## Model spans and context
 
 When you call a provider SDK directly, `hue.model(model, callback, options)` creates the GenAI client span for that call. The span is named `{operation} {model}` (`operation` defaults to `chat`) and carries `gen_ai.operation.name`, `gen_ai.request.model` and `gen_ai.provider.name`. Inside the callback, `setInput` and `setOutput` record `gen_ai.input.messages` and `gen_ai.output.messages` when `captureContent` is true; use the OpenTelemetry GenAI message shape (`{ role, parts: [{ type: "text", content }] }`). `setUsage` records provider-reported token counts; unknown usage stays absent.
 
@@ -136,7 +136,7 @@ Like `withSpan`, the options come after the callback and also accept `name`, `se
 
 Across processes, call `hue.inject(carrier)` inside the producing span and pass `hue.extract(carrier)` as `parentContext` in the worker. Both carry W3C `traceparent` only, never the API key or baggage, and `inject()` keeps propagating the application's own trace context when the client is disabled. Hue registers no global propagator or context manager. When your application has registered a context manager, `withSpan`, `tool` and `model` also make their span the active OpenTelemetry span while the callback runs, so spans from instrumentations that use the global API parent under it.
 
-## Connect Vercel AI SDK
+## Vercel AI SDK
 
 The `hueTelemetry` adapter requires AI SDK 7 and an OTel integration 1 peer. Installed-package tests cover pairs `7.0.99 / 1.0.99` and `7.0.100 / 1.0.100`. Install one matching pair when using the integration:
 
@@ -144,13 +144,13 @@ The `hueTelemetry` adapter requires AI SDK 7 and an OTel integration 1 peer. Ins
 bun add ai@7.0.99 @ai-sdk/otel@1.0.99
 ```
 
-Import `hueTelemetry` from `@hue-run/sdk/ai-sdk` and pass `telemetry: hueTelemetry(hue)` to your agent or generation call. The helper forwards your explicit content choice to `recordInputs` and `recordOutputs`. Consume a streaming response inside the surrounding `hue.withSpan` callback, then flush after it finishes. See the [reference chatbot](/integrations/reference-chatbot) for a complete streaming application.
+Import `hueTelemetry` from `@hue-run/sdk/ai-sdk` and pass `telemetry: hueTelemetry(hue)` to your agent or generation call. The helper forwards your explicit content choice to `recordInputs` and `recordOutputs`. Consume a streaming response inside the surrounding `hue.withSpan` callback, then flush after it finishes. See the [Example chatbot](/integrations/reference-chatbot) for a complete streaming application.
 
 For AI SDK 6, import `hueExperimentalTelemetry` from `@hue-run/sdk` and pass `experimental_telemetry: hueExperimentalTelemetry(hue)` to each call. It needs no `@ai-sdk/otel` peer; the generated spans parent under `withSpan`, inherit session and user identifiers, and record prompts and responses only when `captureContent` is true. `hueTelemetry` reads the installed `ai` major version once per process and throws a `TypeError` below 7. Do not upgrade an application's AI SDK only to add tracing.
 
 If your app already registers a global AI SDK integration, preserve it and attach Hue to the same OpenTelemetry provider. A per-call `telemetry` integration replaces the global AI SDK integration for that call. Follow [existing OpenTelemetry](/integrations/opentelemetry) when you need multiple exporters.
 
-## Verify stored trace evidence
+## Verify
 
 Available in `@hue-run/sdk` 0.1.3 and later. Finish a real application request and retain its trace ID and known span IDs. End its spans, flush the provider that owns them, then flush Hue. When borrowing a provider, flush that provider first. Verification does not run the app, invoke a model, or flush telemetry.
 
@@ -173,7 +173,7 @@ The receipt reports stored field presence, span counts, and missing expected spa
 
 For serving requests, use [safe initialization, lifecycle deadlines and a kill switch](/guides/production-safety).
 
-## Handle delivery failures
+## Delivery failures
 
 `flush()` drains traces and logs. Partial rejection, malformed acknowledgement, queue overflow, and export failure raise `HueExportError`. Its report contains cumulative accepted, rejected, failed, and pending counts; `hue.transport.getIssues()` returns recent sanitized issues.
 

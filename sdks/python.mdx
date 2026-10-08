@@ -62,11 +62,11 @@ Run it with your environment already configured:
 
 Open **Traces** in the project that owns the key. The root span and its `execute_tool add` child share the printed trace ID. Both show the input `{"a": 2, "b": 2}` and the output `4` because this example captures content.
 
-## Choose what you capture
+## Content capture
 
-For a copyable email-masking callback and guidance on custom field rules, follow [redact sensitive trace content](/guides/redaction).
+For a copyable email-masking callback and guidance on custom field rules, follow [Redaction](/guides/redaction).
 
-`capture_content` defaults to `True`; set it to `False` to opt out. Use `True`, the recommended setting: Hue can only show and evaluate what a trace records. `True` captures content supplied through Hue's input, output, tool, and inference-log helpers, such as prompts and messages, responses and tool inputs and outputs. Use `False` for metadata-only capture when you'd rather not send content, or when an application or data policy forbids sending it to another service; it omits that content before it enters an OpenTelemetry queue. Received content is stored under your project’s [retention policy](/guides/production-safety#capture-titles-and-retention).
+`capture_content` defaults to `True`; set it to `False` to opt out. Use `True`, the recommended setting: Hue can only show and evaluate what a trace records. `True` captures content supplied through Hue's input, output, tool, and inference-log helpers, such as prompts and messages, responses and tool inputs and outputs. Use `False` for metadata-only capture when you'd rather not send content, or when an application or data policy forbids sending it to another service; it omits that content before it enters an OpenTelemetry queue. Received content is stored under your project’s [retention policy](/guides/production-safety#content-capture-and-retention).
 
 With `capture_content=False`, Hue also strips recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes, legacy `gen_ai.*` message events, log bodies and status descriptions from every record it exports, including spans from third-party instrumentors on the same provider. The [compatibility matrix](/sdks/compatibility) lists the keys, which are identical to TypeScript's `contentPrefixes`. The setting does not classify arbitrary attribute names, span names, session IDs or another exporter's records, and unrecognized custom keys pass through. Configure an instrumentor's own content controls before enabling it; it may also send content to other exporters.
 
@@ -74,7 +74,7 @@ For helper content, `redactor(field, value)` receives a detached copy and can re
 
 The helpers always exclude exception messages and stacks, retaining error type and status. A context manager records an escaping error and rethrows it.
 
-## Add model metadata and correlation
+## Model metadata and correlation
 
 Use `hue.model(model, provider=...)` for a model operation. Report known token counts with `span.set_usage(input_tokens=..., output_tokens=...)`; leave unavailable counts as `None`. Hue does not estimate missing usage.
 
@@ -82,7 +82,7 @@ Use `hue.context(session_id=..., user_id=...)` around related helpers. These are
 
 `span.log_inference(input=..., output=...)` emits a log correlated with that span. Use logs or span attributes for a given content event instead of storing identical copies in both. With capture enabled, an explicit `None` field keeps its key with an empty value, distinct from an absent field. With capture disabled, `log_inference` emits no record.
 
-## Verify stored trace evidence
+## Verify
 
 Available in `hue-run` 0.1.1 and later. Finish a real application request and retain its trace ID and known span IDs. End its spans, flush the provider that owns them, then flush Hue. When borrowing a provider, flush that provider first. Verification does not run the app, invoke a model, or flush telemetry.
 
@@ -106,7 +106,7 @@ The receipt reports stored field presence, span counts, and missing expected spa
 
 For serving requests, use [safe initialization, lifecycle deadlines and a kill switch](/guides/production-safety).
 
-## Handle flush and shutdown
+## Flush and shutdown
 
 `force_flush()` drains both signals and returns a boolean. It returns `False` for a timeout or any recorded failed export batch, dropped record or instrumentation failure during this client's lifetime. Check `hue.export_status` for cumulative trace and log failure counts. HTTP errors, malformed acknowledgements, and OTLP partial rejections are failures; receiver error bodies are not echoed.
 
@@ -116,7 +116,7 @@ Before planned application shutdown, finish traced work and keep the process ali
 
 The SDK uses official OTLP HTTP exporters with protobuf encoding and their retry policy. Export requests are gzip-compressed and carry a `hue-sdk-python/<version>` User-Agent ahead of the exporter's own token. Partial rejections are not retried wholesale. Queues are in memory, so process termination and overflow can lose records. A successful flush is not proof that every application operation was instrumented.
 
-## Use an existing provider
+## Existing OpenTelemetry provider
 
 Pass your OpenTelemetry SDK tracer provider as `tracer_provider=provider`, and an existing SDK `LoggerProvider` as `logger_provider=provider` when the application already owns one. Hue adds its processors without setting the global providers. A provider Hue creates for the other signal reuses the borrowed provider's resource, so spans and correlated logs report one `service.name`; `service_name` applies only when Hue creates both providers. An instrumentor that accepts a provider can use `hue.tracer_provider` explicitly. Use one Hue client per provider lifecycle; OpenTelemetry has no public processor-removal API.
 
@@ -124,8 +124,8 @@ Hue shutdown leaves borrowed providers and their other processors usable. Your a
 
 ## Evaluate locally
 
-Import the built-in evaluator bundle as `from hue_sdk.evals import builtin_scorers`. `builtins` remains an alias, but shadows the standard-library module in files that import it. `builtin_scorers.json_schema` needs `pip install 'hue-run[evals]'`; otherwise the helper raises `ImportError` and stored schema evaluators report `SchemaValidatorUnavailable`. The tracing core depends only on OpenTelemetry packages and `requests`. See [your first evaluation](/evaluations/first-evaluation) and the [Python API reference](/reference/python#run-locally-and-rescore).
+Import the built-in evaluator bundle as `from hue_sdk.evals import builtin_scorers`. `builtins` remains an alias, but shadows the standard-library module in files that import it. `builtin_scorers.json_schema` needs `pip install 'hue-run[evals]'`; otherwise the helper raises `ImportError` and stored schema evaluators report `SchemaValidatorUnavailable`. The tracing core depends only on OpenTelemetry packages and `requests`. See [First evaluation](/evaluations/first-evaluation) and the [Python API reference](/reference/python#run-locally-and-rescore).
 
-## Run an agent from Hue
+## Managed runs
 
 Expose a protected route around your existing application function with the [managed target adapter](/evaluations/managed-runs). Hue dispatches frozen cases, saves real output files and verifies trace evidence; your application retains its provider, tools and existing telemetry. Local evaluation runners remain available.

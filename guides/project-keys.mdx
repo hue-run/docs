@@ -5,13 +5,13 @@ description: "Create, scope, rotate, and verify Hue project keys."
 
 Use a project service key for SDK requests and OpenTelemetry exports. Create it in **Settings → Integrations & API keys** within the project you want to use.
 
-## Configure the application
+## Configure your app
 
 Store the key as `HUE_API_KEY` in your server environment or secret manager. Pass it to the SDK constructor, as shown in the [quickstart](/quickstart). Hue constructors do not automatically load environment files.
 
 For direct HTTP requests, authentication uses `Authorization: Bearer <project-service-key>`. The key determines the destination project. Resource attributes, observed user IDs and session IDs cannot select a different project.
 
-## Understand access
+## Access levels
 
 A key either reads the project, reads and writes it, or only sends traces:
 
@@ -31,7 +31,7 @@ Treat every key as a server credential. Keep it out of browser bundles, logs, so
 
 A service key does not represent a signed-in Hue user. Owner- and admin-only tools on the [MCP server](/agents/mcp-server) check the key's creating verified member, or for a sign-in connection the member who approved it. Org invites and role changes stay in the application session. Trace browsing goes through that MCP server with a **Read** or **Read and write** key or by signing in with Hue; the SDKs do not expose a general trace-search API.
 
-## Verify and rotate
+## Verify and rotate keys
 
 Call `hue.checkConnection()` in TypeScript or `hue.validate_project()` in Python. These send a project lookup without a trace and return the project identity. Confirm it matches the project you intend to use before exporting data.
 

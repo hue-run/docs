@@ -1,6 +1,5 @@
 ---
-title: "Using a simulated environment"
-sidebarTitle: "Using a simulated environment"
+title: "Reproduce failures"
 description: "Build a simulated environment from a trace, run your agent, and inspect each attempt."
 ---
 
@@ -29,7 +28,7 @@ profile are available through `search_hue_tools` and `execute_hue_tool` or
 Ask an owner or admin to enable **AI trace builds** in **Settings → Projects → Edit project**.
 This allows Hue to send redacted trace content and supplied context to models that populate
 the environment. The MCP setting is `update_project` with `ai_case_conversion_suggestions: true`;
-the same setting also controls case builds. See [AI processing](/guides/production-safety#what-hue-computes-from-your-traces).
+the same setting also controls case builds. See [AI processing](/guides/production-safety#trace-analysis).
 
 Linear is the first supported app. Keep your agent's own model, search and helper connections;
 replace its Linear connection with the simulation connection for each attempt.
@@ -52,7 +51,7 @@ Run the task, then inspect state, diff, steps and requests. Use get_world's retu
 Finish the attempt. After changing my agent, reset to a fresh world and reconnect before trying again.
 ```
 
-## Submit one failed trace
+## Submit a failed trace
 
 Fetch the trace through your own Langfuse connection, including every observation page and
 the captured inputs, outputs and metadata. Send a single trace, rather than a session or a
@@ -178,7 +177,7 @@ Call `complete_trace_upload` with `{"upload_id": "<returned upload_id>"}`, then 
 }
 ```
 
-### Follow the build
+### Track the build
 
 The create response's `id` is the build ID. Save it and pass it as `build_id` to
 `get_environment_build` to follow progress and read any evidence gaps. `gap_count` counts all gaps;

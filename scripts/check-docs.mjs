@@ -116,8 +116,8 @@ if (JSON.stringify(mdxFiles) !== JSON.stringify(expectedMdxFiles)) {
 // turns one production trace into a published case. agents/debug-environment describes the
 // distinct trace-to-environment debugging workflow, private uploads and fresh world attempts, and
 // guides/hue-app maps the customer-facing app sidebar to its owning documentation.
-if (pages.length !== 29 || pages.length + 1 !== 30) {
-  fail(`expected 29 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
+if (pages.length !== 28 || pages.length + 1 !== 29) {
+  fail(`expected 28 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
 }
 
 for (const page of expectedMdxFiles) {
@@ -544,7 +544,7 @@ for (const [path, text] of Object.entries(publicText)) {
 const compatibilitySource = canonicalCompatibility(read("sdks/compatibility.mdx"));
 if (digest(compatibilitySource) !== sdk.compatibility.sha256) fail("sdks/compatibility.mdx differs from the SDK-owned source");
 // Everyone follows one public agent setup page: the key step with the account contact line, tracing
-// through the skill, then the MCP connection. The invited-setup URL stays alive only as a stub.
+// through the skill, then the MCP connection. Mintlify redirects the former invited-setup URL.
 const frontmatterOf = (text) => text.match(/^---\n([\s\S]*?)\n---\n/)?.[1] ?? "";
 const agentSetup = publicText["guides/agent-setup.mdx"];
 if (/^hidden:\s*true$/m.test(frontmatterOf(agentSetup))) {
@@ -583,13 +583,9 @@ for (const [path, text] of Object.entries(publicText)) {
     }
   }
 }
-const movedSetup = publicText["guides/invited-setup.mdx"];
-if (!/^hidden:\s*true$/m.test(frontmatterOf(movedSetup)) || !movedSetup.includes("https://docs.hue.run/guides/agent-setup.md")) {
-  fail("guides/invited-setup.mdx must be a hidden stub that points to https://docs.hue.run/guides/agent-setup.md");
-}
 for (const [path, text] of Object.entries(publicText)) {
-  if (path !== "guides/invited-setup.mdx" && text.includes("guides/invited-setup")) {
-    fail(`${path} links the moved invited-setup page; link /guides/agent-setup instead`);
+  if (text.includes("guides/invited-setup")) {
+    fail(`${path} links the removed invited-setup page; link /guides/agent-setup instead`);
   }
   for (const phrase of ["heightened demand", "Many apologies", "invite-only gate", "request access"]) {
     if (text.toLowerCase().includes(phrase.toLowerCase())) fail(`${path} contains retired access-gate text: ${phrase}`);

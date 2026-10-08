@@ -1,5 +1,5 @@
 ---
-title: "Investigate production with the Hue MCP"
+title: "Investigate production"
 sidebarTitle: "Investigate production"
 description: "Find failing, slow, or regressed production traces with tool recipes for the Hue MCP."
 ---
@@ -25,7 +25,7 @@ Use `aggregate` for counts and percentiles, `search_spans` for individual steps,
 
 Each recipe is a short sequence of tool calls with their key arguments. Replace `24h` with the window the user asked for. `aggregate` and `search_spans` read spans over at most 7 days; trace reads cover up to 90 days.
 
-### What needs attention, errored or failed, and why
+### Find traces that need attention
 
 Prompt: “What needs attention in the last 24 hours, and why? Link the traces.”
 
@@ -33,7 +33,7 @@ Sequence: `get_project_context` → `aggregate` with `{"since": "24h", "group_by
 
 Caveat: `needs_attention` includes findings and positive active trace checks; `uncertain` means Hue could not settle a finding.
 
-### Which tools fail most
+### Find failing tools
 
 Prompt: “Which tools failed most often yesterday, and what was their failure rate?”
 
@@ -41,7 +41,7 @@ Sequence: `aggregate` with `{"entity": "spans", "since": "24h", "kind": "tool", 
 
 Caveat: Groups rank by call count, and span `name` may differ from tool name; an errored call does not prove the request failed. `search_traces` with `"finding": "unrecovered_tool_error"` lists traces where the agent did not recover.
 
-### Which task types and steps are slow
+### Find slow tasks and steps
 
 Prompt: “Which task types and steps were slowest this week?”
 
@@ -49,7 +49,7 @@ Sequence: `aggregate` with `{"since": "7d", "group_by": ["trace_name"], "metrics
 
 Caveat: Intent grouping needs a published taxonomy; duration sorting includes completed traces only.
 
-### Time to first reply
+### Measure time to first reply
 
 Prompt: “How long did users wait for the first useful reply?”
 
@@ -57,7 +57,7 @@ Sequence: `aggregate` with `{"entity": "spans", "since": "7d", "name": "<span th
 
 Caveat: Identify the reply span, which depends on the application, and page through every row in the window with `next_cursor` in the default newest-first order, or report a sample; a `sort: "duration"` page would skew it. Separate start-offset and duration percentiles cannot be added. With timing enabled, use `search_traces.first_useful_answer_ms` or `get_trace_check_summary.requests` for first-response, useful-playback, useful-server and completion p50 and p95 values.
 
-### Did a release regress
+### Compare releases
 
 Prompt: “Did the latest release regress?”
 
@@ -65,7 +65,7 @@ Sequence: `aggregate` with `{"since": "7d", "group_by": ["release"], "metrics": 
 
 Caveat: Without a recorded release, compare rates in equal ISO-8601 windows around deploy time; concurrent releases can mix them.
 
-### One user's or session's recent traces
+### List a user's or session's traces
 
 Prompt: “Show user `<id>`'s traces and sub-agent activity from the last seven days.”
 
@@ -81,7 +81,7 @@ Sequence: inspect agent and handoff spans with `get_trace` or `search_spans` usi
 
 Caveat: When parent IDs exist only in recorded content, read them with `get_span_content`.
 
-### Compare a tool's input and output sizes
+### Compare tool input and output sizes
 
 Prompt: “Which tools return the largest results?”
 
@@ -97,7 +97,7 @@ Sequence: `search_traces` with `{"since": "24h", "model": "<model>"}` or `{"sinc
 
 Caveat: Trace model or attribute searches scan the newest 5,000 matches and report `scan_capped`; content attributes are refused.
 
-### Read exact values
+### Read span content
 
 Prompt: “Show the exact tool arguments and result for `<trace>`.”
 
@@ -105,7 +105,7 @@ Sequence: `get_span_content` with `{"attribute_keys": ["gen_ai.tool.call.result"
 
 Caveat: Reads are audited and untrusted; each request reads up to 20 spans, in 8,000-unit slices by default. Invalid paths report available keys.
 
-### Trace checks
+### Review trace check results
 
 Prompt: “Which traces did the delegation check flag this week, and what evidence did it use?”
 
@@ -198,11 +198,11 @@ The `attention` filter of `search_traces` takes `needs_attention` or `uncertain`
 | `possible_unsupported_completion` | Model and rule | The reply appears to say the action was done, but no recorded tool call succeeded, or a tool it called failed with no later success. |
 | `possible_action_not_taken` | Model and rule | The request asks for an action, the reply neither reports it done nor asks for input, and no recorded tool call succeeded. |
 
-Model findings require **AI trace findings**, on by default; see [production safety](/guides/production-safety#what-hue-computes-from-your-traces). `finding_ids` lists present findings; `get_trace` returns their state, source and span IDs. `stale: true` means newer spans arrived after assessment. `findings.judge_state` and `skip_reason` explain when the model did not judge a trace.
+Model findings require **AI trace findings**, on by default; see [production safety](/guides/production-safety#trace-analysis). `finding_ids` lists present findings; `get_trace` returns their state, source and span IDs. `stale: true` means newer spans arrived after assessment. `findings.judge_state` and `skip_reason` explain when the model did not judge a trace.
 
 ### Trace checks
 
-Trace checks are project-owned, versioned checks of production behavior. They are advisory, not evaluator scores. The four checks are `delegation` (execution stayed with the orchestrator instead of a sub-agent), `action_scope` (execution expanded the request), `delegation_scope` (a handoff expanded the request) and `output_omission` (needed tool information was omitted). They produce results only after a project sets them up: [instrumentation](/integrations/opentelemetry#instrument-for-trace-checks-and-request-timing) that marks the request and its boundaries, trace-check consent, which is off by default, and a version activated against labelled traces.
+Trace checks are project-owned, versioned checks of production behavior. They are advisory, not evaluator scores. The four checks are `delegation` (execution stayed with the orchestrator instead of a sub-agent), `action_scope` (execution expanded the request), `delegation_scope` (a handoff expanded the request) and `output_omission` (needed tool information was omitted). They produce results only after a project sets them up: [instrumentation](/integrations/opentelemetry#trace-checks-and-request-timing) that marks the request and its boundaries, trace-check consent, which is off by default, and a version activated against labelled traces.
 
 A result is `present`, `absent`, `uncertain`, `unavailable` (not enough evidence) or `not_applicable`. A trace's `check_state` is `needs_attention`, `pending`, `uncertain`, `unavailable`, `not_applicable`, `no_findings` or `null` when no active version applies to it.
 
@@ -233,7 +233,7 @@ A trace's `user_id`, `release` and `trace_name` are its root span's, else those 
 | Error type (`error_type`) | `error.type` |
 | Trace title | Derived from recorded request text first; the trace name is the fallback |
 
-Langfuse metadata (`langfuse.observation.metadata.*`, `langfuse.trace.metadata.*`), `langfuse.environment`, tags and levels are kept as raw attributes. `get_span` lists their names in `attribute_keys`; `get_span_content` with `attribute_keys` reads their values, and the `attribute` filter matches the ones that are not content or free text. The [OpenTelemetry guide](/integrations/opentelemetry#make-traces-useful-to-a-coding-agent) lists the attributes worth recording so these fields are filled.
+Langfuse metadata (`langfuse.observation.metadata.*`, `langfuse.trace.metadata.*`), `langfuse.environment`, tags and levels are kept as raw attributes. `get_span` lists their names in `attribute_keys`; `get_span_content` with `attribute_keys` reads their values, and the `attribute` filter matches the ones that are not content or free text. The [OpenTelemetry guide](/integrations/opentelemetry#attributes-for-coding-agents) lists the attributes worth recording so these fields are filled.
 
 ## Limits and errors
 

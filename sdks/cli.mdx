@@ -1,5 +1,5 @@
 ---
-title: "Hue CLI"
+title: "CLI"
 description: "Store a key, connect an agent to Hue MCP, and run evaluations from your terminal."
 ---
 
@@ -70,7 +70,7 @@ With a key, export `HUE_MCP_KEY` in the shell that starts your client; an app st
 
 ## Run an evaluation
 
-`hue eval` runs your agent locally against a published case or a saved eval set and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It uses `HUE_API_KEY` from `--env-file` (or its alias `--env-path`). Start the agent's own command with `--command`, after the one-time change in [Make your agent eval-ready](/evaluations/eval-ready-agent):
+`hue eval` runs your agent locally against a published case or a saved eval set and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It uses `HUE_API_KEY` from `--env-file` (or its alias `--env-path`). Start the agent's own command with `--command`, after the one-time change in [Evaluation setup](/evaluations/eval-ready-agent):
 
 ```sh
 npx --yes --package @hue-run/sdk@0.14.0 --package "zod@^4.6.5" hue eval --case "<name|id|url>" --command "<start command>" --env-file .env.hue

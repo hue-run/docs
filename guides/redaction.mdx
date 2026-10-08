@@ -1,5 +1,5 @@
 ---
-title: "Redact sensitive trace content"
+title: "Redaction"
 description: "Redact sensitive trace content before it leaves your application."
 ---
 
@@ -7,7 +7,7 @@ Keep useful prompts, responses and tool evidence while removing information you 
 
 Start with the email example, then adapt it to your application's data. Pattern matching catches common email addresses, not every address format, encoded value or category of personal information. Keep opaque user and session IDs for grouping; avoid using an email address as an identifier. Redaction affects future exports, not data already stored.
 
-## Choose the attachment point
+## Where to redact
 
 | Integration | Where to configure the callback | What it covers |
 | --- | --- | --- |
@@ -18,7 +18,7 @@ Start with the email example, then adapt it to your application's data. Pattern 
 
 Callbacks do not cover every OpenTelemetry field. Keep sensitive information out of span and event names, attribute keys and instrumentation names. Python user/session metadata and custom attributes also need your own producer-side policy. See the complete [TypeScript](/reference/typescript#content-policy) and [Python](/reference/python#content-policy) contracts.
 
-## TypeScript: mask email addresses
+## TypeScript example
 
 [Install the SDK](/installation#typescript) and set `HUE_API_KEY` to a **Tracing only** project key in your server environment. Save this reusable callback as `redaction.ts`:
 
@@ -70,7 +70,7 @@ try {
 
 In Hue, captured input and output contain `[EMAIL]`; `user_123`, `session_456`, counts, timing and trace/span IDs remain available. Replacing every address with one marker loses recipient distinctions. If your evaluations need to compare recipients, use stable aliases generated under your application's policy instead.
 
-### Use the same callback with an existing provider
+### Existing providers
 
 Put the callback on the **transport** when supplying a transport to `createHue`. Add Hue's processors to the provider your application already constructs; keep its other processors, resources, sampling and registration. For example, extend the existing bootstrap as follows:
 
@@ -93,11 +93,11 @@ Put the callback on the **transport** when supplying a transport to `createHue`.
   });
 ```
 
-`provider`, `resource` and `existingProcessor` represent your existing setup. If you also export logs, add `hueTransport.logRecordProcessor` to your existing logger provider. Follow the [complete OpenTelemetry setup](/integrations/opentelemetry#attach-hue-transport-to-javascript-providers) for lifecycle handling and [production safety](/guides/production-safety) for fail-open initialization.
+`provider`, `resource` and `existingProcessor` represent your existing setup. If you also export logs, add `hueTransport.logRecordProcessor` to your existing logger provider. Follow the [complete OpenTelemetry setup](/integrations/opentelemetry#existing-javascript-providers) for lifecycle handling and [production safety](/guides/production-safety) for fail-open initialization.
 
-Each exporter needs its own policy. A Langfuse `mask` callback does not automatically scrub Hue's copy, and Hue's callback does not scrub Langfuse's copy. Keep the current instrumentation and provider; see [keep Langfuse and add Hue](/integrations/opentelemetry#keep-langfuse-and-add-hue).
+Each exporter needs its own policy. A Langfuse `mask` callback does not automatically scrub Hue's copy, and Hue's callback does not scrub Langfuse's copy. Keep the current instrumentation and provider; see [Use with Langfuse](/integrations/opentelemetry#use-with-langfuse).
 
-## Python: mask nested helper content
+## Python example
 
 [Install `hue-run`](/installation#python) and set `HUE_API_KEY` to a **Tracing only** project key. Save this as `trace.py` and run `python trace.py` in that environment:
 
@@ -163,9 +163,9 @@ Use the callback to combine text patterns with the fields your application knows
 
 Preserve the structure and non-sensitive evidence your debugging and evaluations need. An email pattern does not cover names, phone numbers, message bodies containing other personal information, or secrets. Hue's built-in filtering of credential fields in tool definitions is also not a general secret scanner.
 
-With `captureContent: false` / `capture_content=False`, Hue removes recognized content fields instead, including native Langfuse fields from TypeScript `0.13.0` and Python `0.7.0`. Unrecognized custom attributes need your own producer or Collector policy; see the [OpenTelemetry guide](/integrations/opentelemetry#keep-langfuse-and-add-hue).
+With `captureContent: false` / `capture_content=False`, Hue removes recognized content fields instead, including native Langfuse fields from TypeScript `0.13.0` and Python `0.7.0`. Unrecognized custom attributes need your own producer or Collector policy; see the [OpenTelemetry guide](/integrations/opentelemetry#use-with-langfuse).
 
-### Keep patterns linear-time
+### Linear-time patterns
 
 The callback runs synchronously in your serving process, on the Node.js event loop or in the Python request thread, and receives untrusted text such as user messages, model output and fetched pages. A pattern that backtracks on crafted input can block the whole process.
 
@@ -173,10 +173,10 @@ The callback runs synchronously in your serving process, on the Node.js event lo
 - **Limit the input size.** Hue's stored-field limits do not cap what the callback receives. TypeScript passes the whole recorded string and cuts the result to 256 KiB afterwards; Python passes content within a 1 MiB value budget. Before running any pattern, return a fixed marker such as `[REDACTED]` for a string longer than your application allows. Replace the whole value rather than redacting only a prefix.
 - **Test adversarial input.** Time the callback on a string of your maximum size made of address characters without `@`, such as `"a".repeat(1_000_000)` or `"a" * 1_000_000`, and on one of half that size. Doubling the input should roughly double the time, not quadruple it, and the time must fit your request budget.
 
-## Verify before rollout
+## Verify redaction
 
 Run a synthetic request through the application's actual instrumentation, including nested messages and tool results. Inspect the Hue-bound export or the stored trace: the raw test address should be absent and `[EMAIL]` present, while opaque user/session IDs, numeric values, trace/span IDs and parent relationships remain intact. Check logs and any running-span placeholders too. With multiple exporters, inspect each destination separately.
 
 Test a callback that throws. TypeScript rejects the affected export record and reports an export issue; Python omits the affected helper content field and counts an instrumentation failure. The original sensitive value must not be sent as a fallback, and application results and errors must remain unchanged. Inspect `hue.transport.getReport()` / `getIssues()` or Python's `hue.export_status`; log only sanitized counters and status, never original content or callback exceptions.
 
-A successful [trace receipt](/sdks/typescript#verify-stored-trace-evidence) confirms requested spans and field presence, not correct redaction. The examples use strict flush checks for diagnostics; use the [production-safe lifecycle](/guides/production-safety) in serving applications. Existing stored traces are unaffected; agree [retention and deletion](/guides/production-safety#capture-titles-and-retention) separately.
+A successful [trace receipt](/sdks/typescript#verify) confirms requested spans and field presence, not correct redaction. The examples use strict flush checks for diagnostics; use the [production-safe lifecycle](/guides/production-safety) in serving applications. Existing stored traces are unaffected; agree [retention and deletion](/guides/production-safety#content-capture-and-retention) separately.

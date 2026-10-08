@@ -36,6 +36,6 @@ Hue observes your application through OpenTelemetry traces, then turns traces in
 | Project key | A server-side key with one preset: **Read**, **Read and write** or **Tracing only**. Created in **Settings → Integrations & API keys**. See [project keys](/guides/project-keys). |
 | Hue MCP | The project-data MCP server at `https://mcp.hue.run/mcp`. Agents connect by signing in with Hue or with a key. See [Hue MCP](/agents/mcp-server). |
 
-## Naming in code
+## Names in code
 
 The SDK evaluation clients and MCP tools use these product names: `createEvalSet`, `createEvaluator` and `createRun` in TypeScript, `create_eval_set`, `create_evaluator` and `create_run` in Python, and fields such as `eval_set_id`, `evaluator_version_id`, `run_id` and `scoring_run_id`. Older methods, REST paths and response fields still say dataset, scorer and experiment; the [TypeScript](/reference/typescript) and [Python](/reference/python) references mark which ones are deprecated.

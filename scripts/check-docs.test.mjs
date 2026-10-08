@@ -254,7 +254,7 @@ test("retired MCP field names cannot return", () => {
 });
 
 test("the retired key-only MCP statement cannot return", () => {
-  const result = checkSnapshot((directory) => changePage(directory, "guides/invited-setup.mdx", (text) =>
+  const result = checkSnapshot((directory) => changePage(directory, "guides/agent-setup.mdx", (text) =>
     `${text}\nHue does not offer an OAuth authorization flow in this release.\n`,
   ));
   assert.notEqual(result.status, 0);
@@ -289,12 +289,12 @@ test("the retired access-gate copy cannot return", () => {
   assert.match(result.stderr, /guides\/agent-setup\.mdx contains retired access-gate text: heightened demand/);
 });
 
-test("only the moved stub may link the invited-setup page", () => {
+test("a public page cannot link the deleted invited-setup page", () => {
   const result = checkSnapshot((directory) => changePage(directory, "quickstart.mdx", (text) =>
     text.replace("(/guides/agent-setup)", "(/guides/invited-setup)"),
   ));
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /quickstart\.mdx links the moved invited-setup page/);
+  assert.match(result.stderr, /quickstart\.mdx links the removed invited-setup page/);
 });
 
 test("every skill link names the current skill version, in any link form", () => {
@@ -358,7 +358,7 @@ test("the agent setup page must offer the other MCP client option, not only name
 
 test("the agent setup page cannot be hidden again", () => {
   const result = checkSnapshot((directory) => changePage(directory, "guides/agent-setup.mdx", (text) =>
-    text.replace('sidebarTitle: "Agent setup"\n', 'sidebarTitle: "Agent setup"\nhidden: true\n'),
+    text.replace('sidebarTitle: "Coding agent setup"\n', 'sidebarTitle: "Coding agent setup"\nhidden: true\n'),
   ));
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /guides\/agent-setup\.mdx must stay visible in navigation/);

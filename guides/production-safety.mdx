@@ -13,9 +13,9 @@ The SDKs suppress their export traffic from OpenTelemetry instrumentation. If Py
 The APIs below require TypeScript `@hue-run/sdk >= 0.1.5` or Python `hue-run >= 0.1.3`. Confirm the installed version before using them. Older SDKs can propagate capture or lifecycle errors.
 </Note>
 
-## Separate setup verification from serving requests
+## Verify setup outside request handling
 
-Run the strict [quickstart](/quickstart), connection check and [trace receipt verification](/sdks/typescript#verify-stored-trace-evidence) during setup, not in readiness or customer requests.
+Run the strict [quickstart](/quickstart), connection check and [trace receipt verification](/sdks/typescript#verify) during setup, not in readiness or customer requests.
 
 Create one client per serving process with the safe constructor and background export. Use safe lifecycle methods at the lifecycle boundary; never rerun an agent after a telemetry error because tools may have caused side effects.
 
@@ -101,9 +101,9 @@ Inspect TypeScript's `hue.transport.getReport()` and Python's `hue.export_status
 
 Before rollout, test your real entry point against a loopback receiver that returns 503, rejects its key, delays its response and exceeds queue capacity. Verify that each tool runs once, results and errors match an uninstrumented request, and shutdown meets your deadline. Start with a small canary.
 
-## Capture, titles and retention
+## Content capture and retention
 
-The snippets capture content when `HUE_CAPTURE_CONTENT` is unset. Hue can show and evaluate only recorded data, including prompts, responses and tool inputs and outputs. Set `HUE_CAPTURE_CONTENT=false` for metadata-only export; this does not disable redaction or credential scrubbing. Use the [redaction recipe](/guides/redaction) for email and custom field rules.
+The snippets capture content when `HUE_CAPTURE_CONTENT` is unset. Hue can show and evaluate only recorded data, including prompts, responses and tool inputs and outputs. Set `HUE_CAPTURE_CONTENT=false` for metadata-only export; this does not disable redaction or credential scrubbing. Use [Redaction](/guides/redaction) for email and custom field rules.
 
 In metadata-only mode, both SDKs strip recognized third-party content attributes on Hue's export path, but custom keys pass through; configure third-party instrumentors separately.
 
@@ -111,7 +111,7 @@ Hue names each trace from its own recorded request text, or from a trace name th
 
 Telemetry retention is configured per project. A policy removes eligible older traces by periodic sweep; without one, telemetry does not expire automatically. Saved snapshots retain evidence after the source trace expires and need separate deletion; archiving does not delete data. Quotas protect admission, not retention.
 
-## What Hue computes from your traces
+## Trace analysis
 
 Hue assesses stored traces; some settings send conversation text to a model. Align them with your capture policy. Owners and admins manage consent in **Settings → Trace checks** and other settings in **Settings → Projects → Edit project**; MCP uses `set_trace_checks_consent` and `update_project`. Both require **Read and write** and owner or admin authority.
 
