@@ -17,7 +17,7 @@ A connection lists Hue's production reads. `search_hue_tools` finds every other 
 Use a [project key](#connect-with-a-project-key) for clients without sign-in, browserless runs, read-only access or longer-lived access. **Tracing only** keys cannot connect.
 
 <Visibility for="agents">
-  **If you are a coding agent connecting with sign-in:** add the server as `hue` at the URL the user gave you, using your client's tab below, with no API key, token or headers. In Claude Code, keep `--scope user`. In Codex, have the user run `codex mcp add hue` in their terminal and `codex mcp login hue` only if sign-in did not finish. Ask the user to complete authentication, start a new session if Hue tools do not appear, then call `list_projects`. If the client cannot sign in, use a project key and let the user store it.
+  **If you are a coding agent connecting with sign-in:** add the server as `hue` at the URL the user gave you, using your client's tab below, with no API key, token or headers. In Claude Code, keep `--scope user`. In Codex, have the user run `codex mcp add hue --url 'https://mcp.hue.run/mcp?toolsets=all'` in their terminal and `codex mcp login hue` only if sign-in did not finish. Ask the user to complete authentication, start a new session if Hue tools do not appear, then call `list_projects`. If the client cannot sign in, use a project key and let the user store it.
 </Visibility>
 
 ## Connect your client
@@ -322,7 +322,7 @@ Write tools need **Read and write** without `?read_only=true`. Ask before each w
 | Task | Ask your agent | Tools |
 | --- | --- | --- |
 | Investigate production | “What needs attention in the last 24 hours, and why? Link the traces.” | `search_traces`, `get_trace`, `get_span`, `search_spans`, `aggregate`, `get_span_content`; [investigate production](/agents/investigate-production) |
-| Review behavior across requests | “How often does the agent hand work to sub-agents, and which task types are slow?” | `get_request_answer` |
+| Review behavior across requests | “How often does the agent hand work to sub-agents, and which task types are slow?” | `get_request_answer`; [request-answer details](/agents/investigate-production#request-answers) |
 | Confirm trace delivery | “Did trace `<trace id>` arrive with its spans, model and usage?” | `verify_trace` |
 | Check production behavior | “Show this week’s positive delegation checks and their evidence.” | `list_trace_checks`, `get_trace_checks`, `get_trace_check_results`, `get_trace_check_summary`; [investigate production](/agents/investigate-production#trace-checks) |
 | Read eval sets and runs | “Summarize the latest run and list its failing cases.” | `list_eval_sets`, `get_eval_set`, `list_evaluators`, `get_evaluator`, `list_runs`, `get_run`, `list_run_items`, `get_run_item`, `get_run_execution`, `list_scoring_runs`, `get_scoring_run` |

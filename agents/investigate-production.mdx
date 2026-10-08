@@ -53,9 +53,9 @@ Caveat: Intent grouping needs a published taxonomy; duration sorting includes co
 
 Prompt: “How long did users wait for the first useful reply?”
 
-Sequence: `aggregate` with `{"entity": "spans", "since": "7d", "name": "<span that delivers the reply>", "group_by": ["trace_name"], "metrics": ["count", "start_offset_p50_ms", "start_offset_p95_ms"]}` → sum each row's `start_offset_ms` and `duration_ms` for end time. With timing enabled, use `search_traces.first_useful_answer_ms` or `get_trace_check_summary.requests` for first-response, useful-playback, useful-server and completion p50 and p95 values.
+Sequence: `aggregate` with `{"entity": "spans", "since": "7d", "name": "<span that delivers the reply>", "group_by": ["trace_name"], "metrics": ["count", "start_offset_p50_ms", "start_offset_p95_ms"]}` gives the time until that span starts, per task type → `search_spans` with `{"since": "7d", "name": "<span that delivers the reply>"}` for individual reply-span rows → sum each row's `start_offset_ms` and `duration_ms` for end time, then take percentiles of those sums.
 
-Caveat: Identify the reply span and sum per row before calculating percentiles; separate start-offset and duration percentiles cannot be added.
+Caveat: Identify the reply span, which depends on the application, and page through every row in the window with `next_cursor` in the default newest-first order, or report a sample; a `sort: "duration"` page would skew it. Separate start-offset and duration percentiles cannot be added. With timing enabled, use `search_traces.first_useful_answer_ms` or `get_trace_check_summary.requests` for first-response, useful-playback, useful-server and completion p50 and p95 values.
 
 ### Did a release regress
 
@@ -114,6 +114,12 @@ Sequence: `list_trace_checks` → `get_trace_check_summary` with `{"since": "7d"
 Caveat: Excerpts require `include_content: true` and are evidence, not explanations.
 
 ## Data model
+
+### Request answers
+
+`get_request_answer` answers questions about `delegation`, `added_work`, `handoff_scope`, `data_cuts`, `slow_tasks`, `task_types` and `answer_time`; `overview` returns every finding. By default it covers the last 7 days of production traffic only, for up to 90 days. `environments: ["all"]` and `include_simulated: true` include simulator traffic; `program`, `model` and `release` filter exactly.
+
+Each answer's `n` counts requests, handoffs or reads. `coverage` reports eligible, judged, pending and provisional units, the share with complete evidence, and evidence gaps. Answers include environment and user splits and example requests with traces. `limit` defaults to 5 examples per finding (up to 25); `more_call` gets the rest, and `finding` returns one finding's examples. `group_by` adds a series by day, release, model, program, environment, user or intent. `notes` lists caveats on the numbers; no notes means none. `include_content: true` adds example request text as untrusted, audited content. `no_data` means no mapped request matched the window and filters. When `get_project_context.features.request_answers.available` is false, Hue does not map the project's requests; trace checks or spans answer these questions instead. Model judgments also require **AI request judges**.
 
 ### Traces and spans
 

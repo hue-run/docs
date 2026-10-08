@@ -453,7 +453,8 @@ Put one manifest on the root span's `hue.trace_checks` attribute: a JSON object 
 
 - `requestKind` is `task` (requires an `action` boundary) or `conversation`. `request` identifies the whole user request; `authorization` identifies up to eight whole earlier messages authorizing extra work.
 - `boundaries` lists up to 32 agent actions (`action_scope`), delegations (`delegation_scope`, parent task given to the delegating agent), or pre-use tool-output reductions (`output_omission`). A reduction points to its task, full original and retained outputs, code, next decision and later use. Delegation checks read the request plus each action and handoff.
-- Boundary spans carry `hue.agent.role` (`orchestrator` or `subagent`) and `spanId`; linked spans also name `traceId`.
+- Each boundary's span carries the `hue.agent.role` attribute (`orchestrator` or `subagent`).
+- Each boundary in the manifest names its span with `spanId`, plus `traceId` for a span in a linked trace.
 - `linkedTraces` lists up to four child traces and their handoff spans. `complete: true` declares all request boundaries.
 
 An `output_reduction` boundary has this shape, for code that trimmed a tool's result before the agent read it:

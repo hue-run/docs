@@ -284,7 +284,7 @@ claude -p "$PROMPT" --mcp-config "$CONFIG" --strict-mcp-config
 
 ### Stdio MCP servers
 
-A `command` and `args` entry starts a local server, so the helper refuses to rewrite it to avoid changing tools. Keep it and pass the REST mirror URL or token through its own base-URL override via `appEndpoint`; without that override it cannot run in a world.
+A `command` and `args` entry starts a local server, so the helper refuses to rewrite it to avoid changing tools. Keep it and use `appEndpoint` to resolve both the REST mirror URL and world token. Pass them through the server's own base-URL and credential settings; without a base-URL override it cannot run in a world.
 
 ### OpenAI Agents SDK
 
@@ -672,9 +672,9 @@ For the **Run** button and `launch_local_run` to use one agent for answer-only o
 npx --yes --package @hue-run/sdk@0.14.0 --package "zod@^4.6.5" hue eval --worker --command "node \"$PWD/agent.js\"" --revision "<new-agent-revision>" --env-file .env.hue
 ```
 
-TypeScript 0.13.2 workers register `direct:v1` and `environment:v1`. Change `--revision` when capabilities change; otherwise keep it stable.
+TypeScript 0.13.2 command workers register `direct:v1` and `environment:v1`. Adapter-file workers register world support by default; add `--capability direct:v1` only after the adapter supports direct cases. Change `--revision` when capabilities change; otherwise keep it stable.
 
-TypeScript adapters lack `HUE_WORLD_TOKEN` and `HUE_EXECUTION_ID`: pass `context.world.env` or spawn with [`agentEnvironment(context.world)`](/reference/typescript#world-handoff). Reject missing worlds; direct adapters pass `{ HUE_EXECUTION_ID: context.executionId }` and connect no apps. Never mutate `process.env`; concurrency can leak worlds. Python uses [`hue_sdk.environment`](/reference/python#world-handoff) helpers. Unsupported gateway worlds have no handoff or token; required connections refuse them. See [worlds with a handoff](/evaluations/simulations#worlds-with-a-handoff).
+TypeScript adapters lack `HUE_WORLD_TOKEN` and `HUE_EXECUTION_ID`: pass `context.world.env` or spawn with [`agentEnvironment(context.world)`](/reference/typescript#world-handoff). Reject missing worlds; direct adapters pass `{ HUE_EXECUTION_ID: context.executionId }` and connect no apps. Adapter-file workers register world support by default; add `--capability direct:v1` only after the adapter supports direct cases. Never mutate `process.env`; concurrency can leak worlds. Python uses [`hue_sdk.environment`](/reference/python#world-handoff) helpers. Unsupported gateway worlds have no handoff or token; required connections refuse them. See [worlds with a handoff](/evaluations/simulations#worlds-with-a-handoff).
 
 ## Verify before you finish
 

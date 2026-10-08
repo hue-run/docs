@@ -186,7 +186,9 @@ test("a double-quoted key reference in an mcp add command fails", () => {
 test("the MCP guide must keep the sign-in snippets", () => {
   // The key command starts with the sign-in command, so it alone does not satisfy the check.
   const result = checkSnapshot((directory) => changePage(directory, "agents/mcp-server.mdx", (text) =>
-    text.replaceAll("codex mcp add hue --url 'https://mcp.hue.run/mcp?toolsets=all'\n", ""),
+    text
+      .replaceAll("codex mcp add hue --url 'https://mcp.hue.run/mcp?toolsets=all'\n", "")
+      .replaceAll("`codex mcp add hue --url 'https://mcp.hue.run/mcp?toolsets=all'`", ""),
   ));
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /does not match the generated oauthCodexCli snippet/);
