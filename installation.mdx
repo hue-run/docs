@@ -1,6 +1,6 @@
 ---
 title: "Installation"
-description: "Install the Hue SDK for TypeScript or Python."
+description: "Install the Hue SDK for TypeScript or Python and check your runtime."
 ---
 
 Choose your language below, then [send your first trace](/quickstart) or let your [coding agent set up Hue](/guides/agent-setup).
@@ -24,7 +24,15 @@ Requires Node.js 22 or 24 (Node.js 26 also runs in CI) or Bun 1.4. Run the comma
   </Tab>
 </Tabs>
 
-The package is ESM; CommonJS applications on Node.js 22.12 or later load it with `require("@hue-run/sdk")`. The core package can coexist with AI SDK 6, whose calls accept `hueExperimentalTelemetry(hue)` as `experimental_telemetry`. The `hueTelemetry` adapter requires AI SDK 7 and a compatible `@ai-sdk/otel` peer. Check [compatibility](/sdks/compatibility) before adding it to an existing application. An application already using OpenTelemetry can send data through its [standard exporter](/integrations/opentelemetry). Importing `@hue-run/sdk/evals` for evaluations or [simulations](/evaluations/simulations) needs the optional `zod` peer (`npm install zod`, 4.6.5 or later); JSON Schema scoring additionally needs the optional `ajv` peer (`npm install ajv`).
+The package is ESM; CommonJS applications on Node.js 22.12 or later load it with `require("@hue-run/sdk")`. Check [compatibility](/sdks/compatibility) before adding it to an existing application.
+
+| Dependency | When you need it |
+| --- | --- |
+| AI SDK 6 | Use `hueExperimentalTelemetry(hue)` as `experimental_telemetry`. |
+| AI SDK 7 | Use the `hueTelemetry` adapter with a compatible `@ai-sdk/otel` peer. |
+| `zod` 4.6.5 or later | Import `@hue-run/sdk/evals` for evaluations or [simulations](/evaluations/simulations). |
+| `ajv` | Add JSON Schema scoring with `npm install ajv`. |
+| OpenTelemetry | Applications with existing instrumentation can use the [standard exporter](/integrations/opentelemetry). |
 
 ## Python
 
@@ -45,7 +53,10 @@ Requires Python 3.10 or later; tested on 3.10 and 3.14. Install into your projec
 
 For a new pip example, create and activate a virtual environment first with `python3 -m venv .venv` and `source .venv/bin/activate`. For a new uv project, run `uv init` before `uv add`; run the examples with `uv run python` or activate its `.venv`.
 
-The SDK accepts `opentelemetry-api`, `opentelemetry-sdk` and `opentelemetry-exporter-otlp-proto-http` in the range `>=1.40,<2`, so it installs next to applications and instrumentation packages on another OpenTelemetry 1.x release. OpenTelemetry 1.44.0 is the certified combination; 1.40.0 is tested as the floor. See [compatibility](/sdks/compatibility) if your application already uses a different release. JSON Schema scoring needs the optional extra: `pip install 'hue-run[evals]'`.
+| Dependency | When you need it |
+| --- | --- |
+| OpenTelemetry 1.x | The SDK accepts `opentelemetry-api`, `opentelemetry-sdk`, and `opentelemetry-exporter-otlp-proto-http` in the range `>=1.40,<2`. See [compatibility](/sdks/compatibility) for tested combinations. |
+| `hue-run[evals]` | Add JSON Schema scoring with `pip install 'hue-run[evals]'`. |
 
 ## Verify your installation
 

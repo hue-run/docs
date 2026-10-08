@@ -1,18 +1,18 @@
 ---
 title: "Hue for coding agents"
 sidebarTitle: "Overview"
-description: "Choose between the Hue skill, the Hue MCP server and the SDKs for the task your coding agent is doing."
+description: "Choose the Hue skill, MCP server, or SDKs for your coding-agent task."
 ---
 
-Hue gives a coding agent three surfaces. They are complementary: the skill teaches the agent how to integrate Hue well, the MCP server gives it live data inside your project, and the SDKs and REST API are the scriptable path for CI and shell-capable agents.
+Hue gives coding agents three complementary surfaces: the skill teaches integration, the MCP server provides project data, and the SDKs provide a scriptable path.
 
 The installable project-data server runs at `https://mcp.hue.run/mcp`. A separate documentation-only MCP runs at `https://docs.hue.run/mcp`; it cannot read your Hue project. Simulations can also provide an execution-scoped MCP connection for one disposable world. That short-lived connection is passed to the simulation callback and is not a replacement for the project-data server.
 
 | Surface | Use it when | It owns | It never does |
 | --- | --- | --- | --- |
-| [Hue skill](https://docs.hue.run/skill.md?v=0.6.5&release=3ec5394) | The agent is adding or troubleshooting tracing in an application | How to install the SDK, choose a capture policy, keep serving requests independent of telemetry and verify a real request | Grant credentials, read your project's data |
-| [Hue MCP server](/agents/mcp-server) | The agent needs live project data: see what needs attention in production, find failing or slow traces, inspect a span, read trace checks and intents, check a receipt, read or author evaluations, inspect reviewed cases, or inspect settings | Tools for one project, or for the active projects of one organization through sign-in, with pagination, deep links and documentation search. Writes appear only with **Read and write** access. Key management, project settings including AI-processing consent, trace-check consent, managed targets, the intent taxonomy and the judge alignment bar need an owner or admin; through sign-in, other trace-check changes and archiving eval sets and evaluators do too. See [permissions](/agents/mcp-tools#permissions) | Billing and plan changes; OTLP ingest; artifact bytes; org invites or role changes; access outside the key's project or the signed-in organization |
-| [SDKs](/sdks/typescript) and REST | CI jobs and agents that can run a shell and prefer to filter data in code | Tracing, receipts, datasets, scorers, experiments and evaluation runs | Browse traces — the clients expose no trace-search API |
+| [Hue skill](https://docs.hue.run/skill.md?v=0.6.5&release=3ec5394) | Adding or troubleshooting tracing | SDK setup, capture policy, safe exports, and request verification | Grant credentials or read project data |
+| [Hue MCP server](/agents/mcp-server) | Inspecting project data or production traces | Project tools, pagination, deep links, and documentation search | Billing, OTLP ingest, artifact bytes, or org administration |
+| [SDKs](/sdks/typescript) and REST | Automating tracing or evaluations in CI | Tracing, receipts, eval sets, evaluators, runs, and scoring runs | Browse traces; clients expose no trace-search API |
 
 ## Install the Hue skill
 
@@ -22,15 +22,15 @@ Run this from your application's repository and select your coding agent:
 npx skills add hue-run/hue-sdk --skill hue
 ```
 
-Then send the prompt from [agent setup](/guides/agent-setup). Your agent guides you through storing a key, adding tracing, verifying a real request and connecting the Hue MCP server. Installing the skill adds instructions to your project; it does not install the SDK or connect your account.
+Then send the prompt from [agent setup](/guides/agent-setup). Your agent guides you through storing a key, adding tracing, verifying a real request, and connecting the Hue MCP server.
 
 ## Which one to reach for
 
-- **The agent can run a shell and is changing application code.** Install the skill and let it use the SDK. Add the MCP server when the agent should also confirm what Hue stored without asking you to open the UI.
-- **You want to know what production is doing.** Connect the MCP server and ask the agent what needs attention, what failed and why, or which requests are slow. The server returns traces, spans, attention states, trace checks and intents; the agent does the analysis. [Investigate production](/agents/investigate-production) has the tool sequences and example prompts.
-- **You want to debug a failed query against a simulated app.** Build a Linear environment from one trace, connect your agent and inspect each attempt. [Using a simulated environment](/agents/debug-environment) covers the `debug` tool profile and fresh worlds.
-- **The agent cannot run a shell**, for example a hosted assistant, **or you want several connected actions in one conversation** ("find yesterday's failing traces, show me the slowest span, compare the last two runs"). Connect the MCP server; a hosted assistant that supports MCP sign-in adds the URL and signs in with Hue. Hue has not yet verified claude.ai or ChatGPT end to end.
-- **You are automating in CI.** Use the SDK evaluation clients and the receipt endpoint directly.
+- **Changing application code.** Install the skill and use the SDK. Add the MCP server when the agent should confirm what Hue stored.
+- **Investigating production.** Connect the MCP server and ask what needs attention, what failed, or which requests are slow. Start with [Investigate production](/agents/investigate-production).
+- **Debugging a simulated app.** Build a Linear environment from a trace, connect your agent, and inspect each attempt in [Using a simulated environment](/agents/debug-environment).
+- **Working without a shell or combining project actions.** Connect the MCP server; clients with sign-in use Hue OAuth, while other clients use a **Read** or **Read and write** key.
+- **Automating in CI.** Use the SDK evaluation clients and receipt endpoint directly.
 
 For a coding agent implementing content scrubbing, use the [redaction recipe](/guides/redaction). It includes email examples, exporter attachment points and a synthetic verification checklist. The [Hue skill](https://docs.hue.run/skill.md?v=0.6.5&release=3ec5394) routes agents to the same guide.
 
@@ -38,8 +38,8 @@ For a coding agent implementing content scrubbing, use the [redaction recipe](/g
 
 Application telemetry and agent access have different authentication needs:
 
-- The application's `HUE_API_KEY` uses **Tracing only** for telemetry and known-trace receipts. Use **Read and write** only when that process also manages datasets, scorers, experiments, simulations, environments, or managed runs.
-- For MCP access, [sign in with Hue](/agents/mcp-server#sign-in-with-hue): the connection can read and write the active projects of one organization, within your role, for 30 days. Use a key as `HUE_MCP_KEY` instead for read-only access (a **Read** key), or for a client that can't sign in or a run without a browser (**Read** or **Read and write**). Configure that key in the MCP client, never in application code. The [MCP connection guide](/agents/mcp-server) covers both methods and client setup.
+- The application's `HUE_API_KEY` uses **Tracing only** for telemetry and known-trace receipts. Use **Read and write** only when it also manages eval sets, evaluators, runs, simulations, environments, or managed runs.
+- For MCP access, [sign in with Hue](/agents/mcp-server#sign-in-with-hue) for projects in one organization. Use `HUE_MCP_KEY` for a **Read** connection or for clients and runs without a browser; use **Read and write** when the client writes project data.
 
 See [project keys](/guides/project-keys) for the presets and rotation.
 

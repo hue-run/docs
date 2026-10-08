@@ -1,6 +1,6 @@
 ---
 title: "Send your first trace"
-description: "Install the TypeScript or Python SDK, send a trace with a tool span, and inspect it in Hue."
+description: "Send a trace from TypeScript or Python and inspect it in Hue in about five minutes."
 ---
 
 Send a real trace to Hue with a local text transformation. No model provider or model credits are needed.
@@ -16,7 +16,7 @@ You need a Hue project and **Node.js 22 or 24** or **Python 3.10+**.
 Prefer to have your coding agent do the integration? Start with [agent setup](/guides/agent-setup).
 
 <Note>
-  Don't have a Hue account yet? The Hue team sets up accounts: email [founders@hue.run](mailto:founders@hue.run) or book a time at [https://calendar.notion.so/meet/akethini/hue](https://calendar.notion.so/meet/akethini/hue). You do not need a project to try the SDKs: both send standard OTLP/HTTP to `<origin>/api/v1/otlp/v1/traces` and `/logs`, so the programs below also run against a local OpenTelemetry Collector whose receiver serves those paths, with four edits: set `baseUrl` / `base_url` to the receiver's origin, keep any non-empty placeholder as the key, pass `liveSpans: false` / `live_spans=False`, and remove the connection check, which a Collector cannot answer. [Point a Hue SDK at a Collector](/integrations/opentelemetry#point-a-hue-sdk-at-a-collector) shows the receiver configuration.
+  To run these examples against a local OpenTelemetry Collector, follow [Point a Hue SDK at a Collector](/integrations/opentelemetry#point-a-hue-sdk-at-a-collector).
 </Note>
 
 In [Hue](https://app.hue.run), select your project and open **Settings → Integrations & API keys** to create a **Tracing only** service key; see [project keys](/guides/project-keys). Keep the key in your server environment.
@@ -34,7 +34,7 @@ export HUE_API_KEY=your_project_service_key
 export HUE_CAPTURE_CONTENT=true
 ```
 
-`HUE_CAPTURE_CONTENT=true` is the recommended setting: traces then record prompts, responses and tool inputs and outputs alongside timing and errors, and Hue can show and evaluate them. This example's only content is `Hello Hue` and `HELLO HUE`. These programs default an unset variable to `true` and pass that choice explicitly to the SDKs. An invalid supplied value stops the program. Set `false` to send metadata only, for example when a data policy forbids sending content to another service. The programs read these variables explicitly; neither SDK automatically loads a `.env` file. Third-party instrumentors have their own capture settings, covered in the [TypeScript](/sdks/typescript) and [Python](/sdks/python) guides.
+`HUE_CAPTURE_CONTENT=true` records prompts, responses, and tool inputs and outputs alongside timing and errors; set it to `false` for metadata-only traces. See the SDK [capture settings](/sdks/typescript#choose-what-you-capture).
 
 ## 3. Record a request
 

@@ -1,42 +1,35 @@
 ---
 title: "Welcome to Hue"
-description: "Trace your AI application, inspect its behavior, and evaluate frozen outputs."
+description: "Trace AI agents with OpenTelemetry, inspect production behavior, and evaluate runs."
 sidebarTitle: "Introduction"
 og:title: "Welcome to Hue"
 ---
 
-Hue records what your AI application does and helps you evaluate its outputs. Your application runs in your own environment and sends telemetry to Hue through OpenTelemetry.
-
-Start with one request. Inspect its input, output, model calls and tool calls, then turn useful examples into an eval set for repeatable evaluations.
+Hue traces AI agents through OpenTelemetry so you can see what needs attention in production, turn traces into cases, and evaluate runs. You can also evaluate agents against simulated apps.
 
 <CardGroup cols={2}>
-  <Card title="Send your first trace" href="/quickstart">
-    Connect your application and inspect a trace without making a paid model call.
-  </Card>
-
   <Card title="Set up with your coding agent" href="/guides/agent-setup">
-    Install the Hue skill and send the setup prompt. Your agent adds tracing and connects the Hue MCP server.
+    Install the Hue skill and let your agent add tracing and connect the Hue MCP.
   </Card>
 
-  <Card title="Install the SDK" href="/installation">
-    Get the TypeScript or Python package for your application.
+  <Card title="Send your first trace" href="/quickstart">
+    Send a trace from TypeScript or Python and inspect it in Hue.
   </Card>
 
   <Card title="Run your first evaluation" href="/evaluations/first-evaluation">
-    Compare outputs against a frozen eval set version and preserve the evidence behind each result.
+    Evaluate an agent against a versioned eval set and inspect its scores.
+  </Card>
+
+  <Card title="Connect the Hue MCP" href="/agents/mcp-server">
+    Let a coding agent inspect your project data and production traces.
   </Card>
 </CardGroup>
 
-## Choose your integration
+## How Hue works
 
-Use the [TypeScript SDK](/sdks/typescript) or [Python SDK](/sdks/python) for explicit tracing and local evaluation workflows. If your application already has OpenTelemetry, follow the [existing instrumentation guide](/integrations/opentelemetry) to add Hue without replacing your provider.
+1. **Instrument** your app with the [TypeScript](/sdks/typescript), [Python](/sdks/python), or [OpenTelemetry](/integrations/opentelemetry) integration.
+2. **Observe** traces, spans, findings, and intents in **[Traces](/agents/investigate-production)**.
+3. **Turn traces into cases** with [case-from-trace](/evaluations/case-from-trace).
+4. **Evaluate** runs with [eval sets and evaluators](/evaluations/first-evaluation), including [simulated environments](/evaluations/simulations).
 
-Your application must emit telemetry. Calling a model API alone does not send data to Hue. The SDKs ask you to choose explicitly whether telemetry includes content. Capture it: Hue can only show and evaluate what a trace records, so record prompts, responses and tool inputs and outputs alongside model, usage, timing and errors. Send metadata only when you'd rather not share that content, or when an application or data policy forbids sending it to another service.
-
-## Tracing and evaluation
-
-A **trace** records one execution. Its **spans** describe the model calls, tools and application steps within that execution. A **session** groups related executions, such as turns in one conversation.
-
-An **evaluation** assesses a stored output using a pinned scorer definition. Execution failure, scorer failure and a negative quality result are different outcomes. For example, a successful model call can still receive a `false` quality score.
-
-Install the TypeScript SDK from [npm](https://www.npmjs.com/package/@hue-run/sdk) or the Python SDK from [PyPI](https://pypi.org/project/hue-run/). Start with [installation](/installation) for commands and runtime requirements.
+See [Concepts](/concepts) for the names Hue uses in the app, SDKs, and MCP.

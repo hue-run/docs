@@ -108,15 +108,15 @@ if (new Set(pages).size !== pages.length) fail("docs.json navigation contains du
 if (JSON.stringify(mdxFiles) !== JSON.stringify(expectedMdxFiles)) {
   fail(`docs.json must contain every MDX page exactly once; found ${mdxFiles.length} files and ${pages.length} navigation entries`);
 }
-// A new page is a deliberate change: guides/redaction centralizes the cross-language
+// A new page is a deliberate change: concepts defines the product vocabulary, guides/redaction centralizes the cross-language
 // redaction recipes linked by the SDK guides and coding-agent skill, and agents/mcp-tools keeps
 // the per-tool reference off the connection guide that agents read whole during setup, and
 // evaluations/eval-ready-agent is the one committed change that points an agent's own app clients
 // at Hue's mirrors during an evaluation, and evaluations/case-from-trace is the review path that
 // turns one production trace into a published case. agents/debug-environment describes the
 // distinct trace-to-environment debugging workflow, private uploads and fresh world attempts.
-if (pages.length !== 27 || pages.length + 1 !== 28) {
-  fail(`expected 27 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
+if (pages.length !== 28 || pages.length + 1 !== 29) {
+  fail(`expected 28 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
 }
 
 for (const page of expectedMdxFiles) {

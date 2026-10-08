@@ -1,0 +1,41 @@
+---
+title: "Concepts"
+description: "The objects Hue records and evaluates, where to find them in the app, and their names in the SDKs and MCP."
+---
+
+Hue observes your application through OpenTelemetry traces, then turns traces into cases you evaluate repeatedly.
+
+## Observe
+
+| Term | What it is | In Hue |
+| --- | --- | --- |
+| Trace | One recorded execution of your application: a tree of OpenTelemetry spans with one root. | **Traces** |
+| Span | One timed step in a trace, such as a model call, tool call or agent step. | Trace detail |
+| Session | Traces grouped by the session id your application records, such as turns in one conversation. | **Traces** filter |
+| Finding | A problem Hue detects in an ended trace, such as an unrecovered tool error or a reply that claims an action no tool performed. A trace with a finding needs attention. | [**Traces**](/agents/investigate-production#attention-states-and-findings) |
+| Trace check | A project-defined, versioned check of production behavior, such as whether a handoff expanded the request. Advisory, not a score. | [**Traces**](/agents/investigate-production#trace-checks) |
+| Intent | The task type a trace belongs to, classified against your project's published taxonomy. | [**User Intent**](/agents/investigate-production#intents) |
+
+## Evaluate
+
+| Term | What it is | In Hue | SDK name |
+| --- | --- | --- | --- |
+| Eval set | A versioned collection of cases. A run pins one eval set version. | **Evals** | dataset |
+| Case | One example: the task, its inputs, optional expected values and reviewed success criteria. You can create one from a trace. | [**Evals**](/evaluations/case-from-trace) | case |
+| Evaluator | How quality is measured: a deterministic **verifier** or a hosted LLM **judge** with a pinned model and rubric. | [**Evaluators**](/evaluations/first-evaluation) | scorer |
+| Run | Your agent executed over an eval set version, with each case's output, trace and scores. Compare runs to catch regressions. | [**Runs**](/evaluations/first-evaluation) | experiment |
+| Scoring run | Evaluators applied to outputs a run already stored, without running the agent again. | [**Runs**](/evaluations/first-evaluation) | evaluation run, `rescore` |
+| Environment | A simulated app (for example Linear or Gmail): its starting data and the actions an agent can take. | [**Environments**](/evaluations/simulations) | environment |
+| World | A fresh instance of an environment version for one execution. Its journal of actions is scoring evidence. | [**Environments**](/evaluations/simulations) | world |
+
+## Access
+
+| Term | What it is |
+| --- | --- |
+| Project | The workspace that holds traces, eval sets, runs and keys. |
+| Project key | A server-side key with one preset: **Read**, **Read and write** or **Tracing only**. Created in **Settings → Integrations & API keys**. See [project keys](/guides/project-keys). |
+| Hue MCP | The project-data MCP server at `https://mcp.hue.run/mcp`. Agents connect by signing in with Hue or with a key. See [Hue MCP](/agents/mcp-server). |
+
+## Naming in code
+
+The SDKs and REST API keep earlier identifiers: TypeScript exports `createDataset`, `createScorer`, and `runExperiment`; Python exports `create_dataset`, `create_scorer`, and `run_experiment`. MCP tools use product names (`eval_set_id`, `evaluator_version_id`, `run_id`, `scoring_run_id`). Docs prose uses product terms; code samples use identifiers.
