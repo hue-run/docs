@@ -116,8 +116,8 @@ if (JSON.stringify(mdxFiles) !== JSON.stringify(expectedMdxFiles)) {
 // turns one production trace into a published case. agents/debug-environment describes the
 // distinct trace-to-environment debugging workflow, private uploads and fresh world attempts, and
 // guides/hue-app maps the customer-facing app sidebar to its owning documentation.
-if (pages.length !== 28 || pages.length + 1 !== 29) {
-  fail(`expected 28 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
+if (pages.length !== 29 || pages.length + 1 !== 30) {
+  fail(`expected 29 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
 }
 
 for (const page of expectedMdxFiles) {

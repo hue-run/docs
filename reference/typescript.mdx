@@ -4,7 +4,7 @@ description: "Use the TypeScript SDK to trace, evaluate, score, and run simulate
 sidebarTitle: "TypeScript API"
 ---
 
-This reference covers `@hue-run/sdk` **0.14.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+This reference covers `@hue-run/sdk` **0.16.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
 
 ## Imports
 
@@ -554,7 +554,7 @@ To save generated documents, return `withFiles(output, files)`: it takes a JSON 
 | `sourceDigest(source: string \| Uint8Array)` | SHA-256 declaration for supplied source bytes/text. |
 | `scoreLocally(version, context, { scorers?, schemaTimeoutMillis? }?)` | Computes `Promise<Score>` without uploading it. |
 
-`@hue-run/sdk/evals` uses `zod`, an optional peer dependency (4.6.5 or later), for its bounded runtime contracts; install it when you use evaluations or simulations. JSON Schema scoring uses `ajv`, a separate optional peer dependency (8.17 or later) loaded inside a worker only when `builtins.jsonSchema` scores a case; without it that scorer reports `SchemaValidatorUnavailable`. The tracing core depends only on `@opentelemetry/*` packages.
+`@hue-run/sdk/evals` uses `zod`, a regular dependency since 0.16.0, for its bounded runtime contracts. JSON Schema scoring uses `ajv`, a separate optional peer dependency (8.17 or later) loaded inside a worker only when `builtins.jsonSchema` scores a case; without it that scorer reports `SchemaValidatorUnavailable`. The tracing core depends only on `@opentelemetry/*` packages.
 
 `ScoreContext` contains `inputs`, `hasOutput`, `hasExpected`, optional `output`/`expected`, `metadata`, `executionState` and, when the runner requires environment evidence, `environment` (an `EnvironmentEvidence`). With environment evidence present, a `local_code` scorer runs even when no output is stored. When required evidence cannot be read, `local_code` results record an `EnvironmentEvidenceUnavailable` error; a world marked `environment_incomplete` produces a skipped result with the fixed explanation `Environment incomplete: provider behavior is not implemented.` A `Score` is `scored` with declared metrics and explanation/evidence, `error` with a typed error, or `skipped` with an explanation. A failed quality metric is still `scored`, with `passed: false`.
 

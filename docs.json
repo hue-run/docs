@@ -37,6 +37,7 @@
       {
         "group": "Evaluations",
         "pages": [
+          "evaluations/run-your-agent",
           "evaluations/first-evaluation",
           "evaluations/case-from-trace",
           "evaluations/eval-ready-agent",

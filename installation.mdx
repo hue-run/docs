@@ -14,12 +14,12 @@ Requires Node.js 22 or 24 (Node.js 26 also runs in CI) or Bun 1.4. Run the comma
 <Tabs>
   <Tab title="npm">
     ```sh
-    npm install @hue-run/sdk@0.14.0
+    npm install @hue-run/sdk@0.16.0
     ```
   </Tab>
   <Tab title="Bun">
     ```sh
-    bun add @hue-run/sdk@0.14.0
+    bun add @hue-run/sdk@0.16.0
     ```
   </Tab>
 </Tabs>
@@ -30,7 +30,6 @@ The package is ESM; CommonJS applications on Node.js 22.12 or later load it with
 | --- | --- |
 | AI SDK 6 | Use `hueExperimentalTelemetry(hue)` as `experimental_telemetry`. |
 | AI SDK 7 | Use the `hueTelemetry` adapter with a compatible `@ai-sdk/otel` peer. |
-| `zod` 4.6.5 or later | Import `@hue-run/sdk/evals` for evaluations or [simulations](/evaluations/simulations). |
 | `ajv` | Add JSON Schema scoring with `npm install ajv`. |
 | OpenTelemetry | Applications with existing instrumentation can use the [standard exporter](/integrations/opentelemetry). |
 
@@ -41,12 +40,12 @@ Requires Python 3.10 or later; tested on 3.10 and 3.14. Install into your projec
 <Tabs>
   <Tab title="pip">
     ```sh
-    pip install hue-run==0.8.0
+    pip install hue-run==0.9.1
     ```
   </Tab>
   <Tab title="uv">
     ```sh
-    uv add hue-run==0.8.0
+    uv add hue-run==0.9.1
     ```
   </Tab>
 </Tabs>
