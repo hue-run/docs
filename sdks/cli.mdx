@@ -70,7 +70,7 @@ With a key, export `HUE_MCP_KEY` in the shell that starts your client; an app st
 
 ## Run an evaluation
 
-`hue eval` runs your agent locally against a published case or a saved eval set and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It reads `HUE_API_KEY` from the environment or from `./.env.hue`, the file `hue login` writes; `--env-file <path>` names another file. Start the agent's own command with `--command`, after the one-time change in [Evaluation setup](/evaluations/eval-ready-agent):
+`hue eval` runs your agent locally against a published case or a saved eval set and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It reads `HUE_API_KEY` from the environment, or from `./.env.hue`, the file `hue login` writes, when the environment has none; `--env-file <path>` names another file. Start the agent's own command with `--command`, after the one-time change in [Evaluation setup](/evaluations/eval-ready-agent):
 
 ```sh
 npx -y @hue-run/sdk@0.16.0 eval --case "<name|id|url>" --command "<start command>"
