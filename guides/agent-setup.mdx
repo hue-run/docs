@@ -52,7 +52,7 @@ Otherwise, tell the user, in this wording or close to it:
 > Hue needs a **Read and write** API key from your Hue account. You create and store it yourself, so please don't paste it into this chat.
 >
 > 1. Sign in at https://app.hue.run, select the project that should receive this application's traces, open **Settings → Integrations & API keys** (https://app.hue.run/settings/integrations) and create a **Read and write** key. Members ask an owner or admin for one.
-> 2. Store it as `HUE_API_KEY` in your secret manager, or run this in your own terminal from the repository root and paste the key at its hidden prompt: `npx --yes --package @hue-run/sdk@0.15.2 hue login --gitignore`
+> 2. Store it as `HUE_API_KEY` in your secret manager, or run this in your own terminal from the repository root and paste the key at its hidden prompt: `npx --yes --package @hue-run/sdk@0.15.3 hue login --gitignore`
 > 3. Tell me when it's stored. You don't need to run the next steps it prints; I'll do those.
 >
 > Don't have a Hue account yet? The Hue team sets up accounts: email founders@hue.run or book a time at https://calendar.notion.so/meet/akethini/hue. When your account is ready, paste the setup prompt again.
@@ -79,7 +79,7 @@ This check sends no telemetry. `200` means the key works: tell the user the proj
 
 ## 3. Add tracing
 
-Use curl to read [Hue's skill](https://docs.hue.run/skill.md?v=0.6.9) on this site and follow it from **Choose the integration** through **Verify delivery** for the application's language and framework. Its **Get a Hue API key** section is already done. Hold its **Handoff** and come back here for step 4. The skill covers installing the SDK, choosing a capture policy, isolating serving requests from Hue and verifying a real request.
+Use curl to read [Hue's skill](https://docs.hue.run/skill.md?v=0.6.10) on this site and follow it from **Choose the integration** through **Verify delivery** for the application's language and framework. Its **Get a Hue API key** section is already done. Hold its **Handoff** and come back here for step 4. The skill covers installing the SDK, choosing a capture policy, isolating serving requests from Hue and verifying a real request.
 
 Set this up for complete traces with `captureContent: true` in TypeScript or `capture_content=True` in Python, including on older SDKs that require the option. An unset `HUE_CAPTURE_CONTENT` enables capture; only explicit `false` disables it. Explain that this sends supplied prompts, responses and tool inputs and outputs to Hue. Honor an explicit metadata-only choice or an existing application policy that forbids sending that content to another service. Keep redaction and credential filtering either way. Instrument every request path that calls a model or tool, with model and tool child spans and the application's session identifier. When content capture is enabled, verify that the actual request's input and output arrived before reporting setup complete.
 
@@ -98,7 +98,7 @@ If you ask the user to choose a client, always include **Other MCP client**. For
 Claude Code, Codex and Conductor sign in with Hue. The command is this, where `<client>` is `claude-code`, `codex` or `conductor`:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.15.2 hue mcp install --client <client> --auth oauth
+npx --yes --package @hue-run/sdk@0.15.3 hue mcp install --client <client> --auth oauth
 ```
 
 Run it yourself for `claude-code`. Don't run it yourself for `codex` or `conductor`: it runs `codex mcp add`, which opens the Hue sign-in in the browser at once and waits up to 5 minutes for the user to approve it. Give the user the command in your final message instead, to run from the repository root in their own terminal.
@@ -106,12 +106,12 @@ Run it yourself for `claude-code`. Don't run it yourself for `codex` or `conduct
 Cursor, VS Code, Windsurf and Gemini CLI connect with the key as `HUE_MCP_KEY`. Run this, where `<client>` is `cursor`, `vscode`, `windsurf` or `gemini`:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.15.2 hue mcp install --client <client>
+npx --yes --package @hue-run/sdk@0.15.3 hue mcp install --client <client>
 ```
 
 `hue mcp install` configures these four clients with a key only. If VS Code, Windsurf or Gemini CLI supports MCP sign-in, you can instead connect it with the sign-in settings in the **Any MCP client** tab of [Connect your client](/agents/mcp-server#connect-your-client); Hue does not accept Cursor's sign-in.
 
-A sign-in connection can read and write every active project in the organization the user approves, within their role, for 30 days. When Claude Code, Codex or Conductor connects with a key for a reason step 1 names, run the key command for `claude-code`, `codex` or `conductor` with `--auth key`: without it, the command can sign these clients in instead, since sign-in is their default. That connection reads `HUE_MCP_KEY`, which `hue login` already stored; otherwise the user adds it as step 1 describes. For read-only access, the user creates a **Read** key and stores it as `HUE_MCP_KEY` instead, in the secret manager or with `npx --yes --package @hue-run/sdk@0.15.2 hue login --keys coding-agent --force --gitignore` (with the same `--env-path`, if step 1 used one), which replaces only `HUE_MCP_KEY` in the env file; then run the key command for the client, with `--auth key` for `claude-code`, `codex` or `conductor`.
+A sign-in connection can read and write every active project in the organization the user approves, within their role, for 30 days. When Claude Code, Codex or Conductor connects with a key for a reason step 1 names, run the key command for `claude-code`, `codex` or `conductor` with `--auth key`: without it, the command can sign these clients in instead, since sign-in is their default. That connection reads `HUE_MCP_KEY`, which `hue login` already stored; otherwise the user adds it as step 1 describes. For read-only access, the user creates a **Read** key and stores it as `HUE_MCP_KEY` instead, in the secret manager or with `npx --yes --package @hue-run/sdk@0.15.3 hue login --keys coding-agent --force --gitignore` (with the same `--env-path`, if step 1 used one), which replaces only `HUE_MCP_KEY` in the env file; then run the key command for the client, with `--auth key` for `claude-code`, `codex` or `conductor`.
 
 With `--auth oauth`, the command writes only the server URL. With a key, it writes a server named `hue` that references `HUE_MCP_KEY` and never the key itself. `.mcp.json` (Claude Code) and `.cursor/mcp.json` (Cursor) are safe to commit; with a key, each teammate then needs their own key. For Codex and Conductor, the command runs `codex mcp add`, which writes `~/.codex/config.toml`, and for Conductor also `claude mcp add --scope user`; if your sandbox blocks that, ask the user to approve it. VS Code prompts for the key when the server starts, and for Windsurf the command prints a snippet to merge into the file it names. Without Node.js, use the instructions for the user's client in [Connect your client](/agents/mcp-server#connect-your-client); for a client without its own tab there, such as VS Code, Windsurf or Gemini CLI, use the **Any MCP client** tab's project-key settings.
 

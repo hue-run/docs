@@ -10,7 +10,7 @@ The installable project-data server runs at `https://mcp.hue.run/mcp`. A separat
 
 | Surface | Use it when | It owns | It never does |
 | --- | --- | --- | --- |
-| [Hue skill](https://docs.hue.run/skill.md?v=0.6.9) | Adding or troubleshooting tracing | SDK setup, capture policy, safe exports, and request verification | Grant credentials or read project data |
+| [Hue skill](https://docs.hue.run/skill.md?v=0.6.10) | Adding or troubleshooting tracing | SDK setup, capture policy, safe exports, and request verification | Grant credentials or read project data |
 | [Hue MCP server](/agents/mcp-server) | Inspecting project data or production traces | Project tools, pagination, deep links, and documentation search. Writes need **Read and write**; admin settings need an owner or admin ([permissions](/agents/mcp-tools#permissions)) | Billing, OTLP ingest, artifact bytes, org invites or role changes, or access outside the key's project or signed-in organization |
 | [SDKs](/sdks/typescript) and REST | Automating tracing or evaluations in CI | Tracing, receipts, eval sets, evaluators, runs, and scoring runs | Browse traces; clients expose no trace-search API |
 
@@ -32,7 +32,7 @@ Then send the prompt from [Agent setup](/guides/agent-setup). Your agent guides 
 - **Working without a shell or combining project actions.** Connect the MCP server; clients with sign-in use Hue OAuth, while other clients use a **Read** or **Read and write** key.
 - **Automating in CI.** Use the SDK evaluation clients and receipt endpoint directly.
 
-For a coding agent implementing content scrubbing, use [Redaction](/guides/redaction). It includes email examples, exporter attachment points and a synthetic verification checklist. The [Hue skill](https://docs.hue.run/skill.md?v=0.6.9) routes agents to the same guide.
+For a coding agent implementing content scrubbing, use [Redaction](/guides/redaction). It includes email examples, exporter attachment points and a synthetic verification checklist. The [Hue skill](https://docs.hue.run/skill.md?v=0.6.10) routes agents to the same guide.
 
 ## Authentication
 
