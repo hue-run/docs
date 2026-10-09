@@ -20,7 +20,7 @@
     "projectMcpUrl": "https://mcp.hue.run/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
     "skillUrl": "https://docs.hue.run/skill.md?v=0.6.5",
-    "pageCount": 30
+    "pageCount": 29
   },
   "serviceKeyPresets": [
     {
@@ -223,7 +223,6 @@
     "agents/mcp-server",
     "agents/investigate-production",
     "agents/debug-environment",
-    "guides/invited-setup",
     "sdks/cli",
     "agents/mcp-tools",
     "reference/typescript",

@@ -1,6 +1,7 @@
 ---
 title: "TypeScript API reference"
 description: "Use the TypeScript SDK to trace, evaluate, score, and run simulated environments."
+sidebarTitle: "TypeScript API"
 ---
 
 This reference covers `@hue-run/sdk` **0.14.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
@@ -227,11 +228,11 @@ const result = await generateText({
 
 Provider-executed tools, such as OpenAI hosted MCP (`openai.tools.mcp`), appear as `execute_tool mcp.<name>` spans with `gen_ai.tool.type` `extension`. The server is named only by `serverLabel` inside the recorded result, so before export the SDK copies it to `mcp.server.name`, and a result carrying an MCP `error` sets an ERROR status and `error.type` `mcp_error`. Both attributes survive metadata-only export. The label can only be read when AI SDK recorded the result: `hueTelemetry(hue)` with `captureContent: false` records none, whereas an application whose AI SDK integration records outputs and exports through Hue's attached processors keeps the label.
 
-AI SDK per-call integrations replace the global integrations for that call. If your app already has telemetry, preserve its setup and attach Hue to the existing provider. See [OpenTelemetry](/integrations/opentelemetry) and the [reference chatbot](/integrations/reference-chatbot).
+AI SDK per-call integrations replace the global integrations for that call. If your app already has telemetry, preserve its setup and attach Hue to the existing provider. See [OpenTelemetry](/integrations/opentelemetry) and the [Example chatbot](/integrations/reference-chatbot).
 
 ## Content policy
 
-See [redact sensitive trace content](/guides/redaction) for runnable email-masking examples and the correct attachment point for each integration.
+See [Redaction](/guides/redaction) for runnable email-masking examples and the correct attachment point for each integration.
 
 - `captureContent: false` disables Hue helper content and removes recognized GenAI, Vercel AI SDK, OpenInference, OpenLLMetry and Langfuse content, legacy GenAI content events, log bodies, status messages and exception text before Hue exports records, including records from other instrumentations on a shared provider. The exported `contentPrefixes` array lists the attribute keys, and their dotted children, that are removed; the [compatibility matrix](/sdks/compatibility) reproduces it. It does not classify every custom attribute name.
 - `captureContent: true` permits supplied content. Received content is stored by Hue; the SDK does not set a retention timer. Helpers still omit exception messages and stack traces.
@@ -295,7 +296,7 @@ Trace IDs are 32 lowercase hexadecimal characters; expected span IDs are 16. All
 
 Missing spans or required fields keep polling until the deadline. Only recognized trace-not-found responses, HTTP 429, and HTTP 503 are retried; connection failures, unsupported endpoints, redirects, and malformed responses raise a safe typed error. Verification reads stored normalized field presence across the trace, including supported correlated logs. It does not inspect values or prove that unlisted application operations were instrumented.
 
-[Flush the owning providers before verification](/sdks/typescript#verify-stored-trace-evidence); this method never flushes implicitly.
+[Flush the owning providers before verification](/sdks/typescript#verify); this method never flushes implicitly.
 
 ## Evaluation client
 
@@ -467,7 +468,7 @@ Submitting hosted jobs is an explicit platform operation and can consume the pro
 
 `ArtifactReservation` has `id`, `filename`, `declaredContentType`, `declaredBytes`, `declaredSha256`, `state` (`reserved`, `verifying`, `ready`, `rejected`, `cancelled` or `abandoned`; only `ready` artifacts are verified and downloadable), `copyState` (`none`, `started` or `acknowledged`), `verifiedBytes` and `verifiedSha256` (`null` until ready) and `failureCode`. `ArtifactUpload` is `{ uploadUrl, method: "PUT", headers?, expiresAt }`; omitted or `null` headers mean the file content type only.
 
-### Published Scenarios and eval sets
+### Published scenarios and eval sets
 
 A published Scenario is a case converted from a trace, with immutable pins to a frozen dataset version, an environment version and one scorer version. The evaluation client reads them with `listCaseConversions(page?)`, a page of `CaseConversionSummary` values (drafts and published), and `getCaseConversion(id)`, a `CaseConversion`. Both need a **Read and write** key.
 
@@ -573,7 +574,7 @@ Use one checkpoint directory per experiment or rescore run. Checkpoint files con
 
 When a target's outcome is uncertain, restarting the runner will not repeat it. Investigate side effects first. The low-level `startExecution` API requires an explicit `previousExecutionId` for a replacement attempt and `allowUncertainRetry: true` to replace a still-started attempt. The convenience runner does not automatically adopt an externally created attempt; use a new experiment for an intentional fresh target run. Required evidence never silently changes to omitted evidence after an export failure.
 
-For a runnable experiment and historical rescore, see the public [first evaluation guide](/evaluations/first-evaluation).
+For a runnable experiment and historical rescore, see the public [First evaluation](/evaluations/first-evaluation).
 
 ### Wait for results and verdicts
 
@@ -978,7 +979,7 @@ Hue-native `tools` and the `hue_sim_` capability are deprecated. When a case run
 
 The target receives a `ManagedTargetContext`: `executionId`, `attempt`, `input`, `config`, verified `inputFiles` (`ManagedInputFile` entries with `artifactId`, `filename`, `contentType`, `byteSize`, `sha256` and `role`, plus their `data` bytes), an AbortSignal `signal` and the `traceId` of the `ai.managed_target` span. It returns a `ManagedTargetResult`: optional `state`, `output` JSON, a safe `error` summary, `files` (`ManagedOutputFile` entries with `filename`, `contentType`, `data` and optional `primary`) and provider-reported `usage`. `ManagedInvocation` describes the protocol-version-1 request body Hue POSTs. The helper claims before execution and saves outcomes before returning. It never automatically reruns the agent. See [managed runs](/evaluations/managed-runs) for the full setup and recovery flow.
 
-## Safe serving lifecycle
+## Serving lifecycle
 
 `createHueSafe(options)` accepts the same options as `createHue`, catches initialization failures and returns a disabled client with an instrumentation failure; the caller's `onExportIssue` stays attached and receives the configuration error's message as the reported issue. Pass an empty string for an unset environment key; the safe constructor handles the invalid configuration. `enabled: false` needs neither a key nor a `captureContent` choice. `flushSafe(options?: SafeLifecycleOptions)` and `shutdownSafe(options?: SafeLifecycleOptions)` return `Promise<SafeLifecycleResult>`, `{ ok: boolean; timedOut: boolean; report: ExportReport }`, without rejecting. `SafeLifecycleOptions.timeoutMillis` is the caller deadline, 1–60000 ms, default 1000. A deadline does not cancel a borrowed provider.
 

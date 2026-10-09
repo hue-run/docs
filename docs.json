@@ -50,8 +50,7 @@
           "agents/overview",
           "agents/mcp-server",
           "agents/investigate-production",
-          "agents/debug-environment",
-          "guides/invited-setup"
+          "agents/debug-environment"
         ]
       },
       {
@@ -66,6 +65,12 @@
       }
     ]
   },
+  "redirects": [
+    {
+      "source": "/guides/invited-setup",
+      "destination": "/guides/agent-setup"
+    }
+  ],
   "logo": {
     "light": "/images/hue-light.svg",
     "dark": "/images/hue-dark.svg"

@@ -1,6 +1,7 @@
 ---
 title: "Python API reference"
 description: "Use the Python SDK to trace, evaluate, score, and drive simulated worlds."
+sidebarTitle: "Python API"
 ---
 
 This reference covers `hue-run` **0.8.0** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
@@ -108,7 +109,7 @@ Choose logs or span attributes for the same content event to avoid duplicate sto
 
 ## Content policy
 
-See [redact sensitive trace content](/guides/redaction) for runnable email-masking examples and the correct attachment point for each integration.
+See [Redaction](/guides/redaction) for runnable email-masking examples and the correct attachment point for each integration.
 
 `capture_content=False` omits input/output content from Hue's helpers **before it enters an OpenTelemetry queue** and, at export, strips recognized GenAI, OpenInference, OpenLLMetry, Langfuse and Vercel AI SDK content attributes, legacy `gen_ai.*` message events, log bodies and status descriptions from every record on Hue's export path, including spans from third-party instrumentors on a borrowed provider. The key list is identical to TypeScript's `contentPrefixes` and is reproduced in the [compatibility matrix](/sdks/compatibility). `True` permits that content. The policy does not classify arbitrary attribute names, span names, session identifiers or another exporter's records; unrecognized custom keys pass through. Configure an external instrumentor's own content policy before enabling it.
 
@@ -175,7 +176,7 @@ Trace IDs are 32 lowercase hexadecimal characters; expected span IDs are 16. All
 
 Missing spans or required fields keep polling until the deadline. Only recognized trace-not-found responses, HTTP 429, and HTTP 503 are retried; connection failures, unsupported endpoints, redirects, and malformed responses raise a safe typed error. Verification reads stored normalized field presence across the trace, including supported correlated logs. It does not inspect values or prove that unlisted application operations were instrumented.
 
-[Flush the owning providers before verification](/sdks/python#verify-stored-trace-evidence); this method never flushes implicitly. An in-flight network read may finish in the background after the caller times out.
+[Flush the owning providers before verification](/sdks/python#verify); this method never flushes implicitly. An in-flight network read may finish in the background after the caller times out.
 
 ## Evaluation client
 
@@ -351,7 +352,7 @@ Use one checkpoint directory per experiment or rescore run. Checkpoint files con
 
 For uncertain work, investigate side effects before starting another attempt. The low-level `start_execution` method requires the latest `previous_execution_id` for a replacement attempt and `allow_uncertain_retry=True` to replace a still-started attempt. Restarting a runner does not grant either permission or automatically adopt an externally created attempt. Use a new experiment for an intentional fresh target run after investigating.
 
-Required evidence waits for both signals after the root span ends. Omission is an explicit policy, never an automatic fallback after export failure. For a runnable example, see the public [first evaluation guide](/evaluations/first-evaluation).
+Required evidence waits for both signals after the root span ends. Omission is an explicit policy, never an automatic fallback after export failure. For a runnable example, see the public [First evaluation](/evaluations/first-evaluation).
 
 ## Environment client
 
@@ -431,7 +432,7 @@ Finishing a gateway world answers `lifecycle: "completing"` with `sealedAt: None
 
 `handle(payload, headers)` accepts bounded raw JSON bytes or a dictionary and returns `ManagedResponse` with `status_code`, `body` and `headers`. The target receives a `ManagedTargetContext` with `execution_id`, `attempt`, `input`, `config`, `input_files`, the `cancelled` event, `deadline_monotonic` and `trace_id`; `input_files` is a tuple of `ManagedInputFile` entries with `artifact_id`, `filename`, `content_type`, `byte_size`, `sha256`, `role` and the verified `data` bytes. It returns `ManagedTargetResult`; generated files use `ManagedOutputFile`. Calls use the existing tracing providers. A false flush result leaves telemetry pending. See [managed runs](/evaluations/managed-runs) for framework integration, cancellation and recovery.
 
-## Safe serving lifecycle
+## Serving lifecycle
 
 Import `create_hue_safe` from `hue_sdk`. It accepts the same constructor arguments as `Hue`, catches ordinary initialization failures and returns a disabled client with an instrumentation failure. `enabled=False` needs no API key and does not attach to a supplied provider. Initialize once per serving process after fork; inherited clients no-op instead of reusing parent worker locks.
 

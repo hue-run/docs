@@ -1,11 +1,11 @@
 ---
-title: "Use existing OpenTelemetry"
+title: "OpenTelemetry"
 description: "Send existing OpenTelemetry traces and logs to Hue without replacing your instrumentation."
 ---
 
 Send existing OpenTelemetry records to Hue with an OTLP/HTTP exporter or Collector; no Hue-specific model wrapper is needed.
 
-## Ownership and boundaries
+## Provider ownership
 
 Your provider owns instrumentation and propagation; Hue stores what it sends.
 
@@ -14,7 +14,7 @@ Your provider owns instrumentation and propagation; Hue stores what it sends.
 - Hue SDK `captureContent: false` or `capture_content=False` strips recognized content attributes, including third-party spans; custom keys pass through. Python `redactor` changes helper values; TypeScript `redact` runs on export. Other exporters and Collectors need their own controls.
 - Hue processors send a separate provider copy; existing exporters and filters are unchanged. Test each destination with synthetic content.
 
-## Configure the destination
+## Configure the endpoint
 
 Use a **Tracing only** key from **Settings → Integrations & API keys**; it determines the project. An attribute cannot select a project. Use **Read and write** only for evaluation APIs.
 
@@ -162,9 +162,9 @@ Any OTLP/HTTP SDK or Collector can send here. Examples use standard packages and
   </Tab>
 </Tabs>
 
-Hue accepts the Node.js OTLP/JSON, Python protobuf and Collector gzip/protobuf examples. Each marks a tool span; see [attributes Hue reads](#make-traces-useful-to-a-coding-agent). Verify the trace ID in Hue or via [trace receipt](/sdks/typescript#verify-stored-trace-evidence).
+Hue accepts the Node.js OTLP/JSON, Python protobuf and Collector gzip/protobuf examples. Each marks a tool span; see [attributes Hue reads](#attributes-for-coding-agents). Verify the trace ID in Hue or via [trace receipt](/sdks/typescript#verify).
 
-### Point a Hue SDK at a Collector
+### Send through a Collector
 
 Hue SDKs post to `<origin>/api/v1/otlp/v1/traces` and `/logs`. Add a separate receiver so standard exporters keep `/v1/traces` and `/v1/logs`. Disable [live-span placeholders](/reference/typescript#live-spans); generic receivers would forward them.
 
@@ -192,9 +192,9 @@ hue = Hue(api_key=api_key, base_url="http://127.0.0.1:4319", service_name="my-ag
 
 The Collector replaces the SDK key, so `apiKey` / `api_key` can be a non-empty placeholder. Skip SDK checks and receipts; the Collector cannot answer. Without `liveSpans: false`, placeholders are sent once, then TypeScript warns or Python sets `export_status.live_spans_rejected` and stops.
 
-## Attach Hue transport to JavaScript providers
+## Existing JavaScript providers
 
-Pass `redact` when creating the transport to scrub exported content; see the [redaction recipe](/guides/redaction#use-the-same-callback-with-an-existing-provider).
+Pass `redact` when creating the transport to scrub exported content; see [Redaction](/guides/redaction#existing-providers).
 
 To keep provider ownership while using Hue content controls and diagnostics, attach its processors during construction. [Install the TypeScript package](/installation#typescript) and these dependencies:
 
@@ -254,13 +254,13 @@ try {
 
 Run `node otel.ts` after setting your environment. An export rejection makes the command fail rather than reporting successful delivery. Hue does not register or replace a global tracer, logger, or context manager. An instrumentor that only uses global providers still needs your application's normal OpenTelemetry initialization.
 
-Your providers own the resource in this mode: set `service.name`, `deployment.environment.name` and similar attributes on them. `resourceAttributes` on the transport options is ignored and reported as a `warning` issue. The Python SDK attaches the same way through `tracer_provider=` and `logger_provider=`; a provider Hue creates for the other signal reuses the borrowed provider's resource. See the [Python guide](/sdks/python#use-an-existing-provider).
+Your providers own the resource in this mode: set `service.name`, `deployment.environment.name` and similar attributes on them. `resourceAttributes` on the transport options is ignored and reported as a `warning` issue. The Python SDK attaches the same way through `tracer_provider=` and `logger_provider=`; a provider Hue creates for the other signal reuses the borrowed provider's resource. See the [Python guide](/sdks/python#existing-opentelemetry-provider).
 
-## Keep Langfuse and add Hue
+## Use with Langfuse
 
 Keep Langfuse's instrumentation/exporter. Add Hue's processor to that provider at construction; preserve resources, sampling, propagation, processors and filters. See [Langfuse's OpenTelemetry guidance](https://langfuse.com/faq/all/existing-otel-setup).
 
-For example, this is the change to an existing `NodeSDK` setup after installing `@hue-run/sdk` and saving the [email callback](/guides/redaction#typescript-mask-email-addresses) as `redaction.ts`; keep the rest of that application's initialization:
+For example, this is the change to an existing `NodeSDK` setup after installing `@hue-run/sdk` and saving the [email callback](/guides/redaction#typescript-example) as `redaction.ts`; keep the rest of that application's initialization:
 
 ```diff
 + import { createHueTransport } from "@hue-run/sdk";
@@ -293,13 +293,13 @@ This is an attachment example, not a replacement bootstrap or version certificat
 
 Keep Langfuse AI SDK instrumentation: SDK 6 uses `experimental_telemetry`; SDK 7 uses its registered integration. Per-call `hueTelemetry()` replaces global integrations for that call. See [Langfuse setup](https://langfuse.com/integrations/frameworks/vercel-ai-sdk) and [compatibility](/sdks/compatibility).
 
-Langfuse's `mask` hook does not redact Hue's copy. Apply policy to both exports, then inspect synthetic content in both. See [Langfuse masking](https://langfuse.com/docs/observability/features/masking) and [Hue capture policy](/guides/production-safety#capture-titles-and-retention).
+Langfuse's `mask` hook does not redact Hue's copy. Apply policy to both exports, then inspect synthetic content in both. See [Langfuse masking](https://langfuse.com/docs/observability/features/masking) and [Hue capture policy](/guides/production-safety#content-capture-and-retention).
 
 Hue reads Langfuse attributes directly. `langfuse.observation.type`, `.model.name`, `.usage_details`, `.input`, `.output`, `langfuse.session.id` and `langfuse.user.id` fill Hue fields when GenAI attributes are absent; GenAI wins. `langfuse.trace.name` names traces without request text; `langfuse.release` supplies `release` absent `service.version`. Metadata, environment, tags and levels stay raw; OpenTelemetry status marks failure. See the [field glossary](/agents/investigate-production#field-glossary).
 
 TypeScript `0.13.0` or Python `0.7.0+` strip recognized Langfuse content in metadata-only mode; earlier SDKs need producer or Collector controls. Metadata and custom fields pass through. Verify each independent capture policy; see [compatibility](/sdks/compatibility).
 
-Test a real request with model and tool spans, preserved IDs and parentage and both exporters flushed by the host deadline. Check content and fields in both destinations. Hue's [trace receipt](/sdks/typescript#verify-stored-trace-evidence) checks span and field presence, not payload correctness or Langfuse delivery; also test errors and cancellation.
+Test a real request with model and tool spans, preserved IDs and parentage and both exporters flushed by the host deadline. Check content and fields in both destinations. Hue's [trace receipt](/sdks/typescript#verify) checks span and field presence, not payload correctness or Langfuse delivery; also test errors and cancellation.
 
 Exporters cannot recover truncated data. Instrument reductions when analysis needs original and retained results.
 
@@ -341,7 +341,7 @@ The reader starts immediately so completion and abort callbacks finish before ex
 
 Log delivery counters to an independent, non-throwing sink. Do not shut down shared transport per request. See the [AI SDK stream-abort guide](https://ai-sdk.dev/docs/troubleshooting/stream-abort-handling).
 
-## Map agent data without inventing it
+## Agent attributes
 
 Hue preserves original resource, scope, status, events, links, dropped counts, typed attributes, and external trace and span IDs. It derives AI fields alongside those records using versioned normalization profiles.
 
@@ -351,7 +351,7 @@ Prefer current GenAI attributes when your instrumentation supports them, includi
 
 A child can arrive before its parent, and a correlated log can arrive before its span. Preserve the same trace ID and the correct parent and span IDs across services. Root-span completion does not prove that the whole distributed trace has arrived. Evaluations use a pinned evidence revision.
 
-## Make traces useful to a coding agent
+## Attributes for coding agents
 
 A coding agent that reads your traces over the [Hue MCP server](/agents/investigate-production) can only filter and group by what the spans record. These attributes make its answers precise:
 
@@ -363,11 +363,11 @@ A coding agent that reads your traces over the [Hue MCP server](/agents/investig
 - **Record releases.** Set resource `service.version` (or `langfuse.release`) to compare deployments.
 - **Separate environments.** Send development and staging to a separate project with its own **Tracing only** key.
 
-## Instrument for trace checks and request timing
+## Trace checks and request timing
 
 [Trace checks](/agents/investigate-production#trace-checks) assess delegation, scope and omitted output; request timing measures time to a useful answer. They use recorded attributes and events, not inferred data, and require owner or admin consent plus an activated tested version. Run traces are excluded.
 
-### Mark the request on the root span
+### Mark the root span
 
 Put request attributes, timing events and the manifest on the request's root span. Hue reads them from the span carrying `hue.trace_checks`, or the parentless root when no manifest exists.
 
@@ -432,7 +432,7 @@ Mark `hue.response.useful` when the answer is ready, not when sending a placehol
 
 The example assumes `agent.support_reply` is root. If not, put attributes and events and the manifest on the active root Hue reads.
 
-### Declare the checked boundaries
+### Declare agent boundaries
 
 Put one manifest on the root span's `hue.trace_checks` attribute: a JSON object or string up to 64,000 characters. It declares the request and every boundary; Hue infers none.
 
@@ -478,11 +478,11 @@ A source reference names a 16-hex `spanId` (and linked `traceId`), `field` (`inp
 
 Checks read the manifest and named spans and, in linked traces, the first span plus handoff continuation—not every trace span. Trace size is not the cap: at most 128 spans are read, each with attributes, input and output up to 64 KiB. Missing or invalid manifests or over-limit evidence yield `unavailable`; delegation is `not_applicable` without task actions or handoffs, and other checks when no boundary is declared.
 
-## Control content at its source
+## Content capture
 
 Capture and redact content in your instrumentation or Collector; Hue cannot reconstruct omitted data. For SDK capture options, see the [TypeScript](/sdks/typescript) and [Python](/sdks/python) guides.
 
-## Observe collector acknowledgements
+## Collector responses
 
 Keep requests at or below 4 MiB on the wire and 8 MiB after decompression. An individual OTLP value can contain up to 1 MiB. Hue cuts oversized text values at a UTF-8 character boundary and replaces oversized structured values with a truncation marker. The `hue.truncated` attribute lists the affected keys. Oversized requests return HTTP 413.
 

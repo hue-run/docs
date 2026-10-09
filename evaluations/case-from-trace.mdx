@@ -1,12 +1,11 @@
 ---
-title: "Turn a trace into a case"
-sidebarTitle: "Trace to case"
+title: "Cases from traces"
 description: "Turn a production trace into a reviewed case with evaluators in Hue."
 ---
 
 A published case is a reviewed task and a set of generated evaluators, built from one recorded trace. A query and model answer can become an answer-only case without an app simulation or a starting world. A trace with app calls can also pin a world; your agent then runs against a fresh copy with [`hue eval`](/evaluations/eval-ready-agent). This page covers both review paths. For what a world is, see [simulations](/evaluations/simulations).
 
-## Traces that can become cases
+## Eligible traces
 
 Record the task and final answer with full content:
 
@@ -26,7 +25,7 @@ Publication pins **Answer outcome** and the required **Answers the task** judge.
 
 An answer-only case publishes at **T4**. Run it with the [agent command or a connected worker](/evaluations/eval-ready-agent#run-it); the agent receives the task and returns its answer without world setup. Cases that made tool calls use the app or recorded-tool path. A turn without a recorded answer cannot become an answer-only case; a turn that produced output files also needs a supported way to evaluate those files.
 
-## In the Hue UI
+## From the app
 
 1. Open **Traces** and open the trace.
 2. Choose **Create case** and answer the one question: "Did the agent complete the task correctly?"
@@ -34,7 +33,7 @@ An answer-only case publishes at **T4**. Run it with the [agent command or a con
 4. Review the task and criteria. For a case with a world, also review the facts it rests on.
 5. Choose **Publish case**. Publishing saves the eval-set version when Hue may; otherwise choose **Save eval-set version**.
 
-## Over the Hue MCP
+## From the MCP
 
 With a **Read and write** connection, a coding agent can run the same review. Writes need the user's go-ahead; on an organization connection every call takes the case's project as `project_id`.
 
@@ -45,9 +44,9 @@ With a **Read and write** connection, a coding agent can run the same review. Wr
 5. Review the criteria and accept them: `update_case_conversion` with `reviewed_criteria` (`accepted_criteria_digest`) and `reviewed_task`. For a case with a world, also review `authored_closed_world`.
 6. Publish only when `get_case_conversion` reports `ready: true`: `publish_case_conversion` with `name` and the current `expected_revision`. Readiness verifies the criteria and required review; an answer-only case has no world to replay.
 
-The `case_from_trace` MCP prompt runs this sequence. To save the eval-set version afterwards, use **Save eval-set version** in Hue, the `freeze_eval_set_version` tool, or `hue eval --save-version`. The [MCP tool reference](/agents/mcp-tools) lists each tool's arguments.
+The `case_from_trace` MCP prompt runs this sequence. To save the eval-set version afterwards, use **Save eval-set version** in Hue, the `freeze_eval_set_version` tool, or `hue eval --save-version`. The [MCP tools](/agents/mcp-tools) page lists each tool's arguments.
 
-## Tiers
+## Case tiers
 
 A case publishes at a tier that says what its evaluators can verify. Run results report per tier. World cases have advisory judges; answer-only cases have a required answer judge.
 
@@ -60,6 +59,6 @@ A case publishes at a tier that says what its evaluators can verify. Run results
 
 A trace that still needs a person (T5) is never published.
 
-## Next step
+## Next steps
 
-Make your agent eval-ready once, then run it against the case: [Make your agent eval-ready](/evaluations/eval-ready-agent).
+Set up your agent once, then run it against the case: [Evaluation setup](/evaluations/eval-ready-agent).

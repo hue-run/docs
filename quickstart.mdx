@@ -1,5 +1,5 @@
 ---
-title: "Send your first trace"
+title: "Quickstart"
 description: "Send a trace from TypeScript or Python and inspect it in Hue in about five minutes."
 ---
 
@@ -9,14 +9,14 @@ Send a real trace to Hue with a local text transformation. No model provider or 
   This is a strict setup diagnostic: it intentionally fails if Hue is unavailable. For application request handlers and startup, use the [production safety guide](/guides/production-safety).
 </Note>
 
-## Before you start
+## Prerequisites
 
 You need a Hue project and **Node.js 22 or 24** or **Python 3.10+**.
 
-Prefer to have your coding agent do the integration? Start with [agent setup](/guides/agent-setup).
+Prefer to have your coding agent do the integration? Start with [coding agent setup](/guides/agent-setup).
 
 <Note>
-  To run these examples against a local OpenTelemetry Collector, follow [Point a Hue SDK at a Collector](/integrations/opentelemetry#point-a-hue-sdk-at-a-collector).
+To run these examples against a local OpenTelemetry Collector, follow [Send through a Collector](/integrations/opentelemetry#send-through-a-collector).
 </Note>
 
 In [Hue](https://app.hue.run), select your project and open **Settings → Integrations & API keys** to create a **Tracing only** service key; see [project keys](/guides/project-keys). Keep the key in your server environment.
@@ -34,7 +34,7 @@ export HUE_API_KEY=your_project_service_key
 export HUE_CAPTURE_CONTENT=true
 ```
 
-`HUE_CAPTURE_CONTENT=true` records prompts, responses, and tool inputs and outputs alongside timing and errors; set it to `false` for metadata-only traces. See capture settings for [TypeScript](/sdks/typescript#choose-what-you-capture) and [Python](/sdks/python#choose-what-you-capture).
+`HUE_CAPTURE_CONTENT=true` records prompts, responses, and tool inputs and outputs alongside timing and errors; set it to `false` for metadata-only traces. See capture settings for [TypeScript](/sdks/typescript#content-capture) and [Python](/sdks/python#content-capture).
 
 ## 3. Record a request
 
@@ -139,8 +139,8 @@ Export acknowledgement confirms receiver acceptance. Inspecting the stored trace
 ## Next steps
 
 - Connect your application with [TypeScript](/sdks/typescript) or [Python](/sdks/python).
-- Add Hue to [existing OpenTelemetry instrumentation](/integrations/opentelemetry), or follow the [Vercel AI SDK recipe](/sdks/typescript#connect-vercel-ai-sdk).
-- [Run your first evaluation](/evaluations/first-evaluation).
+- Add Hue to [existing OpenTelemetry instrumentation](/integrations/opentelemetry), or follow the [Vercel AI SDK recipe](/sdks/typescript#vercel-ai-sdk).
+- [First evaluation](/evaluations/first-evaluation).
 - Connect your coding agent to the [Hue MCP server](/agents/mcp-server) by signing in with Hue or with a separate **Read** key, since the **Tracing only** key above cannot connect, then [ask it what needs attention in production](/agents/investigate-production).
 
 If the trace does not appear, follow [troubleshooting](/guides/troubleshooting).

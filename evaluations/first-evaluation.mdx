@@ -1,5 +1,5 @@
 ---
-title: "Run your first local evaluation"
+title: "First evaluation"
 description: "Run a local evaluation, score its output, and rescore it without running your target again."
 ---
 
@@ -7,7 +7,7 @@ This example creates one eval-set case, publishes an exact-match evaluator, and 
 
 [Install the SDK](/installation) for your language and set `HUE_API_KEY` to a [project service key](/guides/project-keys) created with the **Read and write** preset. A **Tracing only** key cannot use evaluation APIs. Both SDKs connect to Hue Cloud by default. To run an existing TypeScript agent against a disposable simulated world instead of a plain function, see [simulations](/evaluations/simulations).
 
-## Choose your content policy
+## Content policy
 
 Telemetry capture and evaluation storage are separate choices:
 
@@ -20,7 +20,7 @@ Setting the first switch to `false` sends metadata-only telemetry without changi
 
 Eval-set inputs and reference answers are intentionally uploaded during setup. The second switch also controls target error messages, evaluator evidence, arbitrary explanations, and their local-checkpoint copies. With it disabled, local scores can still be uploaded, but historical evaluators skip unavailable output instead of invoking a callback on invented data. Declared metric values are always uploaded, including custom text metrics.
 
-## Create and run the evaluation
+## Create and run
 
 Choose one language. The program creates setup once and saves IDs locally; later invocations reuse the same run and checkpoint directories. Add `.hue-first-evaluation-*` to `.gitignore`.
 
@@ -212,13 +212,13 @@ Open **Runs** and select **Uppercase baseline**. The target should succeed and t
 
 To compare a different target configuration, create a new run with the same frozen eval-set and published evaluator versions. Use a new checkpoint directory; do not edit frozen pins or reuse a checkpoint.
 
-## Preserve absence and quality failures
+## Missing outputs and quality failures
 
 Read presence flags such as `hasOutput` and `hasExpected` in API responses. Do not test value truthiness: JSON `null`, `false`, `0`, and `""` can all be present values. TypeScript target return `undefined` and Python's exported `MISSING` sentinel represent unavailable output. Python `None` is a present null.
 
 A failed quality verdict is still a scored result, typically with `passed: false`. Target execution and evaluator errors have separate states. Missing evidence produces an explicit skipped result. Exact match preserves scalar types; false is not zero.
 
-## Resume without repeating side effects
+## Resume an interrupted run
 
 Keep the same run ID, content settings and checkpoint directory when retrying an interrupted upload. The runner saves permitted completion and scoring payloads before upload and reuses request keys. It will not rerun an uncertain target.
 

@@ -1,5 +1,5 @@
 ---
-title: "Hue for coding agents"
+title: "Coding agents overview"
 sidebarTitle: "Overview"
 description: "Choose the Hue skill, MCP server, or SDKs for your coding-agent task."
 ---
@@ -22,17 +22,17 @@ Run this from your application's repository and select your coding agent:
 npx skills add hue-run/hue-sdk --skill hue
 ```
 
-Then send the prompt from [agent setup](/guides/agent-setup). Your agent guides you through storing a key, adding tracing, verifying a real request, and connecting the Hue MCP server.
+Then send the prompt from [coding agent setup](/guides/agent-setup). Your agent guides you through storing a key, adding tracing, verifying a real request, and connecting the Hue MCP server.
 
-## Which one to reach for
+## Skill or MCP
 
 - **Changing application code.** Install the skill and use the SDK. Add the MCP server when the agent should confirm what Hue stored.
 - **Investigating production.** Connect the MCP server and ask what needs attention, what failed, or which requests are slow. Start with [Investigate production](/agents/investigate-production).
-- **Debugging a simulated app.** Build a Linear environment from a trace, connect your agent, and inspect each attempt in [Using a simulated environment](/agents/debug-environment).
+- **Debugging a simulated app.** Build a Linear environment from a trace, connect your agent, and inspect each attempt in [Reproduce failures](/agents/debug-environment).
 - **Working without a shell or combining project actions.** Connect the MCP server; clients with sign-in use Hue OAuth, while other clients use a **Read** or **Read and write** key.
 - **Automating in CI.** Use the SDK evaluation clients and receipt endpoint directly.
 
-For a coding agent implementing content scrubbing, use the [redaction recipe](/guides/redaction). It includes email examples, exporter attachment points and a synthetic verification checklist. The [Hue skill](https://docs.hue.run/skill.md?v=0.6.5&release=3ec5394) routes agents to the same guide.
+For a coding agent implementing content scrubbing, use [Redaction](/guides/redaction). It includes email examples, exporter attachment points and a synthetic verification checklist. The [Hue skill](https://docs.hue.run/skill.md?v=0.6.5&release=3ec5394) routes agents to the same guide.
 
 ## Authentication
 
@@ -43,6 +43,6 @@ Application telemetry and agent access have different authentication needs:
 
 See [project keys](/guides/project-keys) for the presets and rotation.
 
-## What the agent sees
+## Available data
 
 Everything the MCP server returns from your traced application is treated as data: names, generated titles, metadata and judge explanations are length-capped and labelled untrusted, recorded prompts and outputs appear only through `get_span_content` or a tool called with `include_content: true`, and credential-shaped strings are redacted. Each result carries a link that opens the object in Hue for a signed-in member of the project.
