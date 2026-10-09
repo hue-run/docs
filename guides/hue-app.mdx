@@ -1,0 +1,73 @@
+---
+title: "Find your way around Hue"
+sidebarTitle: "The Hue app"
+description: "What each page in the Hue app shows, the controls you'll use most, and where the docs go deeper."
+---
+
+Hue's sidebar has two groups, **Observe** and **Evaluate**, plus **Settings**.
+
+## Traces
+
+**Traces** shows recorded application activity so you can inspect requests, findings and trace checks.
+
+- Filter by time range, deployment environment, activity type, findings, behavior check or user. Run traces stay hidden until you choose **Show run traces**.
+- Use **View as** to switch between traces and conversations. In the inspector, open **Overview**, **Execution** or **Findings**. Scope a conversation to **This trace only** or **Show all traces**.
+
+**Go deeper:** [quickstart](/quickstart), [attention states and findings](/agents/investigate-production#attention-states-and-findings), [trace checks and request timing](/integrations/opentelemetry#instrument-for-trace-checks-and-request-timing).
+
+## User Intent
+
+**User Intent** groups traffic by the task types in your published taxonomy and shows how requests are distributed.
+
+- Choose **Production Traces**, **Run Traces** or **Without Run Traces** as the traffic source.
+- Review Category, Intent, Share and Started, search user requests, and inspect latency by primary intent in request timing.
+- An owner or admin defines the intent categories, and the project's **AI intent classification** setting must be on.
+
+**Go deeper:** [intents](/agents/investigate-production#intents).
+
+## Evals
+
+**Evals** is where you manage versioned eval sets and inspect their cases.
+
+- Edit in a **New draft**, then save the changes as a new eval set version. Existing runs keep the version they used.
+- Open a case to see **Overview**, **Task**, **Evaluators**, **Files** and **Environment**.
+
+**Go deeper:** [first evaluation](/evaluations/first-evaluation), [case from a trace](/evaluations/case-from-trace).
+
+## Runs
+
+**Runs** shows each execution over an eval set version and its case results.
+
+- Filter cases by **Passed**, **Failed**, **Improved**, **Regressed** or **Not evaluated**.
+- Use **Compare with** another run, or open **Compare runs** and choose a **Baseline** and **Candidate** for each metric.
+- Use **Cancel run**, **Requeue** or **Start a new attempt**. A scoring run re-scores stored outputs.
+- Runs start from the SDK, `hue eval`, the MCP or a managed target.
+
+**Go deeper:** [first evaluation](/evaluations/first-evaluation), [managed runs](/evaluations/managed-runs), [CLI reference](/sdks/cli).
+
+## Environments
+
+**Environments** lets you create and version simulated apps, then inspect a world's requests and state.
+
+- Use **Create environment** and search the environment list; open a version to inspect its world, requests and state.
+
+**Go deeper:** [simulations](/evaluations/simulations), [debug an environment](/agents/debug-environment).
+
+## Evaluators
+
+**Evaluators** is where you define verifiers and judges, publish versions and review judge alignment.
+
+- **Create verifier** accepts TypeScript or Python code with an entry point and a deadline.
+- **Create judge** configures a hosted LLM with a judge model, rubric items, temperature and samples. Published versions keep the evaluator reproducible.
+- **Alignment** compares a judge with human labels.
+
+**Go deeper:** [first evaluation](/evaluations/first-evaluation), [MCP evaluator and judge tools](/agents/mcp-server#what-you-can-do).
+
+## Settings
+
+**Settings** contains project connections and API key controls.
+
+- **Integrations & API keys** opens the [project key settings](/guides/project-keys).
+- **Connected apps** lists and disconnects your [sign-in connections](/agents/mcp-server#sign-in-with-hue).
+
+**Go deeper:** [project keys](/guides/project-keys), [sign in with Hue](/agents/mcp-server#sign-in-with-hue).
