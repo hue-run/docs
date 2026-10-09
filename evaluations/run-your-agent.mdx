@@ -1,0 +1,46 @@
+---
+title: "Run an eval with your agent"
+description: "Run your existing agent, local or deployed, against a published case or eval set with one command."
+---
+
+`hue eval` runs your own agent against Hue cases and prints the run link and verdicts. Your agent, prompts and model keys stay in your process; Hue never executes the agent. Use this command instead of writing a harness, a runner or tool stand-ins around the SDK.
+
+## Before you start
+
+- Node.js 22 or 24 on the machine that runs the command, even for a Python agent.
+- A **Read and write** [project key](/quickstart#project-keys) in an ignored env file. `hue login --gitignore` writes `.env.hue` and ignores it; when the shell has no `HUE_API_KEY`, `hue eval` loads `./.env.hue` by default. Pass `--env-file <path>` for another file, and add `.hue/` to `.gitignore` for checkpoints.
+- A start command that reads `{"inputs","config"}` as JSON on stdin and prints the answer on stdout. Logs go to stderr.
+- For cases where the agent calls apps, the one-time [mirror helper](/evaluations/eval-ready-agent) so its clients reach Hue's simulated world instead of production.
+
+## Run it
+
+Check first, then run the same command without `--check`:
+
+```sh
+npx -y @hue-run/sdk@0.16.0 eval --case "<name|id|url>" --command "<start command>" --check
+npx -y @hue-run/sdk@0.16.0 eval --case "<name|id|url>" --command "<start command>"
+```
+
+`--check` validates the key, selection, case kind and agent, prints what the run would do, and exits without creating a run, world or checkpoint. A published case carries its own evaluators. To run an eval set, use `--set "<eval set>"` and add `--scorer-version <id>` for each evaluator; Hue's **Run** snippet for the set includes them.
+
+- **One command, one run.** The run holds every selected case: a 100-case eval set is one run with 100 executions. The command prints the `https://app.hue.run/runs/<id>` link once the run exists.
+- **Let it finish.** Start the command in the background or with a long timeout. If you press Ctrl+C, the run stays open; rerun the identical command to resume from `.hue/eval/<agent-key>`. Finished cases are kept, and an interrupted case runs again in a fresh world for a world case. If `--wait` ends while Hue's checks are pending, open the run link instead of rerunning. Never delete that directory to start over.
+- **Exit codes.** 0 every case passed; 1 a case failed, errored, is inconclusive or is incomplete; 2 usage error; 130 interrupted.
+- **Compare.** Pass `--baseline <run id|url>` to see improvements and regressions against an earlier run.
+
+## Answer-only and world cases
+
+| Case | What the command receives | What the agent does |
+| --- | --- | --- |
+| Answer-only | `HUE_EXECUTION_ID` and case variables, no world | Answers without connecting app clients. |
+| World | A fresh world: `HUE_WORLD_TOKEN` and one `HUE_SIM_<SURFACE>_URL` per mirrored app | The helper swaps each app's production URL and credential for the mirror and world token. |
+
+The helper fails closed: with an execution but no world token, or a missing mirror URL, a required app connection throws before any request. Outside a Hue eval it returns production values unchanged. `hue eval` removes `HUE_API_KEY` and other Hue credentials from the command's environment unless you pass `--allow-hue-credentials`.
+
+## Local or deployed
+
+- **Local, one run:** the one-shot command above.
+- **Local, launched from Hue:** `hue eval --worker --command "<start command>"` registers the agent and runs what the **Run** button or `launch_local_run` starts, one run per launch, until you stop it.
+- **Deployed:** run the worker beside the deployment with a non-production key and a start command that forwards stdin to the deployed agent and prints its answer. Never put world variables or a **Read and write** key in production configuration.
+
+See [`hue eval`](/sdks/cli#run-an-evaluation) for every flag and [simulations](/evaluations/simulations) for how worlds are built and graded.

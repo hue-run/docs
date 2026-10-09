@@ -275,7 +275,7 @@ for (const [name, page, phrase] of [
 
 test("a bare npx hue command in a code block fails", () => {
   const result = checkSnapshot((directory) => changePage(directory, "sdks/cli.mdx", (text) =>
-    text.replace(/npx --yes --package @hue-run\/sdk@\d+\.\d+\.\d+ hue login --gitignore/, "npx hue login --gitignore"),
+    text.replace(/npx -y @hue-run\/sdk@\d+\.\d+\.\d+ login --gitignore/, "npx hue login --gitignore"),
   ));
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /sdks\/cli\.mdx runs the hue CLI without naming @hue-run\/sdk: npx hue login --gitignore/);

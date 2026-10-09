@@ -20,7 +20,7 @@
     "projectMcpUrl": "https://mcp.hue.run/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
     "skillUrl": "https://docs.hue.run/skill.md?v=0.7.0",
-    "pageCount": 24
+    "pageCount": 25
   },
   "serviceKeyPresets": [
     {
@@ -210,6 +210,7 @@
     "integrations/reference-chatbot",
     "guides/redaction",
     "guides/troubleshooting",
+    "evaluations/run-your-agent",
     "evaluations/first-evaluation",
     "evaluations/case-from-trace",
     "evaluations/eval-ready-agent",

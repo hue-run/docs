@@ -117,9 +117,10 @@ if (JSON.stringify(mdxFiles) !== JSON.stringify(expectedMdxFiles)) {
 }
 // Concepts defines the product vocabulary, guides/redaction centralizes the cross-language
 // privacy recipes linked by the SDK guides and coding-agent skill, and agents/mcp-tools keeps
-// the per-tool reference off the connection guide that agents read whole during setup.
-if (pages.length !== 23 || pages.length + 1 !== 24) {
-  fail(`expected 23 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
+// the per-tool reference off the connection guide that agents read whole during setup, and
+// evaluations/run-your-agent is the one short path for running an eval with an existing agent.
+if (pages.length !== 24 || pages.length + 1 !== 25) {
+  fail(`expected 24 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
 }
 
 for (const page of expectedMdxFiles) {

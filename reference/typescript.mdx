@@ -4,7 +4,7 @@ description: "Use the TypeScript SDK to trace, evaluate, score, and run simulate
 sidebarTitle: "TypeScript API"
 ---
 
-This reference covers `@hue-run/sdk` **0.15.3** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use [Quickstart](/quickstart#2-install-the-sdk) for the available package release.
+This reference covers `@hue-run/sdk` **0.16.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use [Quickstart](/quickstart#2-install-the-sdk) for the available package release.
 
 ## Imports
 
@@ -12,7 +12,7 @@ This reference covers `@hue-run/sdk` **0.15.3** on Node.js 22 or 24 and Bun 1.4.
 | --- | --- |
 | `@hue-run/sdk` | `createHue`, `createHueSafe`, `HueClient`, `createHueTransport`, `HueTransport`, `hueExperimentalTelemetry`, `contentPrefixes`, `HueConnectionError`, `HueExportError`, `HueTraceVerificationError` and the tracing types below. |
 | `@hue-run/sdk/ai-sdk` | `hueTelemetry` for Vercel AI SDK 7. Requires the optional `ai` and `@ai-sdk/otel` peers. |
-| `@hue-run/sdk/evals` | Evaluation client, local runners including `runSimulation` and `runLocalAgent`, scorer definitions, file-based case helpers, published Scenario resolvers, verdict helpers, attempt-preflight validators, evaluation errors and types. Requires the optional `zod` peer (`^3.25.76` or `^4.6.5`). |
+| `@hue-run/sdk/evals` | Evaluation client, local runners including `runSimulation` and `runLocalAgent`, scorer definitions, file-based case helpers, published Scenario resolvers, verdict helpers, attempt-preflight validators, evaluation errors and types. Uses `zod`, a regular dependency since 0.16.0. |
 | `@hue-run/sdk/environment` | `createEnvironmentClient`, `EnvironmentClient`, `bindEnvironmentTools`, `HueEnvironmentError`, the [world handoff](#world-handoff) helpers and the simulated-environment types. |
 | `@hue-run/sdk/managed` | `createManagedTargetHandler` and the managed-target types. |
 
@@ -554,7 +554,7 @@ To save generated documents, return `withFiles(output, files)`: it takes a JSON 
 | `sourceDigest(source: string \| Uint8Array)` | SHA-256 declaration for supplied source bytes/text. |
 | `scoreLocally(version, context, { scorers?, schemaTimeoutMillis? }?)` | Computes `Promise<Score>` without uploading it. |
 
-`@hue-run/sdk/evals` uses `zod`, an optional peer dependency (`^3.25.76` or `^4.6.5`), for its bounded runtime contracts; install it when you use evaluations or simulations. JSON Schema scoring uses `ajv`, a separate optional peer dependency (8.17 or later) loaded inside a worker only when `builtins.jsonSchema` scores a case; without it that scorer reports `SchemaValidatorUnavailable`. The tracing core depends only on `@opentelemetry/*` packages.
+JSON Schema scoring uses `ajv`, a separate optional peer dependency (8.17 or later) loaded inside a worker only when `builtins.jsonSchema` scores a case; without it that scorer reports `SchemaValidatorUnavailable`. The tracing core depends only on `@opentelemetry/*` packages.
 
 `ScoreContext` contains `inputs`, `hasOutput`, `hasExpected`, optional `output`/`expected`, `metadata`, `executionState` and, when the runner requires environment evidence, `environment` (an `EnvironmentEvidence`). With environment evidence present, a `local_code` scorer runs even when no output is stored. When required evidence cannot be read, `local_code` results record an `EnvironmentEvidenceUnavailable` error; a world marked `environment_incomplete` produces a skipped result with the fixed explanation `Environment incomplete: provider behavior is not implemented.` A `Score` is `scored` with declared metrics and explanation/evidence, `error` with a typed error, or `skipped` with an explanation. A failed quality metric is still `scored`, with `passed: false`.
 
@@ -564,7 +564,7 @@ Custom callbacks run locally, without a general execution timeout or side-effect
 
 - `UncertainExecutionError` exposes `caseId` and optional `executionId`: no durable outcome is available, so the runner refuses to repeat potentially completed work.
 - `OutcomeSerializationError` exposes `executionId`: the target returned, but its outcome could not be saved as JSON. The runner does not invoke it again.
-- `TargetCancelledError` is thrown when cooperative caller cancellation stops target execution; the runner records the execution as `cancelled`.
+- `TargetCancelledError` is thrown by `runExperiment()` and `runSimulation()` when cooperative caller cancellation stops target execution; the run stays open, and rerunning with the same checkpoint directory retries the interrupted case as a new attempt.
 - `TargetOutcomeUncertainError` exposes `executionId`: the target or its simulated world may have committed but acknowledgement is unavailable, so a resume will not invoke the target again.
 - `TargetTimeoutError` is thrown to a target still running five seconds past its world's `expiresAt`, through the `signal` in its context; the case ends as an `error` of type `TargetTimeout` and the world is sealed abandoned.
 - `TraceExportUnacknowledgedError` is thrown by a resumed case whose saved outcome still waits for a trace export Hue never acknowledged; it is that case's own state on resume, and the cases beside it still run.

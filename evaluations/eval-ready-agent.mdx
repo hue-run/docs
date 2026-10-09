@@ -604,7 +604,7 @@ A world's clock is the source trace start, not wall time; `hue eval` passes RFC 
 
 ## Run it
 
-`hue eval` starts your command once per case. World cases get world variables; answer-only cases get execution and case variables only. Read `{"inputs","config"}` from stdin, run once, print the answer to stdout and exit. Answer-only cases retain generated checks and required judges; see [Cases from traces](/evaluations/case-from-trace#answer-only-cases).
+`hue eval` starts your command once per case. World cases get world variables; answer-only cases get execution and case variables only. Read `{"inputs","config"}` from stdin, run once, print the answer to stdout and exit. Answer-only cases retain generated checks and required judges; see [Trace to case](/evaluations/case-from-trace#answer-only-cases).
 
 Use an absolute entry path for one-shot runs; private case directories cannot resolve repository-relative paths. Workers keep the CLI's starting directory. Examples expand `$PWD` before launch.
 
@@ -644,10 +644,10 @@ print(json.dumps(answer))  # logs go to stderr, never stdout
 Run with a **Read and write** key that `hue login` stored in an ignored env file:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.15.3 --package "zod@^4.6.5" hue eval --case "<name>" --command "node \"$PWD/agent.js\"" --env-file .env.hue
+npx -y @hue-run/sdk@0.16.0 eval --case "<name>" --command "node \"$PWD/agent.js\""
 ```
 
-`hue eval` needs Node.js 22 or 24, even for Python. The two `--package` flags cache the CLI and `zod` without changing the repository. Always pin the SDK: an unpinned package can select an older local copy. Installing `zod` in the project does not help when the SDK is absent; the CLI exits with `hue eval needs zod`, even for `--help`.
+`hue eval` needs Node.js 22 or 24, even for Python. npx caches the CLI without changing the repository. Always pin the SDK: an unpinned `npx @hue-run/sdk` can select an older local copy. See [Run an eval with your agent](/evaluations/run-your-agent) for `--check`, one run per command and resuming.
 
 Every case receives execution and case variables. Only a case with a world receives the world and mirror variables:
 
@@ -668,7 +668,7 @@ Every case receives execution and case variables. Only a case with a world recei
 For the **Run** button and `launch_local_run` to use one agent for answer-only or world-backed cases, start a command worker. It claims queued runs and uses the same stdin handoff:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.15.3 --package "zod@^4.6.5" hue eval --worker --command "node \"$PWD/agent.js\"" --revision "<new-agent-revision>" --env-file .env.hue
+npx -y @hue-run/sdk@0.16.0 eval --worker --command "node \"$PWD/agent.js\"" --revision "<new-agent-revision>"
 ```
 
 Command workers register `direct:v1` and `environment:v1`. Adapter-file workers register world support by default; add `--capability direct:v1` only after the adapter supports direct cases. Change `--revision` when capabilities change; otherwise keep it stable.
@@ -693,7 +693,6 @@ TypeScript adapters lack `HUE_WORLD_TOKEN` and `HUE_EXECUTION_ID`: pass `context
 | Symptom | Fix |
 | --- | --- |
 | Exit 1 with an unsaved eval-set version | Rerun with `--save-version`. |
-| `hue eval needs zod` | Use the two-package `npx` form above. |
 | The helper throws "no world handoff" | Required app or MCP connections need a world token; answer-only cases skip optional apps. |
 | The helper throws "`HUE_SIM_…_URL` is not set" | The world does not include that app; connect it only where `appInWorld` is true. |
 | 501 `surface_unavailable` | The case needs a mirror this deployment does not serve. |

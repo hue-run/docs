@@ -68,7 +68,7 @@ See the [compatibility matrix](/sdks/compatibility). SDK core supports AI SDK 6 
 
 ## A JSON Schema evaluator reports `SchemaValidatorUnavailable`
 
-The validator is optional in both SDKs. Run `npm install ajv` (8.17 or later) for `builtins.jsonSchema` in TypeScript, or `pip install 'hue-run[evals]'` for `builtin_scorers.json_schema` in Python; without it the Python helper raises `ImportError`. Other built-in evaluators do not need these packages. Separately, importing `@hue-run/sdk/evals` needs the optional `zod` peer (`npm install zod`, `^3.25.76` or `^4.6.5`).
+The validator is optional in both SDKs. Run `npm install ajv` (8.17 or later) for `builtins.jsonSchema` in TypeScript, or `pip install 'hue-run[evals]'` for `builtin_scorers.json_schema` in Python; without it the Python helper raises `ImportError`. Other built-in evaluators do not need these packages.
 
 ## Listing eval-set cases fails for a large page
 
