@@ -15,7 +15,7 @@ Use Python 3.10 or later. [Install the Python SDK](/installation#python), then c
 
 Create a **Tracing only** project service key in **Settings → Integrations & API keys** and set `HUE_API_KEY` in your server environment. Keep it out of browser code and Git.
 
-**Tracing only** covers ingestion, connection checks, and known-trace receipt verification. Use **Read and write** instead when the same process also creates datasets, scorers, experiments, or managed runs. See [project keys](/guides/project-keys) for access and rotation. The SDK connects to Hue Cloud by default. Other origins are covered in [connection settings](/guides/project-keys#connection-settings).
+**Tracing only** covers ingestion, connection checks, and known-trace receipt verification. Use **Read and write** when the same process also creates eval sets, evaluators, runs or managed runs. See [project keys](/guides/project-keys) for access and rotation. The SDK connects to Hue Cloud by default. Other origins are covered in [connection settings](/guides/project-keys#connection-settings).
 
 Pass the key as the `api_key=` keyword. The first positional parameter is `base_url`, so a bare key in that position raises `TypeError` naming `api_key=`; existing `Hue(base_url, api_key)` calls keep working. The constructor reads no environment variables.
 
@@ -70,7 +70,7 @@ For a copyable email-masking callback and guidance on custom field rules, follow
 
 With `capture_content=False`, Hue also strips recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes, legacy `gen_ai.*` message events, log bodies and status descriptions from every record it exports, including spans from third-party instrumentors on the same provider. The [compatibility matrix](/sdks/compatibility) lists the keys, which are identical to TypeScript's `contentPrefixes`. The setting does not classify arbitrary attribute names, span names, session IDs or another exporter's records, and unrecognized custom keys pass through. Configure an instrumentor's own content controls before enabling it; it may also send content to other exporters.
 
-For helper content, `redactor(field, value)` receives a detached copy and can return a redacted JSON value before serialization. Mutating that copy does not change application inputs or results, even if the redactor then raises. Snapshotting accepts supported built-in containers and scalars under a conservative 1 MiB value budget, depth 64 and 65,536 visited values/keys. Hue applies it even without a redactor, and checks a redactor's returned value with a fresh snapshot under the same bounds before JSON encoding. Cycles, custom objects or subclasses, non-finite numbers, integers above 14,000 bits and over-budget input are omitted before the callback. These failures and redactor failures increment instrumentation failure counters without raising into application work. Final captured JSON is limited to 256 KiB. The callback must handle your nested data format and avoid side effects through globals or captured references; it is not applied to arbitrary external OpenTelemetry records.
+For helper content, `redactor(field, value)` receives a detached copy and can return a redacted JSON value before serialization. Mutating that copy does not change application inputs or results, even if the redactor then raises. Snapshotting accepts supported built-in containers and scalars under a conservative 1 MiB value budget, depth 64 and 65,536 visited values and keys. Hue applies it even without a redactor, and checks a redactor's returned value with a fresh snapshot under the same bounds before JSON encoding. Cycles, custom objects or subclasses, non-finite numbers, integers above 14,000 bits and over-budget input are omitted before the callback. These failures and redactor failures increment instrumentation failure counters without raising into application work. Final captured JSON is limited to 256 KiB. The callback must handle your nested data format and avoid side effects through globals or captured references; it is not applied to arbitrary external OpenTelemetry records.
 
 The helpers always exclude exception messages and stacks, retaining error type and status. A context manager records an escaping error and rethrows it.
 
@@ -114,7 +114,7 @@ A flush timeout bounds your wait, not the ongoing network request. Both signals 
 
 Before planned application shutdown, finish traced work and keep the process alive long enough to confirm completion. Repeated `shutdown()` calls wait for the same cleanup and report current failures and drops. Spans ending or external records emitted after Hue shuts down count as dropped, including records from a borrowed provider; new Hue helpers are no-ops. A context manager calls shutdown on exit, but you still need an explicit checked flush when your command's exit status must reflect delivery failure.
 
-The SDK uses official OTLP HTTP/protobuf exporters with their retry policy. Export requests are gzip-compressed and carry a `hue-sdk-python/<version>` User-Agent ahead of the exporter's own token. Partial rejections are not retried wholesale. Queues are in memory, so process termination and overflow can lose records. A successful flush is not proof that every application operation was instrumented.
+The SDK uses official OTLP HTTP exporters with protobuf encoding and their retry policy. Export requests are gzip-compressed and carry a `hue-sdk-python/<version>` User-Agent ahead of the exporter's own token. Partial rejections are not retried wholesale. Queues are in memory, so process termination and overflow can lose records. A successful flush is not proof that every application operation was instrumented.
 
 ## Use an existing provider
 
@@ -124,7 +124,7 @@ Hue shutdown leaves borrowed providers and their other processors usable. Your a
 
 ## Evaluate locally
 
-Import the built-in scorer bundle as `from hue_sdk.evals import builtin_scorers`. `builtins` remains an alias, but it shadows the standard-library module of the same name in any file that imports it. `builtin_scorers.json_schema` needs the optional extra, `pip install 'hue-run[evals]'`; without it the helper raises `ImportError` and stored schema scorers report `SchemaValidatorUnavailable`. The tracing core depends only on the OpenTelemetry packages and `requests`. See [your first evaluation](/evaluations/first-evaluation) and the [Python API reference](/reference/python#run-locally-and-rescore).
+Import the built-in evaluator bundle as `from hue_sdk.evals import builtin_scorers`. `builtins` remains an alias, but shadows the standard-library module in files that import it. `builtin_scorers.json_schema` needs `pip install 'hue-run[evals]'`; otherwise the helper raises `ImportError` and stored schema evaluators report `SchemaValidatorUnavailable`. The tracing core depends only on OpenTelemetry packages and `requests`. See [your first evaluation](/evaluations/first-evaluation) and the [Python API reference](/reference/python#run-locally-and-rescore).
 
 ## Run an agent from Hue
 

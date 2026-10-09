@@ -3,7 +3,7 @@ title: "Run your first local evaluation"
 description: "Run a local evaluation, score its output, and rescore it without running your target again."
 ---
 
-This example creates one dataset case, publishes an exact-match scorer, and evaluates a deterministic uppercase function. It then scores the same saved output in a new evaluation run. It makes no model call and consumes no hosted-judge allowance.
+This example creates one eval-set case, publishes an exact-match evaluator, and evaluates a deterministic uppercase function. It then scores the same saved output in a new scoring run. It makes no model call and consumes no hosted-judge allowance.
 
 [Install the SDK](/installation) for your language and set `HUE_API_KEY` to a [project service key](/guides/project-keys) created with the **Read and write** preset. A **Tracing only** key cannot use evaluation APIs. Both SDKs connect to Hue Cloud by default. To run an existing TypeScript agent against a disposable simulated world instead of a plain function, see [simulations](/evaluations/simulations).
 
@@ -18,11 +18,11 @@ Telemetry capture and evaluation storage are separate choices:
 
 Setting the first switch to `false` sends metadata-only telemetry without changing what the evaluation stores.
 
-Dataset inputs and reference answers are intentionally uploaded during setup. The second switch also controls target error messages, scorer evidence, arbitrary explanations, and their copies in local checkpoints. With it disabled, local scores can still be uploaded, but historical scorers skip unavailable output instead of invoking a callback on invented data. Declared metric values are always uploaded, including custom text metrics.
+Eval-set inputs and reference answers are intentionally uploaded during setup. The second switch also controls target error messages, evaluator evidence, arbitrary explanations, and their local-checkpoint copies. With it disabled, local scores can still be uploaded, but historical evaluators skip unavailable output instead of invoking a callback on invented data. Declared metric values are always uploaded, including custom text metrics.
 
-## Create and run the experiment
+## Create and run the evaluation
 
-Choose one language. The program creates its setup once and saves its IDs locally. Subsequent invocations use the same experiment and checkpoint directories. Add the example's `.hue-first-evaluation-*` directory to `.gitignore`.
+Choose one language. The program creates setup once and saves IDs locally; later invocations reuse the same run and checkpoint directories. Add `.hue-first-evaluation-*` to `.gitignore`.
 
 <Tabs>
 <Tab title="TypeScript">
@@ -204,26 +204,26 @@ finally:
 </Tab>
 </Tabs>
 
-The setup directory is created before registry writes. If setup stops before `state.json` is written, the next invocation stops instead of silently creating another experiment. Inspect **Datasets**, **Scorers**, and **Experiments** before recovering setup. Registry mutations have no automatic retry. The saved creation request can recover an uncertain experiment acknowledgement with its original idempotency key and payload.
+The setup directory is created before registry writes. If setup stops before `state.json`, the next invocation stops rather than silently creating another run. Inspect **Evals**, **Evaluators**, and **Runs** before recovery. Registry writes have no automatic retry; the saved request can recover an uncertain acknowledgement with its original idempotency key and payload.
 
 ## Read the result
 
-Open **Experiments** and select **Uppercase baseline**. The target should succeed and the exact-match metric should be true. The historical run uses the same immutable subject ID and saved output. The `rescore` API has no target callback, so it cannot invoke the uppercase function again.
+Open **Runs** and select **Uppercase baseline**. The target should succeed and the exact-match metric should be true. The scoring run uses the same immutable subject ID and saved output. `rescore` has no target callback, so it cannot invoke the uppercase function again.
 
-To compare a different target configuration, create a new experiment with the same frozen dataset version and published scorer version. Use a new checkpoint directory. Do not edit the existing experiment's frozen pins or reuse its checkpoint as a new attempt.
+To compare a different target configuration, create a new run with the same frozen eval-set and published evaluator versions. Use a new checkpoint directory; do not edit frozen pins or reuse a checkpoint.
 
 ## Preserve absence and quality failures
 
 Read presence flags such as `hasOutput` and `hasExpected` in API responses. Do not test value truthiness: JSON `null`, `false`, `0`, and `""` can all be present values. TypeScript target return `undefined` and Python's exported `MISSING` sentinel represent unavailable output. Python `None` is a present null.
 
-A failed quality verdict is still a scored result, typically with `passed: false`. Target execution errors and scorer errors have separate states. Missing evidence produces an explicit skipped result. Exact match preserves scalar types; false is not zero.
+A failed quality verdict is still a scored result, typically with `passed: false`. Target execution and evaluator errors have separate states. Missing evidence produces an explicit skipped result. Exact match preserves scalar types; false is not zero.
 
 ## Resume without repeating side effects
 
-Keep the same experiment ID, content settings, and checkpoint directory when retrying an interrupted upload. The runner saves permitted completion and scoring payloads before upload and reuses their request keys. It will not automatically rerun a target whose outcome is uncertain.
+Keep the same run ID, content settings and checkpoint directory when retrying an interrupted upload. The runner saves permitted completion and scoring payloads before upload and reuses request keys. It will not rerun an uncertain target.
 
 If the process crashes after invoking a target but before saving its outcome, the runner raises `UncertainExecutionError`. Inspect the execution and its side effects. Removing the checkpoint or its lock is not permission to run the target again. Checkpoints are private local files, not encrypted storage. Confirm the old process has stopped before explicitly removing a leftover `.lock`.
 
-The example requires trace evidence. The runner ends the root span and waits for trace/log acknowledgement before completing the execution. An export failure does not silently become omitted evidence, and a fresh exporter cannot prove that an earlier export succeeded. Explicit omission is a separate policy: TypeScript `{ mode: "omit", reason: "This local run does not retain a trace snapshot." }` or Python `TraceEvidence("omit", "This local run does not retain a trace snapshot.")`; supply a meaningful reason if you choose it.
+The example requires trace evidence. The runner ends the root span and waits for trace or log acknowledgement before completing the execution. An export failure does not silently become omitted evidence, and a fresh exporter cannot prove that an earlier export succeeded. Explicit omission is a separate policy: TypeScript `{ mode: "omit", reason: "This local run does not retain a trace snapshot." }` or Python `TraceEvidence("omit", "This local run does not retain a trace snapshot.")`; supply a meaningful reason if you choose it.
 
-Local built-ins also include string inclusion and JSON Schema draft 2020-12. Custom callbacks run on your machine and have no claimed side-effect cancellation. Manual and hosted-judge scorer pins stay pending for their owning workflows; this example does not dispatch them or claim live hosted-model acceptance.
+Local built-ins also include string inclusion and JSON Schema draft 2020-12. Custom callbacks run on your machine without claimed side-effect cancellation. Manual and hosted-judge evaluator pins stay pending for their workflows; this example does not dispatch them or claim live hosted-model acceptance.
