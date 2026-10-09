@@ -10,9 +10,9 @@
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "96243bfa01b0df53ddda2c3e8fa79addfca4eba6",
+      "commit": "df0c50f2b723ffbd636efdbd4dc05684fff7ea4c",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:9a5d0d41b5b2eb350584f593f2cb1761fc7215916a3a0e24bbb953e11b9d9e45"
+      "sha256": "sha256:434e37f24bbb6e5ed30de54eca4fa5e6233e30e49e4a21e5b9de641b4e1da51e"
     }
   },
   "site": {
@@ -74,8 +74,8 @@
   },
   "skill": {
     "version": "0.7.0",
-    "sha256": "sha256:cf318817b615ad80b75f969c887fd57eff32c95b1a772a16272860ad7eb9e896",
-    "sdkSourceSha256": "sha256:9883ba73cc16213f557e2da3396abe4073c217d7868b10262a9540642e3459b5"
+    "sha256": "sha256:70e22c30e393f7d954e98f527e7e94ed36495ca2686b967ad35621b589a952a8",
+    "sdkSourceSha256": "sha256:92962608d1645f5debd8f88bd6e51e03fde05178b783c6ff5cd305dacdb85c80"
   },
   "mcp": {
     "transport": "Streamable HTTP",
