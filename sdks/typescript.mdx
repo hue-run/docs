@@ -9,15 +9,15 @@ For option defaults and method signatures, see the [TypeScript API reference](/r
 
 ## Install
 
-Use Node.js 22 or 24, or Bun 1.4. [Install the TypeScript SDK](/installation#typescript), then configure your key below. The package is ESM; CommonJS applications on Node.js 22.12 or later load it with `require("@hue-run/sdk")`. Check the [compatibility matrix](/sdks/compatibility) if your application already uses AI SDK or OpenTelemetry. Besides the core entry point, the package exposes `@hue-run/sdk/ai-sdk`, `@hue-run/sdk/evals`, `@hue-run/sdk/environment` and `@hue-run/sdk/managed`. `@hue-run/sdk/evals` needs the optional `zod` peer (`npm install zod`, 4.6.5 or later); [simulations](/evaluations/simulations) use it together with `@hue-run/sdk/environment`.
+Use Node.js 22 or 24, or Bun 1.4. [Install the TypeScript SDK](/quickstart#typescript), then configure your key below. The package is ESM; CommonJS applications on Node.js 22.12 or later load it with `require("@hue-run/sdk")`. Check the [compatibility matrix](/sdks/compatibility) if your application already uses AI SDK or OpenTelemetry. Besides the core entry point, the package exposes `@hue-run/sdk/ai-sdk`, `@hue-run/sdk/evals`, `@hue-run/sdk/environment` and `@hue-run/sdk/managed`. `@hue-run/sdk/evals` needs the optional `zod` peer (`npm install zod`, 4.6.5 or later); [simulations](/evaluations/simulations) use it together with `@hue-run/sdk/environment`.
 
 ## Configure your project
 
 Create a **Tracing only** project service key in **Settings → Integrations & API keys**. Put it in your server environment as `HUE_API_KEY`. Keep environment files out of Git and never expose this key to a browser.
 
-**Tracing only** covers ingestion, connection checks, and known-trace receipt verification. Use **Read and write** when the same process also creates eval sets, evaluators, runs, simulations, environments or managed runs. See [project keys](/guides/project-keys) for access and rotation.
+**Tracing only** covers ingestion, connection checks, and known-trace receipt verification. Use **Read and write** when the same process also creates eval sets, evaluators, runs, simulations, environments or managed runs. See [Create a project key](/quickstart#1-create-a-project-key) for access and rotation.
 
-Hue Cloud is the default destination; no base URL is needed. See [connection settings](/guides/project-keys#connection-settings) when using another origin. HTTPS is required except for loopback HTTP. `allowInsecureHttp: true` permits plain HTTP to another host, such as a docker-compose or in-cluster collector, and records a one-time warning issue because the key then travels unencrypted. The SDK reads no `OTEL_EXPORTER_OTLP_*` environment variables; pass configuration explicitly.
+Hue Cloud is the default destination; no base URL is needed. See [connection settings](/quickstart#connection-settings) when using another origin. HTTPS is required except for loopback HTTP. `allowInsecureHttp: true` permits plain HTTP to another host, such as a docker-compose or in-cluster collector, and records a one-time warning issue because the key then travels unencrypted. The SDK reads no `OTEL_EXPORTER_OTLP_*` environment variables; pass configuration explicitly.
 
 `serviceName`, `serviceVersion` and `resourceAttributes` (for example `{ "deployment.environment.name": "production" }`) describe the deployment on a client that owns its providers; `serviceName` and `serviceVersion` take precedence over same-named keys. When you attach Hue to your own providers, they own the resource and `resourceAttributes` is ignored with a warning issue.
 
@@ -88,7 +88,7 @@ For a copyable email-masking callback and guidance on custom field rules, follow
 
 `captureContent` defaults to `true` for an enabled client; set it to `false` to opt out. Use `true`: Hue can only show and evaluate what a trace records. Use `false` for metadata-only capture when you'd rather not send content, or when an application or data policy forbids sending it to another service. A disabled client (`enabled: false`) exports nothing and defaults it to `false`.
 
-- `true`, the recommended setting, captures content you provide to supported helpers and instrumentations: prompts and messages, responses and tool inputs and outputs, alongside model, usage, timing and errors. Hue stores received content under your project’s [retention policy](/guides/production-safety#content-capture-and-retention). Before export, the SDK replaces credentials in recorded tool definitions with `"[redacted]"` and exports an inline file over 64 KiB in recorded messages as its `sha256` and `size`; see the [content policy](/reference/typescript#content-policy).
+- `true`, the recommended setting, captures content you provide to supported helpers and instrumentations: prompts and messages, responses and tool inputs and outputs, alongside model, usage, timing and errors. Hue stores received content under your project’s [retention policy](/guides/redaction#retention). Before export, the SDK replaces credentials in recorded tool definitions with `"[redacted]"` and exports an inline file over 64 KiB in recorded messages as its `sha256` and `size`; see the [content policy](/reference/typescript#content-policy).
 - `false` disables Hue helper content and removes recognized GenAI, Vercel AI SDK, OpenInference, and OpenLLMetry content fields before Hue exports them, including spans from other instrumentations on a shared provider. It also removes log bodies, status descriptions and exception text. The exported `contentPrefixes` array lists the removed keys.
 - `redact(value, path)` can transform supported strings before export. Redactor and capture failures omit unsafe content and increment instrumentation failure counters without changing application results.
 
@@ -171,9 +171,68 @@ Only require fields the request should emit and your capture policy permits. Sup
 
 The receipt reports stored field presence, span counts, and missing expected spans. It contains no captured values. A successful result confirms the conditions you requested; inspect the trace in Hue to check the content and redaction. See the [verification API](/reference/typescript#trace-verification) for limits and failures.
 
-For serving requests, use [safe initialization, lifecycle deadlines and a kill switch](/guides/production-safety).
+## Production setup
 
-## Delivery failures
+Keep tracing best effort in a serving application: an outage should reduce observability, not prevent an answer. Hue follows OpenTelemetry's [runtime error containment](https://opentelemetry.io/docs/specs/otel/error-handling/) and [bounded-resource principles](https://opentelemetry.io/docs/specs/otel/performance/). Use a **Tracing only** project service key for application requests; use **Read and write** only when the same process also calls evaluation APIs, and keep that key off production servers.
+
+The SDK suppresses its own export traffic from OpenTelemetry instrumentation. Snapshot boundaries reject unsupported values; TypeScript also handles Proxies and typed bytes without bypassing queue budgets. Verify your dependency and instrumentor combination in CI.
+
+### Verify setup outside request handling
+
+Run the strict [quickstart](/quickstart), connection check and [trace receipt verification](#verify) during setup, not in readiness or customer requests.
+
+Create one client per serving process with the safe constructor and background export. Use safe lifecycle methods at the lifecycle boundary; never rerun an agent after a telemetry error because tools may have caused side effects.
+
+```ts
+import { createHueSafe, type JsonValue } from "@hue-run/sdk";
+
+export const hue = createHueSafe({
+  apiKey: process.env.HUE_API_KEY ?? "",
+  serviceName: "customer-agent",
+  captureContent: process.env.HUE_CAPTURE_CONTENT !== "false", // Content is on unless explicitly disabled.
+  enabled: process.env.HUE_TRACING_ENABLED !== "false",
+  maxQueueBytes: 8 * 1024 * 1024,
+});
+
+// Call your existing agent exactly once. Preserve its result and exceptions.
+export async function handleRequest(input: JsonValue) {
+  return hue.withSpan("agent.request", async (span) => {
+    const result = await existingAgent(input);
+    span.setOutput(result);
+    return result;
+  }, { input });
+}
+
+// At process shutdown, after stopping new requests:
+export async function shutdownTracing() {
+  return hue.shutdownSafe({ timeoutMillis: 1000 });
+}
+// Register shutdownTracing in your shutdown hook; observe its result without throwing.
+```
+
+`existingAgent` is your function. Register shutdown in the process hook. For serverless, flush in the supported after-response lifecycle; do not shut down shared providers per request.
+
+### Failure behavior
+
+Hue omits unsafe content or redactor failures, records instrumentation failure and preserves application results and errors. Safe initialization returns a disabled client on setup failure; helpers still execute application work.
+
+Safe lifecycle methods return failure results. A timeout neither proves delivery nor cancels an in-flight request. `createHue`, checks, verification and strict lifecycle methods remain diagnostic and may fail.
+
+Queues limit records and bytes, including in-flight records. TypeScript's default 8 MiB is shared by traces and logs. This bounds queued telemetry, not process RSS. Overflow drops telemetry and updates counters without retrying business work.
+
+Network retries are bounded. Shutdown counts discards; process kill, full queues, disabled clients and exporter failures can lose telemetry. There is no disk spool or delivery guarantee.
+
+In-process code cannot prevent termination, OOM, stalls or third-party hooks. Keep redactors fast and offline. Safe construction cannot catch import or dependency failures, so verify startup in CI or guard the integration.
+
+### Kill switch and monitoring
+
+The snippets read `HUE_TRACING_ENABLED`; set it to `false` and restart to bypass Hue without changing application code. It is not a remote flag. Strict constructors also accept `enabled: false`; a disabled client needs neither a key nor capture settings.
+
+Inspect `hue.transport.getReport()` for failures, drops, pending bytes and exports. Counters are cumulative; pending bytes and records are current gauges. Emit only sanitized counts and status, never credentials, content or raw provider exceptions, and do not send health signals only through Hue.
+
+Before rollout, test your real entry point against a loopback receiver that returns 503, rejects its key, delays its response and exceeds queue capacity. Verify that each tool runs once, results and errors match an uninstrumented request, and shutdown meets your deadline. Start with a small canary.
+
+### Delivery failures
 
 `flush()` drains traces and logs. Partial rejection, malformed acknowledgement, queue overflow, and export failure raise `HueExportError`. Its report contains cumulative accepted, rejected, failed, and pending counts; `hue.transport.getIssues()` returns recent sanitized issues.
 

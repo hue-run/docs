@@ -1,5 +1,6 @@
 ---
-title: "Reproduce failures"
+title: "Build an environment from a trace"
+sidebarTitle: "Environments from traces"
 description: "Build a simulated environment from a trace, run your agent, and inspect each attempt."
 ---
 
@@ -28,7 +29,7 @@ profile are available through `search_hue_tools` and `execute_hue_tool` or
 Ask an owner or admin to enable **AI trace builds** in **Settings → Projects → Edit project**.
 This allows Hue to send redacted trace content and supplied context to models that populate
 the environment. The MCP setting is `update_project` with `ai_case_conversion_suggestions: true`;
-the same setting also controls case builds. See [AI processing](/guides/production-safety#trace-analysis).
+the same setting also controls case builds. See [AI processing](/guides/redaction#ai-processing).
 
 Linear is the first supported app. Keep your agent's own model, search and helper connections;
 replace its Linear connection with the simulation connection for each attempt.

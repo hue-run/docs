@@ -142,7 +142,7 @@ test("a complete skill override validates its install commands against its sourc
 
 test("a skill source version does not change the other pages' package contract", () => {
   const sdk = JSON.parse(readFileSync(resolve(root, "contracts/sdk-docs.json"), "utf8"));
-  const result = checkSnapshot((directory) => changePage(directory, "installation.mdx", (text) =>
+  const result = checkSnapshot((directory) => changePage(directory, "quickstart.mdx", (text) =>
     text.replace(`@hue-run/sdk@${sdk.packages.typescript.version}`, "@hue-run/sdk@0.1.0"),
   ));
   assert.notEqual(result.status, 0);
@@ -371,7 +371,7 @@ test("the agent setup page must offer the other MCP client option, not only name
 
 test("the agent setup page cannot be hidden again", () => {
   const result = checkSnapshot((directory) => changePage(directory, "guides/agent-setup.mdx", (text) =>
-    text.replace('sidebarTitle: "Coding agent setup"\n', 'sidebarTitle: "Coding agent setup"\nhidden: true\n'),
+    text.replace('title: "Agent setup"\n', 'title: "Agent setup"\nhidden: true\n'),
   ));
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /guides\/agent-setup\.mdx must stay visible in navigation/);

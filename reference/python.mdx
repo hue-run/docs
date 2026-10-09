@@ -4,7 +4,7 @@ description: "Use the Python SDK to trace, evaluate, score, and drive simulated 
 sidebarTitle: "Python API"
 ---
 
-This reference covers `hue-run` **0.8.0** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/installation) for the available package release.
+This reference covers `hue-run` **0.8.0** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use the [installation guide](/quickstart) for the available package release.
 
 ## Imports
 
@@ -438,4 +438,4 @@ Import `create_hue_safe` from `hue_sdk`. It accepts the same constructor argumen
 
 `force_flush_safe(timeout_millis=1000)` and `shutdown_safe(timeout_millis=1000)` return booleans without raising. Observe `export_status`; it includes `instrumentation_failures`, `dropped_trace_records`, `dropped_log_records`, `queued_trace_records`, `queued_log_records`, `queued_trace_bytes` and `queued_log_bytes`. Queued counts include in-flight records; health is cumulative.
 
-Constructor options `max_queue_size=2048` and `max_queue_bytes=8388608` bound each signal's retained telemetry. Encoded bytes are not total process RSS. HTTP acknowledgements are capped at 64 KiB; 429 and Retry-After are honored within the transport budget. One retained network worker per signal bounds blocked network work, although Python cannot forcibly cancel every blocked system call. After a request timeout, that worker may retain up to 1 MiB of encoded request data per signal outside queue counters. Later batches stay queued within their limits until transport recovery; shutdown counts any queued records it must discard. See [production safety](/guides/production-safety).
+Constructor options `max_queue_size=2048` and `max_queue_bytes=8388608` bound each signal's retained telemetry. Encoded bytes are not total process RSS. HTTP acknowledgements are capped at 64 KiB; 429 and Retry-After are honored within the transport budget. One retained network worker per signal bounds blocked network work, although Python cannot forcibly cancel every blocked system call. After a request timeout, that worker may retain up to 1 MiB of encoded request data per signal outside queue counters. Later batches stay queued within their limits until transport recovery; shutdown counts any queued records it must discard. See [Python production setup](/sdks/python#production-setup).

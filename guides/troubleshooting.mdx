@@ -48,7 +48,7 @@ In a serverless application, await the telemetry flush in the framework's suppor
 
 ## Flush reports a failure
 
-TypeScript `flush()` throws `HueExportError` for rejected or failed export work. Python `force_flush()` returns `False` for an observed export failure, dropped record, instrumentation omission or timeout. Use the bounded safe variants in serving application lifecycles; see [production safety](/guides/production-safety). Inspect their sanitized status reports; do not discard those results.
+TypeScript `flush()` throws `HueExportError` for rejected or failed export work. Python `force_flush()` returns `False` for an observed export failure, dropped record, instrumentation omission or timeout. Use the bounded safe variants in serving application lifecycles; see [TypeScript production setup](/sdks/typescript#production-setup) and [Python production setup](/sdks/python#production-setup). Inspect their sanitized status reports; do not discard those results.
 
 In-memory queues can lose records on termination, overflow or sampling. A timeout does not prove rejection. Hue deduplicates exact completed-span or log replays, but rerunning work or changing IDs creates records; inspect partial-batch rejections before retrying.
 
@@ -78,8 +78,18 @@ Check which outcome failed: the original application execution, the evaluator's 
 
 ## The MCP server rejects the agent
 
-The MCP server accepts a **Read** or **Read and write** project key, or a Hue sign-in connection. For authentication, connection and tool-list issues, see [MCP troubleshooting](/agents/mcp-server#troubleshooting); for trace fields, limits and errors, see [Investigate production](/agents/investigate-production#limits-and-errors).
+The MCP server accepts a **Read** or **Read and write** project key, or a Hue sign-in connection. For authentication, connection and tool-list issues, see [MCP troubleshooting](/agents/mcp-server#troubleshooting); for trace fields, limits and errors, see [MCP tools](/agents/mcp-tools#limits-and-errors).
 
 ## Tracing is disabled or data is being dropped
 
-Check `HUE_TRACING_ENABLED`, package versions, initialization failures and pending bytes and records. Safe initialization can disable tracing while application work succeeds. `429` means the minute allocation was exhausted; `503` can mean saturation, timeout or unavailable persistence. Respect `Retry-After`; do not repeat business work. See [production safety](/guides/production-safety#ingestion-limits).
+Check `HUE_TRACING_ENABLED`, package versions, initialization failures and pending bytes and records. Safe initialization can disable tracing while application work succeeds. `429` means the minute allocation was exhausted; `503` can mean saturation, timeout or unavailable persistence. Respect `Retry-After`; do not repeat business work. See [Requests are rate limited](#requests-are-rate-limited).
+
+## Requests are rate limited
+
+Each project allows 600 telemetry requests, 20,000 new records and 32 MiB logical payload per one-minute window; spans and logs share it. Managed-evaluation root spans use a separate path, so upload limits cannot block orchestration evidence. That path retains tenant checks, deadlines, trace limits and deduplication; uploads cannot select it. The window starts on admission; the next reservation or final evidence charge after 60 seconds starts another. Requests count at admission; records and payload count at storage. Authenticated attempts, including failed writes or retries, use request allowance; exact retries do not add records or payload. Admission limits return 429 or 503 with `Retry-After`; client queues can still overflow.
+
+Tracing uses a bounded database pool separate from application queries. Page-triggered naming uses that pool for at most 30 traces per visit, one at a time; failures leave traces unnamed for a later visit.
+
+These are protective limits, not an SLA. Ask Hue to size the allowance for your instances, request rate, spans and payload; measure latency and overhead under expected concurrency. Local benchmarks do not establish production capacity.
+
+For longer outage buffering, consider a separately operated OpenTelemetry Collector with explicit memory, queue and storage limits. Durable queues add disk and retention failure modes and do not remove instrumentation overhead. See [Collector resilience guidance](https://opentelemetry.io/docs/collector/resiliency/).

@@ -1,11 +1,40 @@
 ---
-title: "Redaction"
-description: "Redact sensitive trace content before it leaves your application."
+title: "Data privacy"
+description: "Configure content capture, redaction, retention and AI processing for your trace data."
 ---
 
 Keep useful prompts, responses and tool evidence while removing information you do not want to send to Hue. You supply a synchronous redaction callback; Hue applies it locally to the supported content below. The SDK does not include a general PII detector or email-masking preset.
 
 Start with the email example, then adapt it to your application's data. Pattern matching catches common email addresses, not every address format, encoded value or category of personal information. Keep opaque user and session IDs for grouping; avoid using an email address as an identifier. Redaction affects future exports, not data already stored.
+
+## Content capture
+
+The SDK examples capture content when `HUE_CAPTURE_CONTENT` is unset. Hue can show and evaluate only recorded data, including prompts, responses and tool inputs and outputs. Set `HUE_CAPTURE_CONTENT=false` for metadata-only export; this does not disable redaction or credential scrubbing. Use a redaction callback for email and custom field rules.
+
+In metadata-only mode, both SDKs strip recognized third-party content attributes on Hue's export path, but custom keys pass through; configure third-party instrumentors separately.
+
+Hue names each trace from its own recorded request text, or from a trace name the producer set, inside Hue. Naming sends nothing to a model provider and needs no setting.
+
+## Retention
+
+Telemetry retention is configured per project. A policy removes eligible older traces by periodic sweep; without one, telemetry does not expire automatically. Saved snapshots retain evidence after the source trace expires and need separate deletion; archiving does not delete data. Quotas protect admission, not retention.
+
+## AI processing
+
+Hue assesses stored traces; some settings send conversation text to a model. Align them with your capture policy.
+
+Owners and admins manage consent in **Settings → Trace checks** and other settings in **Settings → Projects → Edit project**; MCP uses `set_trace_checks_consent` and `update_project`. Both require **Read and write** and owner or admin authority.
+
+| Setting | Default | What it does and sends |
+| --- | --- | --- |
+| **Trace findings** | On | Reads each ended trace's recorded spans inside Hue for rule findings, such as a tool error with no later success, and sets the trace's attention state. Nothing leaves Hue. |
+| **AI trace findings** | On | Once a trace has ended or stalled, sends its latest user request, up to eight earlier conversation turns and the final reply to TypeSafe's decision model for typed judgments about the reply. It never sends tool arguments, results, files or metadata. Turning it off stops new judgments. |
+| **AI intent classification** | On | Once the project publishes an intent taxonomy, sends excerpts of each trace's conversation to TypeSafe to sort traces by task type. |
+| **AI request judges** | Off | Lets Hue's request judges send each request's text, earlier dialogue, handoffs to sub-agents, tool and skill inputs and outputs, and replies to TypeSafe's decision model to judge delegation, scope and answers, for the answers `get_request_answer` reports over MCP. Hue judges a project's requests only after it has set up request answers for that project. Turning it off stops new judgments. |
+| **AI trace builds** | On | When someone builds a case or environment from a trace, sends redacted trace content and supplied context to models to populate the world, build and check the case, suggest criteria and calibrate judges. Turning it off stops new model calls for these builds. The MCP setting is `ai_case_conversion_suggestions`. |
+| Trace-check consent | Off | Trace checks run only after a project gives this separate consent and activates a version. They then send bounded recorded requests, replies, delegation instructions, tool outputs and reduced context to the trace-check model through the Vercel AI Gateway. Withdrawing consent stops new model work. |
+
+Run traces are not assessed. The [MCP data model](/agents/mcp-tools#data-model) describes the attention states, findings, trace checks and intents that these settings produce.
 
 ## Where to redact
 
@@ -20,7 +49,7 @@ Callbacks do not cover every OpenTelemetry field. Keep sensitive information out
 
 ## TypeScript example
 
-[Install the SDK](/installation#typescript) and set `HUE_API_KEY` to a **Tracing only** project key in your server environment. Save this reusable callback as `redaction.ts`:
+[Install the SDK](/quickstart#typescript) and set `HUE_API_KEY` to a **Tracing only** project key in your server environment. Save this reusable callback as `redaction.ts`:
 
 ```ts
 export function redactEmails(value: string, _path: string): string {
@@ -93,13 +122,13 @@ Put the callback on the **transport** when supplying a transport to `createHue`.
   });
 ```
 
-`provider`, `resource` and `existingProcessor` represent your existing setup. If you also export logs, add `hueTransport.logRecordProcessor` to your existing logger provider. Follow the [complete OpenTelemetry setup](/integrations/opentelemetry#existing-javascript-providers) for lifecycle handling and [production safety](/guides/production-safety) for fail-open initialization.
+`provider`, `resource` and `existingProcessor` represent your existing setup. If you also export logs, add `hueTransport.logRecordProcessor` to your existing logger provider. Follow the [complete OpenTelemetry setup](/integrations/opentelemetry#existing-javascript-providers) for lifecycle handling and [production setup](/sdks/typescript#production-setup) for fail-open initialization.
 
 Each exporter needs its own policy. A Langfuse `mask` callback does not automatically scrub Hue's copy, and Hue's callback does not scrub Langfuse's copy. Keep the current instrumentation and provider; see [Use with Langfuse](/integrations/opentelemetry#use-with-langfuse).
 
 ## Python example
 
-[Install `hue-run`](/installation#python) and set `HUE_API_KEY` to a **Tracing only** project key. Save this as `trace.py` and run `python trace.py` in that environment:
+[Install `hue-run`](/quickstart#python) and set `HUE_API_KEY` to a **Tracing only** project key. Save this as `trace.py` and run `python trace.py` in that environment:
 
 ```python
 import os
@@ -179,4 +208,4 @@ Run a synthetic request through the application's actual instrumentation, includ
 
 Test a callback that throws. TypeScript rejects the affected export record and reports an export issue; Python omits the affected helper content field and counts an instrumentation failure. The original sensitive value must not be sent as a fallback, and application results and errors must remain unchanged. Inspect `hue.transport.getReport()` / `getIssues()` or Python's `hue.export_status`; log only sanitized counters and status, never original content or callback exceptions.
 
-A successful [trace receipt](/sdks/typescript#verify) confirms requested spans and field presence, not correct redaction. The examples use strict flush checks for diagnostics; use the [production-safe lifecycle](/guides/production-safety) in serving applications. Existing stored traces are unaffected; agree [retention and deletion](/guides/production-safety#content-capture-and-retention) separately.
+A successful [trace receipt](/sdks/typescript#verify) confirms requested spans and field presence, not correct redaction. The examples use strict flush checks for diagnostics; use the [production-safe lifecycle](/sdks/typescript#production-setup) in serving applications. Existing stored traces are unaffected; agree [retention and deletion](/guides/redaction#retention) separately.

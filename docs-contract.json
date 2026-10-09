@@ -20,7 +20,7 @@
     "projectMcpUrl": "https://mcp.hue.run/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
     "skillUrl": "https://docs.hue.run/skill.md?v=0.6.5",
-    "pageCount": 29
+    "pageCount": 24
   },
   "serviceKeyPresets": [
     {
@@ -201,18 +201,13 @@
   },
   "pages": [
     "index",
-    "concepts",
-    "guides/hue-app",
     "quickstart",
-    "installation",
     "guides/agent-setup",
-    "guides/project-keys",
     "sdks/typescript",
     "sdks/python",
     "integrations/opentelemetry",
     "integrations/reference-chatbot",
     "guides/redaction",
-    "guides/production-safety",
     "guides/troubleshooting",
     "evaluations/first-evaluation",
     "evaluations/case-from-trace",
@@ -221,8 +216,8 @@
     "evaluations/managed-runs",
     "agents/overview",
     "agents/mcp-server",
-    "agents/investigate-production",
     "agents/debug-environment",
+    "concepts",
     "sdks/cli",
     "agents/mcp-tools",
     "reference/typescript",

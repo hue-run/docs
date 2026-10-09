@@ -4,7 +4,7 @@ description: "Use the TypeScript SDK to trace, evaluate, score, and run simulate
 sidebarTitle: "TypeScript API"
 ---
 
-This reference covers `@hue-run/sdk` **0.14.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/installation) for the available package release.
+This reference covers `@hue-run/sdk` **0.14.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use the [installation guide](/quickstart) for the available package release.
 
 ## Imports
 
@@ -983,4 +983,4 @@ The target receives a `ManagedTargetContext`: `executionId`, `attempt`, `input`,
 
 `createHueSafe(options)` accepts the same options as `createHue`, catches initialization failures and returns a disabled client with an instrumentation failure; the caller's `onExportIssue` stays attached and receives the configuration error's message as the reported issue. Pass an empty string for an unset environment key; the safe constructor handles the invalid configuration. `enabled: false` needs neither a key nor a `captureContent` choice. `flushSafe(options?: SafeLifecycleOptions)` and `shutdownSafe(options?: SafeLifecycleOptions)` return `Promise<SafeLifecycleResult>`, `{ ok: boolean; timedOut: boolean; report: ExportReport }`, without rejecting. `SafeLifecycleOptions.timeoutMillis` is the caller deadline, 1–60000 ms, default 1000. A deadline does not cancel a borrowed provider.
 
-The report also exposes `pendingBytes`, `droppedSpans`, `droppedLogs` and `instrumentationFailures`. Dropped records are subsets of failed records; do not add those counts together. Safe `ok` reflects cumulative failures for the client lifetime. Capture/setup/cleanup failures in Hue helpers omit telemetry and preserve the original callback result/error. Async `onExportIssue` rejections are contained and callbacks are rate-limited. See [production safety](/guides/production-safety).
+The report also exposes `pendingBytes`, `droppedSpans`, `droppedLogs` and `instrumentationFailures`. Dropped records are subsets of failed records; do not add those counts together. Safe `ok` reflects cumulative failures for the client lifetime. Capture/setup/cleanup failures in Hue helpers omit telemetry and preserve the original callback result/error. Async `onExportIssue` rejections are contained and callbacks are rate-limited. See [TypeScript production setup](/sdks/typescript#production-setup).
