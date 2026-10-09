@@ -3,7 +3,7 @@ title: "Compatibility"
 description: "Tested runtimes, instrumentation versions and capture behavior for TypeScript 0.16.0 and Python 0.9.1."
 ---
 
-This checkout covers TypeScript `0.16.0` and Python `0.9.1`. Registry availability is established by the completed [release workflow](https://github.com/hue-run/hue-sdk/blob/main/RELEASING.md). See [VERSIONING.md](https://github.com/hue-run/hue-sdk/blob/main/VERSIONING.md) for the versioning, deprecation and runtime support policy. Tested combinations establish the paths below; accepting standard OTLP is broader than testing every instrumentation library.
+This checkout covers TypeScript `0.16.0` and Python `0.9.1`. Registry availability is established by the completed [release workflow](https://github.com/hue-run/hue-sdk/blob/main/RELEASING.md). See [VERSIONING.md](./VERSIONING.md) for the versioning, deprecation and runtime support policy. Tested combinations establish the paths below; accepting standard OTLP is broader than testing every instrumentation library.
 
 | Path | Verified support | Boundary |
 | --- | --- | --- |
@@ -53,7 +53,7 @@ Both SDKs expose product-named eval set, evaluator, run and scoring client metho
 
 TypeScript local experiments, connected workers and rescoring also handle file-based cases: the runner downloads and verifies a case's pinned input files, uploads the documents a target returns as verified Hue artifacts, and hands both to local scorers, including when it regrades files a previous run saved. That file handling shipped in TypeScript `0.5.0`, needs a Hue deployment that serves case input files, subject files and the artifact APIs, and has no Python equivalent.
 
-The clients do not yet expose every platform REST operation. Dataset editing/archival, case replacement/deletion, promotion from a trace, copying published scorers, experiment/run listing and frozen-trace snapshot reads are not convenience methods in these clients. Trace browsing for coding agents is served by the [Hue MCP server](/agents/mcp-server) with a **Read and write** key, or a **Read** key for inspect-only access, not by these clients. Open pull requests are not released functionality.
+The clients do not yet expose every platform REST operation. Dataset editing/archival, case replacement/deletion, promotion from a trace, copying published scorers, experiment/run listing and frozen-trace snapshot reads are not convenience methods in these clients. Trace browsing for coding agents is served by the [Hue MCP server](https://docs.hue.run/agents/mcp-server) with a **Read and write** key, or a **Read** key for inspect-only access, not by these clients. Open pull requests are not released functionality.
 
 API responses are limited to 4 MiB by the clients. Full dataset pages can exceed this limit when cases contain large values. Use smaller explicit page limits when listing full cases; the local experiment runner separately reads summaries and individual cases. A response-size failure does not establish that the server rejected the request.
 
@@ -63,7 +63,7 @@ The TypeScript and Python managed target adapters use the same versioned HTTP co
 
 ## Failure isolation
 
-Serving applications should use `createHueSafe` / `create_hue_safe`, `enabled: false` / `enabled=False` for a local kill switch, and bounded safe lifecycle methods. See [production safety](https://docs.hue.run/guides/production-safety). Helper capture failures omit telemetry, preserve business results/errors and increment diagnostic counters. TypeScript defaults to an 8 MiB combined trace/log queue budget; Python defaults to 8 MiB per signal, including in-flight records. These are telemetry budgets, not process RSS ceilings. A process kill, arbitrary slow user hook, third-party instrumentation or out-of-memory condition remains outside an in-process SDK guarantee.
+Serving applications should use `createHueSafe` / `create_hue_safe`, `enabled: false` / `enabled=False` for a local kill switch, and bounded safe lifecycle methods. See [TypeScript production setup](https://docs.hue.run/sdks/typescript#production-setup) and [Python production setup](https://docs.hue.run/sdks/python#production-setup). Helper capture failures omit telemetry, preserve business results/errors and increment diagnostic counters. TypeScript defaults to an 8 MiB combined trace/log queue budget; Python defaults to 8 MiB per signal, including in-flight records. These are telemetry budgets, not process RSS ceilings. A process kill, arbitrary slow user hook, third-party instrumentation or out-of-memory condition remains outside an in-process SDK guarantee.
 
 ## App-launched local agents
 
