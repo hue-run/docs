@@ -27,39 +27,9 @@ Don't have a Hue account yet? The Hue team sets up accounts: email [founders@hue
 
 In [Hue](https://app.hue.run), select your project and open **Settings → Integrations & API keys** to create a **Tracing only** service key. Keep the key in your server environment.
 
-Use a project service key for SDK requests and OpenTelemetry exports. Create it in **Settings → Integrations & API keys** within the project you want to use.
+Store the key as `HUE_API_KEY` in your server environment or secret manager.
 
-### Configure your app
-
-Store the key as `HUE_API_KEY` in your server environment or secret manager. Pass it to the SDK constructor, as shown in the [quickstart](/quickstart). Hue constructors do not automatically load environment files.
-
-For direct HTTP requests, authentication uses `Authorization: Bearer <project-service-key>`. The key determines the destination project. Resource attributes, observed user IDs and session IDs cannot select a different project.
-
-### Access levels
-
-A key either reads the project, reads and writes it, or only sends traces:
-
-| Preset | Use it for | Access |
-| --- | --- | --- |
-| **Read** | A coding agent on the [Hue MCP server](/agents/mcp-server) | Reads project traces and recorded content, attention states, trace checks, evaluations, reviewed cases, intents, managed and local runs, artifacts, members, and keys, which covers production [recipes](/agents/mcp-tools#recipes). It cannot send telemetry or change project data. |
-| **Read and write** | A trusted MCP client, CI job, evaluation worker, or source-capture process that also changes project data | Everything **Read** reaches, plus MCP writes, tracing, source capture, and evaluation, artifact, simulation, environment, and managed-run APIs. Append `?read_only=true` to the MCP URL to hide writes. Billing stays in Settings. |
-| **Tracing only** | Application telemetry, connection checks, and known-trace receipts | Sends traces and logs. It cannot browse project data or use evaluation APIs. |
-
-Choose **Tracing only** for a production application and store it as `HUE_API_KEY`: if it leaks, it can send telemetry but cannot read your traces, list members, or create keys. For key-based MCP access, configure the key as `HUE_MCP_KEY` in the agent's MCP client, never in the application. A **Read** key is enough for an agent that inspects the project and investigates production. Use **Read and write** only for a process that should change project data, such as an evaluation worker or an agent that authors evaluations, and keep it off production servers. On a development machine, one **Read and write** key can serve as both the evaluation `HUE_API_KEY` and `HUE_MCP_KEY`; `hue login` stores it under both names. Create separate keys when you want to revoke either use alone. The [MCP connection guide](/agents/mcp-server) also covers signing in without a key.
-
-The [MCP access-level reference](/agents/mcp-tools#access-levels) lists the tools each access level exposes.
-
-Keys created with earlier presets keep their access. **Coding agent (read-only)** and **Coding agent (read + evaluations)** keys now appear as **Read** and **Read and write**. **Tracing and evaluations** and **Source capture only** keys appear as **Tracing and evaluations (legacy)** and **Source capture (legacy)**; they keep working for their original APIs but cannot read project data through the MCP server, and new keys use **Read and write** instead. Creating a new restricted key does not narrow an older credential.
-
-Treat every key as a server credential. Keep it out of browser bundles, logs, source control and prompts. Owners and admins can create and revoke keys. A newly invited member needs an owner or admin to supply a key through the team's secret store. To connect an MCP client, any member can instead [sign in with Hue](/agents/mcp-server#sign-in-with-hue) without a key.
-
-A service key does not represent a signed-in Hue user. Owner- and admin-only tools on the [MCP server](/agents/mcp-server) check the key's creating verified member, or for a sign-in connection the member who approved it. Org invites and role changes stay in the application session. Trace browsing goes through that MCP server with a **Read** or **Read and write** key or by signing in with Hue; the SDKs do not expose a general trace-search API.
-
-### Verify and rotate keys
-
-Call `hue.checkConnection()` in TypeScript or `hue.validate_project()` in Python. These send a project lookup without a trace and return the project identity. Confirm it matches the project you intend to use before exporting data.
-
-When replacing a key, configure the replacement in the server's secret store, verify the connection, then revoke the old key in project settings. Never include either credential in a support report. A successful connection check validates project access; the first-trace check separately verifies instrumentation and delivery.
+See [Project keys](#project-keys) for access levels and rotation.
 
 ## 2. Install the SDK
 
@@ -226,6 +196,40 @@ In the same Hue project, open **Traces** and match the printed trace ID. You sho
 - Input `Hello Hue` and output `HELLO HUE`. With `HUE_CAPTURE_CONTENT=false`, the trace shows no input or output.
 
 Export acknowledgement confirms receiver acceptance. Inspecting the stored trace verifies the complete setup.
+
+## Project keys
+
+Use a project service key for SDK requests and OpenTelemetry exports. Pass it to the SDK constructor. Hue constructors do not automatically load environment files.
+
+For direct HTTP requests, authentication uses `Authorization: Bearer <project-service-key>`. The key determines the destination project. Resource attributes, observed user IDs and session IDs cannot select a different project.
+
+### Access levels
+
+A key either reads the project, reads and writes it, or only sends traces:
+
+| Preset | Use it for | Access |
+| --- | --- | --- |
+| **Read** | A coding agent on the [Hue MCP server](/agents/mcp-server) | Reads project traces and recorded content, attention states, trace checks, evaluations, reviewed cases, intents, managed and local runs, artifacts, members, and keys, which covers production [recipes](/agents/mcp-tools#recipes). It cannot send telemetry or change project data. |
+| **Read and write** | A trusted MCP client, CI job, evaluation worker, or source-capture process that also changes project data | Everything **Read** reaches, plus MCP writes, tracing, source capture, and evaluation, artifact, simulation, environment, and managed-run APIs. Append `?read_only=true` to the MCP URL to hide writes. Billing stays in Settings. |
+| **Tracing only** | Application telemetry, connection checks, and known-trace receipts | Sends traces and logs. It cannot browse project data or use evaluation APIs. |
+
+Choose **Tracing only** for a production application and store it as `HUE_API_KEY`: if it leaks, it can send telemetry but cannot read your traces, list members, or create keys. For key-based MCP access, configure the key as `HUE_MCP_KEY` in the agent's MCP client, never in the application. A **Read** key is enough for an agent that inspects the project and investigates production. Use **Read and write** only for a process that should change project data, such as an evaluation worker or an agent that authors evaluations, and keep it off production servers. On a development machine, one **Read and write** key can serve as both the evaluation `HUE_API_KEY` and `HUE_MCP_KEY`; `hue login` stores it under both names. Create separate keys when you want to revoke either use alone. The [MCP connection guide](/agents/mcp-server) also covers signing in without a key.
+
+The [MCP access-level reference](/agents/mcp-tools#access-levels) lists the tools each access level exposes.
+
+A service key does not represent a signed-in Hue user. Owner- and admin-only tools on the [MCP server](/agents/mcp-server) check the key's creating verified member, or for a sign-in connection the member who approved it. Org invites and role changes stay in the application session. Trace browsing goes through that MCP server with a **Read** or **Read and write** key or by signing in with Hue; the SDKs do not expose a general trace-search API.
+
+Treat every key as a server credential. Keep it out of browser bundles, logs, source control and prompts. Owners and admins can create and revoke keys. A newly invited member needs an owner or admin to supply a key through the team's secret store. To connect an MCP client, any member can instead [sign in with Hue](/agents/mcp-server#sign-in-with-hue) without a key.
+
+### Legacy presets
+
+Keys created with earlier presets keep their access. **Coding agent (read-only)** and **Coding agent (read + evaluations)** keys now appear as **Read** and **Read and write**. **Tracing and evaluations** and **Source capture only** keys appear as **Tracing and evaluations (legacy)** and **Source capture (legacy)**; they keep working for their original APIs but cannot read project data through the MCP server, and new keys use **Read and write** instead. Creating a new restricted key does not narrow an older credential.
+
+### Verify and rotate
+
+Call `hue.checkConnection()` in TypeScript or `hue.validate_project()` in Python. These send a project lookup without a trace and return the project identity. Confirm it matches the project you intend to use before exporting data.
+
+When replacing a key, configure the replacement in the server's secret store, verify the connection, then revoke the old key in project settings. Never include either credential in a support report. A successful connection check validates project access; the first-trace check separately verifies instrumentation and delivery.
 
 ## Connection settings
 

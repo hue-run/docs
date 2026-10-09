@@ -229,7 +229,7 @@ A pinned connection omits `project_id`; `list_projects` returns only the project
 2. For clients that read `HUE_MCP_KEY`, export the key alone, without `Bearer `, in the startup shell. Use a secure credential prompt when available.
 3. Follow your [client's tab](#connect-your-client), restart from that shell and approve **hue** if asked. Desktop launchers do not inherit terminal variables.
 
-Never put the key in application code, shared configuration or prompts. See [Create a project key](/quickstart#1-create-a-project-key) for access and rotation.
+Never put the key in application code, shared configuration or prompts. See [Project keys](/quickstart#project-keys) for access and rotation.
 
 <Visibility for="agents">
   **If you are a coding agent:** reference `HUE_MCP_KEY`; never ask the user to paste it. Configuration alone does not prove connection. Use the [key check](#verify-the-connection), then ask the user to restart and verify through the client. Let users complete browser consent; do not request passwords or tokens.

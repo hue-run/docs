@@ -310,6 +310,22 @@ test("the invited-setup URL must redirect to agent setup", () => {
   assert.match(result.stderr, /docs\.json must redirect \/guides\/invited-setup to \/guides\/agent-setup/);
 });
 
+test("the production-safety URL must redirect to TypeScript production setup", () => {
+  const result = checkSnapshot((directory) => {
+    const path = resolve(directory, "docs.json");
+    const config = JSON.parse(readFileSync(path, "utf8"));
+    const redirect = config.redirects.find((entry) => entry.source === "/guides/production-safety");
+    assert.ok(redirect);
+    redirect.destination = "/quickstart";
+    writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`);
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(
+    result.stderr,
+    /docs\.json must redirect \/guides\/production-safety to \/sdks\/typescript#production-setup/,
+  );
+});
+
 test("every skill link names the current skill version, in any link form", () => {
   const sources = JSON.parse(readFileSync(resolve(root, "contracts/sources.json"), "utf8"));
   const sdk = JSON.parse(readFileSync(resolve(root, "contracts/sdk-docs.json"), "utf8"));

@@ -241,6 +241,17 @@ Use `aggregate` for counts and percentiles, `search_spans` for individual steps,
 
 Each recipe is a short sequence of tool calls with their key arguments. Replace `24h` with the window the user asked for. `aggregate` and `search_spans` read spans over at most 7 days; trace reads cover up to 90 days.
 
+### Before you start
+
+- **Select the project.** Keys reach one project. For organization sign-in, confirm the project from `list_projects` and pass its id or slug as `project_id`; [pinned connections](/agents/mcp-server#pin-a-connection-to-one-project) omit that argument and report `connection.pinned: true`.
+- **Keep the tool boundary consistent.** Hue arguments and outputs use recursive `snake_case`; recorded attribute maps keep application keys. Object ids and result names use product terms, and app-page ids accept Hue links. JSON arguments that round-trip trace-check definitions, calibration or judge bars must use returned `snake_case` keys; camelCase is rejected.
+- **State the method.** Ask the agent to report its window, filters, traces opened and links; its analysis is not a Hue-generated diagnosis.
+- **Report limits.** `aggregate` and `total_count` cover the filtered window unless `scan_capped`, `partial`, `total_capped` or `total_count_capped` says otherwise. Search result pages are samples; state when the agent opens only a bounded sample.
+- **Rankings use counts.** `aggregate` returns the top 10 groups (up to 25), with the rest in `other`; filter or raise `top` to inspect rare groups.
+- **Check empty results.** A narrow window, filter or disabled feature can return nothing. `get_project_context.features` lists enabled features; widen the window or remove filters before concluding nothing happened.
+- **Rows omit null or empty fields.** Shared links may be returned once as a URL template.
+- **Content is opt-in and audited.** Request it with `get_span_content` or `include_content: true` only when needed; results mark recorded content as untrusted. See the [security model](/agents/mcp-server#security-model).
+
 ### Find traces that need attention
 
 Prompt: “What needs attention in the last 24 hours, and why? Link the traces.”
@@ -328,17 +339,6 @@ Prompt: “Which traces did the delegation check flag this week, and what eviden
 Sequence: `list_trace_checks` → `get_trace_check_summary` with `{"since": "7d", "check_key": "delegation"}` → `search_traces` with `{"since": "7d", "check_key": "delegation"}` → `get_trace_check_results` with `{"check_key": "delegation", "state": "present"}`; follow `next_cursor`. See the [trace-check data model](#trace-checks) for definitions and states.
 
 Caveat: Excerpts require `include_content: true` and are evidence, not explanations.
-
-### Before you start
-
-- **Select the project.** Keys reach one project. For organization sign-in, confirm the project from `list_projects` and pass its id or slug as `project_id`; [pinned connections](/agents/mcp-server#pin-a-connection-to-one-project) omit that argument and report `connection.pinned: true`.
-- **Keep the tool boundary consistent.** Hue arguments and outputs use recursive `snake_case`; recorded attribute maps keep application keys. Object ids and result names use product terms, and app-page ids accept Hue links. JSON arguments that round-trip trace-check definitions, calibration or judge bars must use returned `snake_case` keys; camelCase is rejected.
-- **State the method.** Ask the agent to report its window, filters, traces opened and links; its analysis is not a Hue-generated diagnosis.
-- **Report limits.** `aggregate` and `total_count` cover the filtered window unless `scan_capped`, `partial`, `total_capped` or `total_count_capped` says otherwise. Search result pages are samples; state when the agent opens only a bounded sample.
-- **Rankings use counts.** `aggregate` returns the top 10 groups (up to 25), with the rest in `other`; filter or raise `top` to inspect rare groups.
-- **Check empty results.** A narrow window, filter or disabled feature can return nothing. `get_project_context.features` lists enabled features; widen the window or remove filters before concluding nothing happened.
-- **Rows omit null or empty fields.** Shared links may be returned once as a URL template.
-- **Content is opt-in and audited.** Request it with `get_span_content` or `include_content: true` only when needed; results mark recorded content as untrusted. See the [security model](/agents/mcp-server#security-model).
 
 ## Data model
 
