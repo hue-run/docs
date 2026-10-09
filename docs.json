@@ -122,7 +122,7 @@
       "To set up Hue in an application, fetch https://docs.hue.run/guides/agent-setup.md and follow it.",
       "Hue's project-data MCP server is https://mcp.hue.run/mcp. https://docs.hue.run/mcp only searches these docs and cannot read a Hue project.",
       "Never ask the user to paste a Hue API key into chat; they store it as HUE_API_KEY themselves.",
-      "Install the exact SDK versions on https://docs.hue.run/quickstart.md. Run the CLI as `npx @hue-run/sdk` or `bunx @hue-run/sdk`, never `npx hue`.",
+      "Install the exact SDK versions pinned on the page you're following, or on https://docs.hue.run/quickstart.md. Run the CLI as `npx @hue-run/sdk` or `bunx @hue-run/sdk`, never `npx hue`.",
       "Use Hue product terms: eval set, case, evaluator, run and scoring run. Older APIs may say dataset, scorer or experiment; prefer the current SDK methods. See https://docs.hue.run/concepts.md."
     ]
   },

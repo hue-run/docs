@@ -571,8 +571,8 @@ for (const phrase of [
 // versioned URL is the acceptance URL for the skill; the unversioned route may lag by up to a day.
 // A destination may be absolute, site-relative (`/skill.md`) or an autolink in angle brackets, and
 // may carry a query or fragment; it ends at whitespace or a closing delimiter. Each is parsed as a
-// URL, and only a docs.hue.run `/skill.md` destination must name the current version in `v`,
-// whatever its fragment. Another site's `/skill.md` is not Hue's.
+// URL, and only a docs.hue.run `/skill.md` destination must name the current version in `v` and
+// contain no ampersands, whatever its fragment. Another site's `/skill.md` is not Hue's.
 const destinationPattern = /(?:https?:\/\/[^\s)\]>`"']+|(?<![\w/.])\/skill\.md[^\s)\]>`"']*)/g;
 const currentSkillLink = `https://docs.hue.run/skill.md?v=${mirroredSkill.metadata.version}`;
 for (const [path, text] of Object.entries(publicText)) {
@@ -584,6 +584,9 @@ for (const [path, text] of Object.entries(publicText)) {
       continue;
     }
     if (url.hostname !== "docs.hue.run" || url.pathname !== "/skill.md") continue;
+    if (destination.includes("&")) {
+      fail(`${path} links ${destination}; skill links must not contain an ampersand`);
+    }
     if (url.searchParams.get("v") !== mirroredSkill.metadata.version) {
       fail(`${path} links ${destination}; link ${currentSkillLink}`);
     }

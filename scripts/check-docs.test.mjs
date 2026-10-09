@@ -358,6 +358,16 @@ test("every skill link names the current skill version, in any link form", () =>
   assert.equal(elsewhere.status, 0, elsewhere.stderr);
 });
 
+test("a skill link cannot contain an ampersand", () => {
+  const text = readFileSync(resolve(root, "agents/overview.mdx"), "utf8");
+  const skillLink = text.match(/https:\/\/docs\.hue\.run\/skill\.md\?v=[^\s)]+/)[0];
+  const result = checkSnapshot((directory) => changePage(directory, "agents/overview.mdx", (source) =>
+    source.replace(skillLink, `${skillLink}&release=ee02dc4`),
+  ));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /skill links must not contain an ampersand/);
+});
+
 test("the agent setup page keeps the account contact line", () => {
   const result = checkSnapshot((directory) => changePage(directory, "guides/agent-setup.mdx", (text) =>
     text.replaceAll("founders@hue.run", "team@example.test"),
