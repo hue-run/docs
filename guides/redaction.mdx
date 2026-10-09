@@ -11,6 +11,8 @@ Start with the email example, then adapt it to your application's data. Pattern 
 
 The SDK examples capture content when `HUE_CAPTURE_CONTENT` is unset. Hue can show and evaluate only recorded data, including prompts, responses and tool inputs and outputs. Set `HUE_CAPTURE_CONTENT=false` for metadata-only export; this does not disable redaction or credential scrubbing. Use a redaction callback for email and custom field rules.
 
+String values over Hue's inline limit (up to 1 GB) in a span's own attributes, and inline files over 64 KiB in a span's own recorded messages, are uploaded separately; the span keeps the first 16 KiB of strings, while log records, events, links and resources aren't uploaded. Redaction and credential scrubbing run over the whole value first, and nothing is uploaded when capture is off. In restricted-egress environments, allow export's HTTPS `PUT` to the URLs Hue returns; failed uploads fall back to cuts or file digests and are reported.
+
 In metadata-only mode, both SDKs strip recognized third-party content attributes on Hue's export path, but custom keys pass through; configure third-party instrumentors separately.
 
 Hue names each trace from its own recorded request text, or from a trace name the producer set, inside Hue. Naming sends nothing to a model provider and needs no setting.
@@ -192,14 +194,14 @@ Use the callback to combine text patterns with the fields your application knows
 
 Preserve the structure and non-sensitive evidence your debugging and evaluations need. An email pattern does not cover names, phone numbers, message bodies containing other personal information, or secrets. Hue's built-in filtering of credential fields in tool definitions is also not a general secret scanner.
 
-With `captureContent: false` / `capture_content=False`, Hue removes recognized content fields instead, including native Langfuse fields from TypeScript `0.13.0` and Python `0.7.0`. Unrecognized custom attributes need your own producer or Collector policy; see the [OpenTelemetry guide](/integrations/opentelemetry#use-with-langfuse).
+With `captureContent: false` / `capture_content=False`, current SDKs remove recognized content fields, including native Langfuse fields. Older SDKs need producer or Collector filtering; unrecognized custom attributes still pass through. See the [OpenTelemetry guide](/integrations/opentelemetry#use-with-langfuse).
 
 ### Linear-time patterns
 
 The callback runs synchronously in your serving process, on the Node.js event loop or in the Python request thread, and receives untrusted text such as user messages, model output and fetched pages. A pattern that backtracks on crafted input can block the whole process.
 
 - **Bound repetition.** The examples cap the part before `@` at 64 characters, the longest RFC 5321 allows, so each position is checked against at most 64 characters. With an unbounded `[A-Z0-9._%+-]+`, a run with no `@` is rescanned to its end from every position: a few hundred kilobytes of `a` characters can block the process for tens of seconds. In a longer local part, which is not a valid address, the characters before the last 64 stay visible. Avoid nested or overlapping quantifiers such as `(a+)+`. For a guaranteed linear-time engine, use [`re2`](https://www.npmjs.com/package/re2) for Node.js or [`google-re2`](https://pypi.org/project/google-re2/) for Python; both accept the example patterns.
-- **Limit the input size.** Hue's stored-field limits do not cap what the callback receives. TypeScript passes the whole recorded string and cuts the result to 256 KiB afterwards; Python passes content within a 1 MiB value budget. Before running any pattern, return a fixed marker such as `[REDACTED]` for a string longer than your application allows. Replace the whole value rather than redacting only a prefix.
+- **Limit the input size.** Hue's stored-field limits do not cap what the callback receives. When uploads are available, both SDKs pass the whole helper value to the redactor, up to 1 GB and 1,048,576 values. Before running any pattern, return a fixed marker such as `[REDACTED]` for a string longer than your application allows. Replace the whole value rather than redacting only a prefix.
 - **Test adversarial input.** Time the callback on a string of your maximum size made of address characters without `@`, such as `"a".repeat(1_000_000)` or `"a" * 1_000_000`, and on one of half that size. Doubling the input should roughly double the time, not quadruple it, and the time must fit your request budget.
 
 ## Verify redaction

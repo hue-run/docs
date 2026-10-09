@@ -297,7 +297,7 @@ Langfuse's `mask` hook does not redact Hue's copy. Apply policy to both exports,
 
 Hue reads Langfuse attributes directly. `langfuse.observation.type`, `.model.name`, `.usage_details`, `.input`, `.output`, `langfuse.session.id` and `langfuse.user.id` fill Hue fields when GenAI attributes are absent; GenAI wins. `langfuse.trace.name` names traces without request text; `langfuse.release` supplies `release` absent `service.version`. Metadata, environment, tags and levels stay raw; OpenTelemetry status marks failure. See the [field glossary](/agents/mcp-tools#field-glossary).
 
-TypeScript `0.13.0` or Python `0.7.0+` strip recognized Langfuse content in metadata-only mode; earlier SDKs need producer or Collector controls. Metadata and custom fields pass through. Verify each independent capture policy; see [compatibility](/sdks/compatibility).
+Current SDKs strip recognized Langfuse content in metadata-only mode; older SDKs need producer or Collector controls. Metadata and custom fields pass through. Verify each independent capture policy; see [compatibility](/sdks/compatibility).
 
 Test a real request with model and tool spans, preserved IDs and parentage and both exporters flushed by the host deadline. Check content and fields in both destinations. Hue's [trace receipt](/sdks/typescript#verify) checks span and field presence, not payload correctness or Langfuse delivery; also test errors and cancellation.
 

@@ -9,7 +9,7 @@ Hue manages eval-set versions, dispatch and scoring. Your application keeps its 
 
 ## 1. Wrap your existing function
 
-Install `@hue-run/sdk@0.14.0` for Node.js 22 or 24 or `hue-run==0.8.0` for Python 3.10+. Configure a **Read and write** key in the same Hue project as the eval set, then set up [tracing](/quickstart).
+Install `@hue-run/sdk@0.15.2` for Node.js 22 or 24 or `hue-run==0.9.1` for Python 3.10+. Configure a **Read and write** key in the same Hue project as the eval set, then set up [tracing](/quickstart).
 
 This guide creates a dedicated evaluation endpoint. Its delivery checks record whether evaluation evidence arrived; use [safe initialization and bounded lifecycle hooks](/sdks/typescript#production-setup) for ordinary customer requests. A telemetry failure must not rerun the agent's business work.
 

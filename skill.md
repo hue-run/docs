@@ -4,7 +4,7 @@ title: "skill.md"
 description: "Set up and verify Hue tracing, investigate production traces over the Hue MCP, turn traces into reviewed cases, make an agent eval-ready and run Hue evaluations with hue eval. Use when a developer asks to set up, integrate or troubleshoot Hue or verify that requests reach Hue; asks what needs attention, fails or is slow in production; asks to turn a trace into a case or eval set; asks to make their agent eval-ready or point its Gmail, Slack or other app clients at Hue's simulated worlds; or asks to evaluate, test or regression-test their agent or run Hue evals (hue eval --case, --command or --worker) and read the results. Also use when the repository already uses Hue (@hue-run/sdk, hue-run, HUE_API_KEY or .env.hue) and the developer asks to evaluate or test their agent. Preserves the application's model provider, framework, OpenTelemetry setup and production behavior."
 metadata:
   author: "hue-run"
-  version: "0.6.5"
+  version: "0.6.9"
 ---
 
 # Hue
@@ -54,7 +54,7 @@ inactive; do not run it.
 
 ## Install and configure
 
-Use the current [installation guide](https://docs.hue.run/installation) and verify that the intended package version is published before installing it:
+Use the current [Install the SDK](https://docs.hue.run/quickstart#2-install-the-sdk) section and verify that the intended package version is published before installing it:
 
 ```sh
 # TypeScript: run in the application directory.
@@ -94,7 +94,7 @@ Keep spans open until streamed work completes or aborts. A returned streaming `R
 
 ## Isolate serving requests from Hue failures
 
-Read [production safety](https://docs.hue.run/guides/production-safety). These APIs require TypeScript 0.1.5 or Python 0.1.3; verify publication/installation first. Use `createHueSafe` / `create_hue_safe` once per serving process (after fork in Python). Explicitly read `HUE_TRACING_ENABLED` and pass `enabled`; `false` disables Hue without needing a key. Use `flushSafe` / `shutdownSafe` or `force_flush_safe` / `shutdown_safe` with an appropriate bounded deadline (default 1 second). Preserve borrowed-provider ownership.
+Read [TypeScript production setup](https://docs.hue.run/sdks/typescript#production-setup) and [Python production setup](https://docs.hue.run/sdks/python#production-setup). These APIs require TypeScript 0.1.5 or Python 0.1.3; verify publication/installation first. Use `createHueSafe` / `create_hue_safe` once per serving process (after fork in Python). Explicitly read `HUE_TRACING_ENABLED` and pass `enabled`; `false` disables Hue without needing a key. Use `flushSafe` / `shutdownSafe` or `force_flush_safe` / `shutdown_safe` with an appropriate bounded deadline (default 1 second). Preserve borrowed-provider ownership.
 
 Keep strict connection, flush and receipt checks in a separate setup/diagnostic path; do not gate application readiness or a customer response on Hue. Do not rerun business work after a telemetry failure. Verify a collector outage, oversized capture, failing redactor, original exception/cancellation and queue overflow against the application's actual entry point. Assert the same result/error and exactly one tool invocation. Observe sanitized cumulative failure/drop counters through a health channel independent of Hue. Explain that bounded memory queues can lose records and cannot guarantee survival of process termination or arbitrary third-party hooks.
 
@@ -123,7 +123,7 @@ and why, which tools fail, what is slow) and the Hue MCP server is connected, fe
 its read tools and do the analysis yourself. Hue returns stored traces, spans, findings, attention
 states, counts and percentiles and, where the project set them up, trace-check results and intents;
 it does not diagnose or summarize. The
-[production recipes](https://docs.hue.run/agents/investigate-production) give the tool sequence
+[production recipes](https://docs.hue.run/agents/mcp-tools#recipes) give the tool sequence
 for each question and explain the fields.
 
 Hue's default connection lists the production reads used below. It also lists `search_hue_tools`,
@@ -224,7 +224,7 @@ evaluator, so a missing judge leaves its result inconclusive.
 ## Evaluate a published case
 
 When the user asks to evaluate or regression-test their agent against a published Hue case, or to
-make their agent eval-ready, follow this procedure end to end. Use `@hue-run/sdk` 0.14.0
+make their agent eval-ready, follow this procedure end to end. Use `@hue-run/sdk` 0.15.2
 (`HUE_WORLD_NOW` needs 0.13.0; `--case` and `--command` are available since 0.12.1). Confirm registry availability before running version-pinned install commands; a source commit is not a release. `hue eval`
 runs on Node.js 22 or 24, also for a Python agent, and the agent itself needs no Hue package.
 Hue never executes the agent: it runs in the user's process. Hue hosts a simulated world when
@@ -357,7 +357,7 @@ in the codebase's language and trim the functions no call site uses.
    the evaluation from the shell:
 
    ```sh
-   npx --yes --package @hue-run/sdk@0.14.0 --package "zod@^4.6.5" hue eval --case "<name>" --command "<the agent's start command>" --env-file .env.hue
+   npx --yes --package @hue-run/sdk@0.15.2 --package "zod@^4.6.5" hue eval --case "<name>" --command "<the agent's start command>" --env-file .env.hue
    ```
 
    The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the agent's
@@ -413,7 +413,7 @@ in the codebase's language and trim the functions no call site uses.
 7. To let the Run button and `launch_local_run` use this agent, start a worker instead:
 
    ```sh
-   npx --yes --package @hue-run/sdk@0.14.0 --package "zod@^4.6.5" hue eval --worker --command "<the agent's start command>" --revision <new-agent-revision> --env-file .env.hue
+   npx --yes --package @hue-run/sdk@0.15.2 --package "zod@^4.6.5" hue eval --worker --command "<the agent's start command>" --revision <new-agent-revision> --env-file .env.hue
    ```
 
 A worker upgrade from an environment-only registration needs a new `--revision`, because Hue

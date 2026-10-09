@@ -88,7 +88,7 @@ For a copyable email-masking callback and guidance on custom field rules, follow
 
 `captureContent` defaults to `true` for an enabled client; set it to `false` to opt out. Use `true`: Hue can only show and evaluate what a trace records. Use `false` for metadata-only capture when you'd rather not send content, or when an application or data policy forbids sending it to another service. A disabled client (`enabled: false`) exports nothing and defaults it to `false`.
 
-- `true`, the recommended setting, captures content you provide to supported helpers and instrumentations: prompts and messages, responses and tool inputs and outputs, alongside model, usage, timing and errors. Hue stores received content under your project’s [retention policy](/guides/redaction#retention). Before export, the SDK replaces credentials in recorded tool definitions with `"[redacted]"` and exports an inline file over 64 KiB in recorded messages as its `sha256` and `size`; see the [content policy](/reference/typescript#content-policy).
+- `true`, the recommended setting, captures content you provide to supported helpers and instrumentations: prompts and messages, responses and tool inputs and outputs, alongside model, usage, timing and errors. Hue stores received content under your project’s [retention policy](/guides/redaction#retention). Before export, the SDK scrubs credentials in recorded tool definitions and uploads inline files over 64 KiB in recorded messages; see the [content policy](/reference/typescript#content-policy).
 - `false` disables Hue helper content and removes recognized GenAI, Vercel AI SDK, OpenInference, and OpenLLMetry content fields before Hue exports them, including spans from other instrumentations on a shared provider. It also removes log bodies, status descriptions and exception text. The exported `contentPrefixes` array lists the removed keys.
 - `redact(value, path)` can transform supported strings before export. Redactor and capture failures omit unsafe content and increment instrumentation failure counters without changing application results.
 
@@ -152,7 +152,7 @@ If your app already registers a global AI SDK integration, preserve it and attac
 
 ## Verify
 
-Available in `@hue-run/sdk` 0.1.3 and later. Finish a real application request and retain its trace ID and known span IDs. End its spans, flush the provider that owns them, then flush Hue. When borrowing a provider, flush that provider first. Verification does not run the app, invoke a model, or flush telemetry.
+Finish a real application request and retain its trace ID and known span IDs. End its spans, flush the provider that owns them, then flush Hue. When borrowing a provider, flush that provider first. Verification does not run the app, invoke a model, or flush telemetry.
 
 ```ts
 await hue.flush();
@@ -218,7 +218,7 @@ Hue omits unsafe content or redactor failures, records instrumentation failure a
 
 Safe lifecycle methods return failure results. A timeout neither proves delivery nor cancels an in-flight request. `createHue`, checks, verification and strict lifecycle methods remain diagnostic and may fail.
 
-Queues limit records and bytes, including in-flight records. TypeScript's default 8 MiB is shared by traces and logs. This bounds queued telemetry, not process RSS. Overflow drops telemetry and updates counters without retrying business work.
+Queues limit records and bytes, including in-flight records. `maxQueueBytes` defaults to 8 MiB shared by traces and logs. Separately, the SDK can hold up to 128 MiB of over-limit strings in a span's own attributes and inline files over 64 KiB in a span's own recorded messages while they await upload; log records, events, links and resources aren't uploaded. This bounds queued telemetry, not process RSS. Overflow drops telemetry and updates counters without retrying business work.
 
 Network retries are bounded. Shutdown counts discards; process kill, full queues, disabled clients and exporter failures can lose telemetry. There is no disk spool or delivery guarantee.
 
@@ -236,6 +236,6 @@ Before rollout, test your real entry point against a loopback receiver that retu
 
 `flush()` drains traces and logs. Partial rejection, malformed acknowledgement, queue overflow, and export failure raise `HueExportError`. Its report contains cumulative accepted, rejected, failed, and pending counts; `hue.transport.getIssues()` returns recent sanitized issues.
 
-Temporary export failures use the OpenTelemetry retry policy. A partially rejected batch is not resent wholesale. A later successful flush does not erase earlier failures from cumulative counters. An acknowledgement confirms collector receipt, not that every span in a distributed trace has arrived.
+Transient HTTP 500 responses are retried within the existing retry and timeout budgets. A 429 `Retry-After` keeps records queued for up to 60 seconds; a longer wait is reported as a failed export. Check `uploadedValues` and `uploadFallbacks` in `hue.transport.getReport()`; upload fallbacks are warnings and do not fail a flush. A partially rejected batch is not resent wholesale, and a later successful flush does not erase earlier failures from cumulative counters.
 
 Stop starting operations before shutdown. End active spans, await `flush()`, and await `shutdown()` before the process exits. The queues are in memory and cannot recover records after process termination.

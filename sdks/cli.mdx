@@ -7,22 +7,22 @@ description: "Store a key, connect an agent to Hue MCP, and run evaluations from
 
 <CodeGroup>
 ```sh npm
-npm install @hue-run/sdk@0.14.0
+npm install @hue-run/sdk@0.15.2
 ```
 
 ```sh Bun
-bun add @hue-run/sdk@0.14.0
+bun add @hue-run/sdk@0.15.2
 ```
 </CodeGroup>
 
-Run the commands from that project with `npx --yes --package @hue-run/sdk@0.14.0 hue …`. Always name the package: a bare `npx hue` can run an unrelated npm package called `hue`. Every command accepts `--help`.
+Run the commands from that project with `npx --yes --package @hue-run/sdk@0.15.2 hue …`. Always name the package: a bare `npx hue` can run an unrelated npm package called `hue`. Every command accepts `--help`.
 
 ## Store your key
 
 Create a **Read and write** key in **Settings → Integrations & API keys** for the project you want to use, then run:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.14.0 hue login --gitignore
+npx --yes --package @hue-run/sdk@0.15.2 hue login --gitignore
 ```
 
 `hue login` prints the key settings page and opens it in your browser when a terminal is attached. It reads the key without echoing it, checks it against Hue, and stores it once as both `HUE_API_KEY` (for evaluations) and `HUE_MCP_KEY` (for your coding agent) in `./.env.hue`, together with `HUE_BASE_URL` and `HUE_MCP_URL`. `--gitignore` adds that file to `.gitignore`. Key values are never printed.
@@ -45,7 +45,7 @@ To revoke evaluation and agent access separately, run `--keys evaluations` and `
 ## Connect your coding agent
 
 ```sh
-npx --yes --package @hue-run/sdk@0.14.0 hue mcp install --client claude-code --auth oauth
+npx --yes --package @hue-run/sdk@0.15.2 hue mcp install --client claude-code --auth oauth
 ```
 
 `hue mcp install` writes a server named `hue` at `https://mcp.hue.run/mcp` for your client. Supported clients are `claude-code`, `codex`, `conductor`, `cursor`, `vscode`, `windsurf` and `gemini`. For `windsurf` it only prints the snippet; merge it into the configuration opened by Cascade's **… (Actions) → MCPs → Open MCP config file**. See the [Cascade MCP guide](https://docs.devin.ai/desktop/cascade/mcp) for that client's configuration. Add `--dry-run` to see the change first, or `--print` for the snippet only.
@@ -73,15 +73,15 @@ With a key, export `HUE_MCP_KEY` in the shell that starts your client; an app st
 `hue eval` runs your agent locally against a published case or a saved eval set and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It uses `HUE_API_KEY` from `--env-file` (or its alias `--env-path`). Start the agent's own command with `--command`, after the one-time change in [Evaluation setup](/evaluations/eval-ready-agent):
 
 ```sh
-npx --yes --package @hue-run/sdk@0.14.0 --package "zod@^4.6.5" hue eval --case "<name|id|url>" --command "<start command>" --env-file .env.hue
-npx --yes --package @hue-run/sdk@0.14.0 --package "zod@^4.6.5" hue eval --worker --command "<start command>" --revision "<new-agent-revision>" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.15.2 --package "zod@^4.6.5" hue eval --case "<name|id|url>" --command "<start command>" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.15.2 --package "zod@^4.6.5" hue eval --worker --command "<start command>" --revision "<new-agent-revision>" --env-file .env.hue
 ```
 
 The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the agent's repository gains no package.json or dependency; without the second, `hue eval` exits with `hue eval needs zod`, even for `--help`, and installing zod in the project does not help when the SDK itself is not installed there. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `--package @hue-run/sdk` runs that local, possibly older, copy. `hue eval` needs Node.js 22 or 24, even for a Python agent.
 
 `--command` starts the command once per case with `{"inputs","config"}` as JSON on stdin and reads the answer from stdout. For a case with a simulated world, the command receives the world's variables; the eval-ready guide lists them under [Run it](/evaluations/eval-ready-agent#run-it) and shows the one committed helper that reads them, so the agent reaches each app through Hue's mirror with its own production client and never receives Hue-native tools. Only the current case's world sets those variables: a value inherited from your environment never reaches the command. A direct case has no simulated world: it sets `HUE_EXECUTION_ID` and case variables without a world token, app mirrors or MCP connection. Skip optional app initialization and fail closed if the agent needs a missing app connection. `HUE_CASE_INPUTS` names the inputs file, the case's input files are under `files/<role>/`, and every file the command writes to `HUE_CASE_OUTPUT_DIR` is uploaded as a generated file for grading. A one-shot direct case starts in that private case directory, so use an absolute entry-point path; a command worker keeps the directory where you started the CLI for both direct and world cases. The command inherits your environment except Hue's own credentials: `HUE_API_KEY`, `HUE_MCP_KEY` and any other variable holding a Hue key are removed unless you pass `--allow-hue-credentials`, so your model keys and settings still reach the agent but the project key does not.
 
-`--worker` registers your agent so runs started from Hue, from the **Run** button or the `launch_local_run` MCP tool, execute on your machine with the same handoff. In TypeScript 0.13.2, command workers register both `direct:v1` and `environment:v1`, so one worker can run answer-only cases, world cases or an eval set containing both. Use a new `--revision` when upgrading an existing worker: a registered revision's capabilities cannot change.
+`--worker` registers your agent so runs started from Hue, from the **Run** button or the `launch_local_run` MCP tool, execute on your machine with the same handoff. Command workers register both `direct:v1` and `environment:v1`, so one worker can run answer-only cases, world cases or an eval set containing both. World-backed cases share the project's live-world quota across runs and workers. Use a new `--revision` when upgrading an existing worker: a registered revision's capabilities cannot change.
 
 | Flag | Meaning |
 | --- | --- |
@@ -93,7 +93,7 @@ The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the 
 | `--json` | Print one JSON document on stdout; progress goes to stderr. |
 | `--wait <seconds>` | Verdict wait after the run finishes (default 300). |
 | `--timeout <seconds>` | Per-case `--command` timeout (default 600). |
-| `--concurrency <n>` | Cases in flight, 1 to 64 (default 1). |
+| `--concurrency <n>` | Cases in flight, 1 to 100 (default 1). |
 | `--baseline <run id\|url>` | Compare verdicts with a previous run. |
 | `--trace-not-accepted fail_case\|pending` | What to do with a case whose telemetry Hue did not accept in time (default `fail_case`). |
 | `--checkpoint-dir <path>` | Private checkpoint directory (default `.hue/eval/<agent-key>`; add `.hue/` to `.gitignore`). |
@@ -106,7 +106,7 @@ The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the 
 
 One-shot exit codes: 0 every case passed; 1 a case failed, errored, is inconclusive or is incomplete; 2 usage error; 130 interrupted. `hue eval --help` lists every flag.
 
-Since TypeScript 0.10.0, one-shot runs store case outputs, target error messages and explanations by default, as workers already do. Trace content capture is on by default; `--no-content` opts out. Earlier SDK versions require `--content` to enable it. Use `--no-output` to omit result content from a one-shot run, or `--no-output --no-content` to omit both results and telemetry content. Resume an older metadata-only run with `--no-content` and its original output policy. A command's stdout becomes its stored answer, with credentials handed to it by `hue eval` redacted; keep credentials and debug logs out of stdout. Generated files are uploaded regardless of `--no-output` and are not fully redacted, so never write credentials into them.
+One-shot runs store case outputs, target error messages and explanations by default, as workers already do. Trace content capture is on by default; `--no-content` opts out. Earlier SDK versions require `--content` to enable it. Use `--no-output` to omit result content from a one-shot run, or `--no-output --no-content` to omit both results and telemetry content. Resume an older metadata-only run with `--no-content` and its original output policy. A command's stdout becomes its stored answer, with credentials handed to it by `hue eval` redacted; keep credentials and debug logs out of stdout. Generated files are uploaded regardless of `--no-output` and are not fully redacted, so never write credentials into them.
 
 An evaluator that does not apply to a case shows `n/a` and neither passes nor fails it. A case with no applicable pinned evaluator is an error.
 

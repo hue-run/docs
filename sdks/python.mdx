@@ -70,7 +70,7 @@ For a copyable email-masking callback and guidance on custom field rules, follow
 
 With `capture_content=False`, Hue also strips recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes, legacy `gen_ai.*` message events, log bodies and status descriptions from every record it exports, including spans from third-party instrumentors on the same provider. The [compatibility matrix](/sdks/compatibility) lists the keys, which are identical to TypeScript's `contentPrefixes`. The setting does not classify arbitrary attribute names, span names, session IDs or another exporter's records, and unrecognized custom keys pass through. Configure an instrumentor's own content controls before enabling it; it may also send content to other exporters.
 
-For helper content, `redactor(field, value)` receives a detached copy and can return a redacted JSON value before serialization. Mutating that copy does not change application inputs or results, even if the redactor then raises. Snapshotting accepts supported built-in containers and scalars under a conservative 1 MiB value budget, depth 64 and 65,536 visited values and keys. Hue applies it even without a redactor, and checks a redactor's returned value with a fresh snapshot under the same bounds before JSON encoding. Cycles, custom objects or subclasses, non-finite numbers, integers above 14,000 bits and over-budget input are omitted before the callback. These failures and redactor failures increment instrumentation failure counters without raising into application work. Final captured JSON is limited to 256 KiB. The callback must handle your nested data format and avoid side effects through globals or captured references; it is not applied to arbitrary external OpenTelemetry records.
+For helper content, `redactor(field, value)` receives a detached copy and can return a redacted JSON value before serialization. Mutating that copy does not change application inputs or results, even if the redactor then raises. When uploads are available, snapshots and redactors accept supported values up to 1 GB and 1,048,576 visited values and keys; otherwise the snapshot is bounded to 4 MiB, depth 64 and 65,536 values and keys. Unsupported or over-budget values and redactor failures increment instrumentation failure counters without raising into application work. The callback must handle your nested data format and avoid side effects through globals or captured references; it is not applied to arbitrary external OpenTelemetry records.
 
 The helpers always exclude exception messages and stacks, retaining error type and status. A context manager records an escaping error and rethrows it.
 
@@ -84,7 +84,7 @@ Use `hue.context(session_id=..., user_id=...)` around related helpers. These are
 
 ## Verify
 
-Available in `hue-run` 0.1.1 and later. Finish a real application request and retain its trace ID and known span IDs. End its spans, flush the provider that owns them, then flush Hue. When borrowing a provider, flush that provider first. Verification does not run the app, invoke a model, or flush telemetry.
+Finish a real application request and retain its trace ID and known span IDs. End its spans, flush the provider that owns them, then flush Hue. When borrowing a provider, flush that provider first. Verification does not run the app, invoke a model, or flush telemetry.
 
 ```python
 if not hue.force_flush():
@@ -148,13 +148,15 @@ def shutdown_tracing():
 
 Hue omits unsafe content or redactor failures, records instrumentation failure and preserves application results and errors. Safe initialization returns a disabled client on setup failure; helpers still execute application work.
 
-Python redactors receive detached copies. Snapshots allow 1 MiB, depth 64 and 65,536 values and keys; cycles, custom objects, non-finite numbers, integers above 14,000 bits and over-budget inputs are omitted before redaction. Final redacted JSON is capped at 256 KiB. Keep redactors deterministic and side-effect free.
+Python redactors receive detached copies. When uploads are available, snapshots and redactors accept supported helper values up to 1 GB and 1,048,576 visited values and keys; otherwise snapshots are bounded to 4 MiB, depth 64 and 65,536 values and keys. Keep redactors deterministic and side-effect free.
 
 Safe lifecycle methods return failure results. A timeout neither proves delivery nor cancels an in-flight request. `Hue`, checks, verification and strict lifecycle methods remain diagnostic and may fail.
 
-Queues limit records and bytes, including in-flight records. Python's default 8 MiB is per signal. This bounds queued telemetry, not process RSS. Overflow drops telemetry and updates counters without retrying business work.
+Queues limit records and bytes, including in-flight records. `max_queue_bytes` defaults to 8 MiB per signal. Separately, the SDK can hold up to 128 MiB of over-limit strings in a span's own attributes and inline files over 64 KiB in a span's own recorded messages while they await upload; log records, events, links and resources aren't uploaded. This bounds queued telemetry, not process RSS. Overflow drops telemetry and updates counters without retrying business work.
 
 Network retries are bounded. Python keeps one worker per signal; an OS-blocked call can outlive the wait and retain one encoded request (up to 1 MiB) outside queue counters. Shutdown counts discards; process kill, full queues, disabled clients and exporter failures can lose telemetry. There is no disk spool or delivery guarantee.
+
+HTTP 429 `Retry-After` responses keep records queued for up to 60 seconds; a longer wait is reported as a failed export. Upload fallbacks increment `upload_fallbacks` and create warnings without failing `force_flush()`.
 
 In-process code cannot prevent termination, OOM, stalls or third-party hooks. Keep redactors fast and offline. Safe construction cannot catch import or dependency failures, so verify startup in CI or guard the integration.
 
@@ -162,7 +164,7 @@ In-process code cannot prevent termination, OOM, stalls or third-party hooks. Ke
 
 The snippets read `HUE_TRACING_ENABLED`; set it to `false` and restart to bypass Hue without changing application code. It is not a remote flag. Strict constructors also accept `enabled=False`; a disabled client needs neither a key nor capture settings.
 
-Inspect `hue.export_status` for failures, drops, pending bytes and exports. Counters are cumulative; pending bytes and records are current gauges. Emit only sanitized counts and status, never credentials, content or raw provider exceptions, and do not send health signals only through Hue.
+Inspect `hue.export_status` for failures, drops, pending bytes, `uploaded_values` and `upload_fallbacks`. Counters are cumulative; pending bytes and records are current gauges. Emit only sanitized counts and status, never credentials, content or raw provider exceptions, and do not send health signals only through Hue.
 
 Before rollout, test your real entry point against a loopback receiver that returns 503, rejects its key, delays its response and exceeds queue capacity. Verify that each tool runs once, results and errors match an uninstrumented request, and shutdown meets your deadline. Start with a small canary.
 

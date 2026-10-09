@@ -5,14 +5,14 @@ description: "Run an agent in a fresh simulated world per case and score its sea
 
 Your agent runs in your process; Hue runs a disposable world and records its action journal. Hue neither executes agent code nor holds provider credentials.
 
-`runSimulation()` is available in `@hue-run/sdk` 0.2.0+ for TypeScript; Python 0.5.0+ provides the lower-level [`hue_sdk.environment`](/reference/python#environment-client). Each invocation creates a fresh run, isolated world per case and resumable checkpoint. See the [simulation](/reference/typescript#run-a-simulation) and [environment](/reference/typescript#environment-client) references.
+`runSimulation()` runs TypeScript agents against simulated worlds; Python provides the lower-level [`hue_sdk.environment`](/reference/python#environment-client). Each invocation creates a fresh run, isolated world per case and resumable checkpoint. See the [simulation](/reference/typescript#run-a-simulation) and [environment](/reference/typescript#environment-client) references.
 
 ## Install
 
 Importing `@hue-run/sdk/evals` needs the optional `zod` peer (4.6.5 or later). Install it with the SDK:
 
 ```sh
-npm install @hue-run/sdk@0.14.0 zod
+npm install @hue-run/sdk@0.15.2 zod
 ```
 
 Set `HUE_API_KEY` to a [project service key](/quickstart#project-keys) created with the **Read and write** preset. The evaluation client and the environment client must use the same Hue origin.
@@ -61,7 +61,7 @@ try {
 
 The referenced run template is app-authored. Each invocation clones its frozen eval set, configuration and evaluator-version pins into a fresh run and creates one isolated world per case. The `run_created` event carries the run URL as soon as it exists, so you can inspect progress while the agent runs.
 
-Rerun after edits for a fresh attempt or world. Interruptions resume from the private checkpoint; use one directory per definition and add it to `.gitignore`.
+Rerun after edits for a fresh attempt or world. Interruptions resume from the private checkpoint; use one directory per definition and add it to `.gitignore`. Concurrency defaults to 1 and accepts up to 100 cases; world-backed cases count toward the project's live-world quota, shared across runs and workers.
 
 ## Definitions in your repository
 
