@@ -17,8 +17,8 @@ description: "Run your existing agent, local or deployed, against a published ca
 Check first, then run the same command without `--check`:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.16.0 hue eval --case "<name|id|url>" --command "<start command>" --env-file .env.hue --check
-npx --yes --package @hue-run/sdk@0.16.0 hue eval --case "<name|id|url>" --command "<start command>" --env-file .env.hue
+npx -y @hue-run/sdk@0.16.0 eval --case "<name|id|url>" --command "<start command>" --check
+npx -y @hue-run/sdk@0.16.0 eval --case "<name|id|url>" --command "<start command>"
 ```
 
 `--check` resolves the key's project, the selection and its evaluators, and whether cases are answer-only or get a world. It creates no run, world or checkpoint. A published case carries its own evaluators. To run an eval set, use `--set "<eval set>"` and add `--scorer-version <id>` for each evaluator; Hue's **Run** snippet for the set includes them.
@@ -40,7 +40,7 @@ The helper fails closed: with an execution but no world token, or a missing mirr
 ## Local or deployed
 
 - **Local, one run:** the one-shot command above.
-- **Local, launched from Hue:** `hue eval --worker --command "<start command>" --env-file .env.hue` registers the agent and runs what the **Run** button or `launch_local_run` starts, one run per launch, until you stop it.
+- **Local, launched from Hue:** `hue eval --worker --command "<start command>"` registers the agent and runs what the **Run** button or `launch_local_run` starts, one run per launch, until you stop it.
 - **Deployed:** run the worker beside the deployment with a non-production key and a start command that forwards stdin to the deployed agent and prints its answer. Never put world variables or a **Read and write** key in production configuration.
 
 See [`hue eval`](/sdks/cli#run-an-evaluation) for every flag and [simulations](/evaluations/simulations) for how worlds are built and graded.
