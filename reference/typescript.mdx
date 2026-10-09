@@ -12,7 +12,7 @@ This reference covers `@hue-run/sdk` **0.16.0** on Node.js 22 or 24 and Bun 1.4.
 | --- | --- |
 | `@hue-run/sdk` | `createHue`, `createHueSafe`, `HueClient`, `createHueTransport`, `HueTransport`, `hueExperimentalTelemetry`, `contentPrefixes`, `HueConnectionError`, `HueExportError`, `HueTraceVerificationError` and the tracing types below. |
 | `@hue-run/sdk/ai-sdk` | `hueTelemetry` for Vercel AI SDK 7. Requires the optional `ai` and `@ai-sdk/otel` peers. |
-| `@hue-run/sdk/evals` | Evaluation client, local runners including `runSimulation` and `runLocalAgent`, scorer definitions, file-based case helpers, published Scenario resolvers, verdict helpers, attempt-preflight validators, evaluation errors and types. Uses `zod`, a regular dependency. |
+| `@hue-run/sdk/evals` | Evaluation client, local runners including `runSimulation` and `runLocalAgent`, scorer definitions, file-based case helpers, published Scenario resolvers, verdict helpers, attempt-preflight validators, evaluation errors and types. Uses `zod`, a regular dependency since 0.16.0. |
 | `@hue-run/sdk/environment` | `createEnvironmentClient`, `EnvironmentClient`, `bindEnvironmentTools`, `HueEnvironmentError`, the [world handoff](#world-handoff) helpers and the simulated-environment types. |
 | `@hue-run/sdk/managed` | `createManagedTargetHandler` and the managed-target types. |
 
@@ -152,7 +152,7 @@ Labels must be non-empty strings of at most 256 characters; other values fall ba
 
 The callback receives `span` (the underlying OpenTelemetry span), `context`, `traceId`, `spanId`, `setInput(value: unknown)`, `setOutput(value: unknown)` and `setUsage(usage: TokenUsage)`. Inside `model()`, `setInput` and `setOutput` record `gen_ai.input.messages` and `gen_ai.output.messages`; elsewhere they record `input.value` and `output.value`. `TokenUsage` is `{ inputTokens?: number; outputTokens?: number }`, recorded as `gen_ai.usage.input_tokens` and `gen_ai.usage.output_tokens`; invalid values are omitted and counted as instrumentation failures. IDs are all zeros for a disabled client.
 
-Use `span.setAttribute(...)`, `span.addEvent(...)` and the other standard OpenTelemetry APIs for additional metadata. Hue does not estimate absent token counts or cost. Captured JSON `null`, `false`, `0` and `""` remain present values; they are distinct from an omitted field. Helper content must serialize as JSON and fit within 256 KiB per field.
+Use `span.setAttribute(...)`, `span.addEvent(...)` and the other standard OpenTelemetry APIs for additional metadata. Hue does not estimate absent token counts or cost. Captured JSON `null`, `false`, `0` and `""` remain present values; they are distinct from an omitted field. When uploads are available, helper content can serialize up to 1 GB and 1,048,576 values; otherwise it is bounded by the receiver's inline limit.
 
 ### Provider-executed tools
 
@@ -238,7 +238,7 @@ See [Redaction](/guides/redaction) for runnable email-masking examples and the c
 - `captureContent: true` permits supplied content. Received content is stored by Hue; the SDK does not set a retention timer. Helpers still omit exception messages and stack traces.
 - With `captureContent: false`, a record whose tool definitions are removed keeps a summary of them: `hue.tool.names` lists each definition's `name` (Chat Completions `function.name`, or the `type` of an unnamed built-in tool such as `mcp`) in order, and `hue.tool.definitions.sha256` is the lowercase hex SHA-256 of the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical JSON of the credential-scrubbed definition list. The digest does not change when a credential rotates. Only definitions another integration recorded can be summarized: `hueTelemetry(hue)` with `captureContent: false` records none.
 - Hosted tools carry credentials in their definitions, such as the `authorization` and `headers` of an OpenAI hosted MCP tool. Before export, and before `redact`, Hue replaces the values of credential-like fields (`authorization`, `authorization_token`, `headers`, `api_key`, `access_token`, `x-api-key`, and keys ending in `token`, `secret`, `password`, `apikey` or `credential`, case-insensitively and ignoring `-` and `_`) with `"[redacted]"` in `gen_ai.tool.definitions`, `ai.prompt.tools` and `llm.tools.*.tool.json_schema`, and in the `tools` and `mcp_servers` entries of a raw provider request or response recorded as `input.value`, `output.value` or `llm.invocation_parameters`. Parameters named in a JSON Schema `properties` object keep their schemas, so a tool that takes a `headers` argument is still described. A definition nested more than 256 levels deep rejects its record.
-- A `blob` part in `gen_ai.input.messages` / `gen_ai.output.messages` or a `file` part in `ai.prompt.messages` whose inline content is longer than 64 KiB is exported without its payload: Hue replaces its `content` or `data` with the file's `sha256` (of the decoded bytes for base64 and `data:` URLs, of the UTF-8 text otherwise) and `size`, and keeps the part's other fields. The digest matches `hue.file.sha256` from [`recordFile`](#files) for the same bytes. Smaller inline files are exported as recorded.
+- String values over Hue's inline limit (up to 1 GB) in a span's own attributes, and inline files over 64 KiB in a span's own recorded messages, are uploaded separately; spans retain the first 16 KiB of strings, while log records, events, links and resources aren't uploaded. If an upload falls back, the value is cut or the file keeps its digest and size. No upload occurs when `captureContent` is false.
 - `redact(value, path)` transforms supported strings in attributes, resources, event/link attributes and log bodies before Hue exports them. It must return a string. A redactor failure rejects the affected record and becomes an export issue.
 - This policy applies to Hue's export path. Another exporter and arbitrary span/scope names remain your application's responsibility.
 
@@ -258,7 +258,7 @@ hue.transport.getFailureSequence(): number
 
 `flush()` drains traces and logs. Concurrent callers receive serialized drains that include their preceding emissions. Rejections, failed exports, queue drops and invalid acknowledgements throw `HueExportError`, whose `issues` and `report` contain sanitized diagnostics. A later non-overlapping flush reports new failures; counters remain cumulative. Overlapping calls also observe failures from shared in-flight work.
 
-`ExportReport` contains `acceptedSpans`, `acceptedLogs`, `rejectedSpans`, `rejectedLogs`, `failedSpans`, `failedLogs`, `pendingSpans`, `pendingLogs`, `droppedSpans`, `droppedLogs`, `pendingBytes` and `instrumentationFailures`. Accepted, rejected, failed, dropped and instrumentation counts are cumulative; pending counts and bytes describe current queued/in-flight records. `getIssues()` returns the latest 128 `ExportIssue` values with `sequence`, `signal` (a `Signal`: `"traces"` or `"logs"`), `kind`, `count`, optional `status` and a sanitized `message`. Kinds are `rejected`, `failed`, `dropped`, `invalid` and `warning`. A warning with no rejection does not fail a flush.
+`ExportReport` contains `acceptedSpans`, `acceptedLogs`, `rejectedSpans`, `rejectedLogs`, `failedSpans`, `failedLogs`, `pendingSpans`, `pendingLogs`, `droppedSpans`, `droppedLogs`, `pendingBytes`, `instrumentationFailures`, `uploadedValues` and `uploadFallbacks`. Accepted, rejected, failed, dropped, instrumentation and upload counts are cumulative; pending counts and bytes describe current queued/in-flight records. `getIssues()` returns the latest 128 `ExportIssue` values with `sequence`, `signal` (a `Signal`: `"traces"` or `"logs"`), `kind`, `count`, optional `status` and a sanitized `message`. Kinds are `rejected`, `failed`, `dropped`, `invalid` and `warning`. A warning with no rejection does not fail a flush.
 
 The transport's `spanProcessor` and `logRecordProcessor` receive `RecordValue` records, the `ReadableSpan` or `ReadableLogRecord` the OpenTelemetry SDK hands to a processor. The exporter plumbing behind them is internal and not part of the published declarations; read `getReport()`, `getIssues()` and `getFailureSequence()` instead.
 
@@ -505,7 +505,7 @@ Both functions are exported from `@hue-run/sdk/evals`.
 | `checkpointDirectory` | Required dedicated local directory for this run. Preserve it for upload recovery; keep it out of Git. |
 | `persistResultContent` | Required boolean, independent of telemetry capture. |
 | `scorers` | Optional array of bound `LocalScorer` definitions/callbacks. |
-| `concurrency` | Default `1`; integer `1–64`. |
+| `concurrency` | Default `1`; integer `1–100`. |
 | `schemaTimeoutMillis` | Default `2000`; integer `100–60000`; applies to JSON Schema validation, not arbitrary callbacks. |
 | `environmentEvidence` | Optional `"required"`: resolve sealed world evidence for local scoring and historical rescoring. `runSimulation` sets it. `"when_pinned"` skips the read for cases that pin no world while still requiring it for cases that do. |
 | `filesDirectory` | Default `<checkpointDirectory>/files`. Holds verified input copies and generated files. |
@@ -554,7 +554,7 @@ To save generated documents, return `withFiles(output, files)`: it takes a JSON 
 | `sourceDigest(source: string \| Uint8Array)` | SHA-256 declaration for supplied source bytes/text. |
 | `scoreLocally(version, context, { scorers?, schemaTimeoutMillis? }?)` | Computes `Promise<Score>` without uploading it. |
 
-`@hue-run/sdk/evals` uses `zod`, a regular dependency since 0.16.0, for its bounded runtime contracts. JSON Schema scoring uses `ajv`, a separate optional peer dependency (8.17 or later) loaded inside a worker only when `builtins.jsonSchema` scores a case; without it that scorer reports `SchemaValidatorUnavailable`. The tracing core depends only on `@opentelemetry/*` packages.
+JSON Schema scoring uses `ajv`, a separate optional peer dependency (8.17 or later) loaded inside a worker only when `builtins.jsonSchema` scores a case; without it that scorer reports `SchemaValidatorUnavailable`. The tracing core depends only on `@opentelemetry/*` packages.
 
 `ScoreContext` contains `inputs`, `hasOutput`, `hasExpected`, optional `output`/`expected`, `metadata`, `executionState` and, when the runner requires environment evidence, `environment` (an `EnvironmentEvidence`). With environment evidence present, a `local_code` scorer runs even when no output is stored. When required evidence cannot be read, `local_code` results record an `EnvironmentEvidenceUnavailable` error; a world marked `environment_incomplete` produces a skipped result with the fixed explanation `Environment incomplete: provider behavior is not implemented.` A `Score` is `scored` with declared metrics and explanation/evidence, `error` with a typed error, or `skipped` with an explanation. A failed quality metric is still `scored`, with `passed: false`.
 
@@ -564,7 +564,7 @@ Custom callbacks run locally, without a general execution timeout or side-effect
 
 - `UncertainExecutionError` exposes `caseId` and optional `executionId`: no durable outcome is available, so the runner refuses to repeat potentially completed work.
 - `OutcomeSerializationError` exposes `executionId`: the target returned, but its outcome could not be saved as JSON. The runner does not invoke it again.
-- `TargetCancelledError` is thrown when cooperative caller cancellation stops target execution; the run stays open, and rerunning with the same checkpoint directory retries the interrupted case as a new attempt.
+- `TargetCancelledError` is thrown by `runExperiment()` and `runSimulation()` when cooperative caller cancellation stops target execution; the run stays open, and rerunning with the same checkpoint directory retries the interrupted case as a new attempt.
 - `TargetOutcomeUncertainError` exposes `executionId`: the target or its simulated world may have committed but acknowledgement is unavailable, so a resume will not invoke the target again.
 - `TargetTimeoutError` is thrown to a target still running five seconds past its world's `expiresAt`, through the `signal` in its context; the case ends as an `error` of type `TargetTimeout` and the world is sealed abandoned.
 - `TraceExportUnacknowledgedError` is thrown by a resumed case whose saved outcome still waits for a trace export Hue never acknowledged; it is that case's own state on resume, and the cases beside it still run.
@@ -583,7 +583,7 @@ Scorers that Hue executes grade after the runner returns, so a caller that wants
 | Function | Behavior |
 | --- | --- |
 | `waitForResults(client, options: WaitForResultsOptions)` | Polls an evaluation run until every item has a terminal (`scored`, `error` or `skipped`) result for every listed scorer version, or the budget elapses → `VerdictResults`. A timeout or abort returns the partial state with `complete: false`. |
-| `summarizeVerdicts(results, { experimentItems, scorerVersionIds?, subjects? })` | Groups results by experiment case, in `experimentItems` order → `VerdictSummary`. Pass `subjects` when items do not carry `execution.subjectId`; `scorerVersionIds` defaults to the versions seen in `results`. |
+| `summarizeVerdicts(results, { experimentItems, scorerVersionIds?, scorerVersions?, subjects? })` | Groups results by experiment case, in `experimentItems` order → `VerdictSummary`. Pass `subjects` when items do not carry `execution.subjectId`; `scorerVersionIds` defaults to versions seen in `results`, while `scorerVersions` lets the summary apply evaluator definitions. |
 | `compareVerdicts(current, baseline)` | Diffs two `VerdictSummary` values by case key → `VerdictComparison`. |
 | `collectExperimentVerdicts(client, options: CollectExperimentVerdictsOptions)` | Reads an experiment's pinned scorer versions, waits for its results and summarizes them per case → `ExperimentVerdicts`. |
 | `metricPassed(metric)` | Whether one `Metric` passes: its explicit `passed`, otherwise a boolean `value`; any other value counts as passing. |
@@ -623,7 +623,7 @@ Register the process first with `registerLocalAgent(input: LocalAgentRegistratio
 | `target(inputs, tools, context)` | Runs cases pinned to a hosted world (`environment:v1`). Invokes the existing local agent with isolated `EnvironmentTool`s and a `LocalAgentTargetContext`. Supply `target`, `directTarget` or both. |
 | `directTarget(inputs, context)` | Runs ordinary cases without a world (`direct:v1`) with a `LocalAgentDirectContext`; returns a JSON value, a `TargetResult` from `withFiles`, `undefined` or a promise of any of these. |
 | `scorers` | Optional `LocalScorer[]` matching published source digests. |
-| `concurrency` | Default `1`; integer `1–64`. |
+| `concurrency` | Default `1`; integer `1–100`. |
 | `pollIntervalMillis` | Default `2000`; integer `250–60000`. |
 | `signal` | Optional `AbortSignal`; stops polling cooperatively and does not cancel an active callback. |
 | `maxRuns` | Optional. Useful for one-shot jobs; omit to keep polling. Counts runs that settled either way. |
@@ -662,7 +662,7 @@ Provider-profile preflight is a control-plane contract. The provider-facade rout
 | `traceEvidence` | Required `{ mode: "required" }` or `{ mode: "omit", reason }`. |
 | `target(inputs, context)` | Required. Invokes the existing local agent exactly once for this attempt with a `SimulationTargetContext`; returns a JSON value, `undefined` or a promise of either. |
 | `localScorers` | Optional `LocalScorer[]` bound by their declared source digests. |
-| `concurrency` | Default `1`; integer `1–64`. |
+| `concurrency` | Default `1`; integer `1–100`. |
 | `schemaTimeoutMillis` | JSON Schema worker deadline in milliseconds. |
 | `maxSteps` | Per-world action ceiling, `1–500`. |
 | `ttlSeconds` | Per-world lease in seconds, `1–86400`. |

@@ -77,11 +77,11 @@ npx -y @hue-run/sdk@0.16.0 eval --case "<name|id|url>" --command "<start command
 npx -y @hue-run/sdk@0.16.0 eval --worker --command "<start command>" --revision "<new-agent-revision>"
 ```
 
-npx caches the CLI, so the agent's repository gains no package.json or dependency. One command creates one run holding every selected case and prints its `https://app.hue.run/runs/<id>` link; rerunning the identical command resumes that run from its checkpoint. Add `--check` to confirm the key, selection, case kind and agent without creating anything. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `npx @hue-run/sdk` runs that local, possibly older, copy. `hue eval` needs Node.js 22 or 24, even for a Python agent.
+npx caches the CLI, so the agent's repository gains no package.json or dependency. See [Run an eval with your agent](/evaluations/run-your-agent) for one-shot runs, `--check` and resuming after interruption. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `npx @hue-run/sdk` runs that local, possibly older, copy. `hue eval` needs Node.js 22 or 24, even for a Python agent.
 
 `--command` starts the command once per case with `{"inputs","config"}` as JSON on stdin and reads the answer from stdout. For a case with a simulated world, the command receives the world's variables; the eval-ready guide lists them under [Run it](/evaluations/eval-ready-agent#run-it) and shows the one committed helper that reads them, so the agent reaches each app through Hue's mirror with its own production client and never receives Hue-native tools. Only the current case's world sets those variables: a value inherited from your environment never reaches the command. A direct case has no simulated world: it sets `HUE_EXECUTION_ID` and case variables without a world token, app mirrors or MCP connection. Skip optional app initialization and fail closed if the agent needs a missing app connection. `HUE_CASE_INPUTS` names the inputs file, the case's input files are under `files/<role>/`, and every file the command writes to `HUE_CASE_OUTPUT_DIR` is uploaded as a generated file for grading. A one-shot direct case starts in that private case directory, so use an absolute entry-point path; a command worker keeps the directory where you started the CLI for both direct and world cases. The command inherits your environment except Hue's own credentials: `HUE_API_KEY`, `HUE_MCP_KEY` and any other variable holding a Hue key are removed unless you pass `--allow-hue-credentials`, so your model keys and settings still reach the agent but the project key does not.
 
-`--worker` registers your agent so runs started from Hue, from the **Run** button or the `launch_local_run` MCP tool, execute on your machine with the same handoff. In TypeScript 0.13.2, command workers register both `direct:v1` and `environment:v1`, so one worker can run answer-only cases, world cases or an eval set containing both. Use a new `--revision` when upgrading an existing worker: a registered revision's capabilities cannot change.
+`--worker` registers your agent so runs started from Hue, from the **Run** button or the `launch_local_run` MCP tool, execute on your machine with the same handoff. Command workers register both `direct:v1` and `environment:v1`, so one worker can run answer-only cases, world cases or an eval set containing both. Use a new `--revision` when upgrading an existing worker: a registered revision's capabilities cannot change.
 
 | Flag | Meaning |
 | --- | --- |
@@ -94,7 +94,7 @@ npx caches the CLI, so the agent's repository gains no package.json or dependenc
 | `--json` | Print one JSON document on stdout; progress goes to stderr. |
 | `--wait <seconds>` | Verdict wait after the run finishes (default 300). |
 | `--timeout <seconds>` | Per-case `--command` timeout (default 600). |
-| `--concurrency <n>` | Cases in flight, 1 to 64 (default 1). |
+| `--concurrency <n>` | Cases in flight, 1 to 100 (default 1). |
 | `--baseline <run id\|url>` | Compare verdicts with a previous run. |
 | `--trace-not-accepted fail_case\|pending` | What to do with a case whose telemetry Hue did not accept in time (default `fail_case`). |
 | `--checkpoint-dir <path>` | Private checkpoint directory (default `.hue/eval/<agent-key>`; add `.hue/` to `.gitignore`). |
@@ -107,7 +107,7 @@ npx caches the CLI, so the agent's repository gains no package.json or dependenc
 
 One-shot exit codes: 0 every case passed; 1 a case failed, errored, is inconclusive or is incomplete; 2 usage error; 130 interrupted. `hue eval --help` lists every flag.
 
-Since TypeScript 0.10.0, one-shot runs store case outputs, target error messages and explanations by default, as workers already do. Trace content capture is on by default; `--no-content` opts out. Earlier SDK versions require `--content` to enable it. Use `--no-output` to omit result content from a one-shot run, or `--no-output --no-content` to omit both results and telemetry content. Resume an older metadata-only run with `--no-content` and its original output policy. A command's stdout becomes its stored answer, with credentials handed to it by `hue eval` redacted; keep credentials and debug logs out of stdout. Generated files are uploaded regardless of `--no-output` and are not fully redacted, so never write credentials into them.
+One-shot runs store case outputs, target error messages and explanations by default, as workers already do. Trace content capture is on by default; `--no-content` opts out. Use `--no-output` to omit result content from a one-shot run, or `--no-output --no-content` to omit both results and telemetry content. Resume an older metadata-only run with `--no-content` and its original output policy. A command's stdout becomes its stored answer, with credentials handed to it by `hue eval` redacted; keep credentials and debug logs out of stdout. Generated files are uploaded regardless of `--no-output` and are not fully redacted, so never write credentials into them.
 
 An evaluator that does not apply to a case shows `n/a` and neither passes nor fails it. A case with no applicable pinned evaluator is an error.
 

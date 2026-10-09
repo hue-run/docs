@@ -600,11 +600,11 @@ export async function runModelCode(code: string) {
 
 ### Relative dates
 
-A world's clock is the source trace start, not wall time; `hue eval` passes RFC 3339 `HUE_WORLD_NOW` for relative dates. Without the SDK, use `inHueEval() && process.env.HUE_WORLD_NOW ? new Date(process.env.HUE_WORLD_NOW) : new Date()` in TypeScript; Python parses with `datetime.fromisoformat(value.replace("Z", "+00:00"))` and otherwise uses `datetime.now(timezone.utc)` (Python 3.10 needs `+00:00`). SDK helpers `worldNow() ?? new Date()` (TS 0.13.0) and `world_now() or datetime.now(timezone.utc)` (Python 0.7.0) fall back when unset; adapters use `worldNow(context.world)` or `context.world.env`. Ignore if the agent never reads a clock.
+A world's clock is the source trace start, not wall time; `hue eval` passes RFC 3339 `HUE_WORLD_NOW` for relative dates. Without the SDK, use `inHueEval() && process.env.HUE_WORLD_NOW ? new Date(process.env.HUE_WORLD_NOW) : new Date()` in TypeScript; Python parses with `datetime.fromisoformat(value.replace("Z", "+00:00"))` and otherwise uses `datetime.now(timezone.utc)` (Python 3.10 needs `+00:00`). SDK helpers `worldNow() ?? new Date()` and `world_now() or datetime.now(timezone.utc)` fall back when unset; adapters use `worldNow(context.world)` or `context.world.env`. Ignore if the agent never reads a clock.
 
 ## Run it
 
-`hue eval` starts your command once per case. World cases get world variables; answer-only cases get execution and case variables only. Read `{"inputs","config"}` from stdin, run once, print the answer to stdout and exit. Answer-only cases retain generated checks and required judges; see [Cases from traces](/evaluations/case-from-trace#answer-only-cases).
+`hue eval` starts your command once per case. World cases get world variables; answer-only cases get execution and case variables only. Read `{"inputs","config"}` from stdin, run once, print the answer to stdout and exit. Answer-only cases retain generated checks and required judges; see [Trace to case](/evaluations/case-from-trace#answer-only-cases).
 
 Use an absolute entry path for one-shot runs; private case directories cannot resolve repository-relative paths. Workers keep the CLI's starting directory. Examples expand `$PWD` before launch.
 
@@ -663,7 +663,7 @@ Every case receives execution and case variables. Only a case with a world recei
 | `HUE_CASE_DIR`, `HUE_CASE_INPUTS`, `HUE_CASE_OUTPUT_DIR` | A private case directory: the inputs file, the case's input files under `files/<role>/`, and `output/`, whose files are uploaded after the case. |
 | `HUE_MCP_URL`, `HUE_MCP_TOKEN`, `HUE_MCP_EXPIRES_AT` | Legacy names for the first MCP mirror. |
 
-`hue eval` removes `HUE_API_KEY` and Hue-key-shaped values; other shell and `--env-file` variables pass through. Do not reload a file containing `HUE_API_KEY`. Store checkpoints under `.hue/eval/<agent-key>` and ignore `.hue/`; case files are under `HUE_CASE_DIR/files/<role>/`. Logs go to stderr; stdout is stored. Exit codes: 0 pass, 1 failure, error, inconclusive or incomplete, 2 usage, 130 interrupt. Compare with `--baseline <previous run id>`.
+`hue eval` removes `HUE_API_KEY` and Hue-key-shaped values; other shell and `--env-file` variables pass through. Do not reload a file containing `HUE_API_KEY`. Store checkpoints under `.hue/eval/<agent-key>` and ignore `.hue/`; case files are under `HUE_CASE_DIR/files/<role>/`. Logs go to stderr; stdout is stored. A case passes only after each required evaluator decides; undecided results leave it inconclusive. Exit codes: 0 pass, 1 failure, error, inconclusive or incomplete, 2 usage, 130 interrupt. Compare with `--baseline <previous run id>`.
 
 For the **Run** button and `launch_local_run` to use one agent for answer-only or world-backed cases, start a command worker. It claims queued runs and uses the same stdin handoff:
 
@@ -671,7 +671,7 @@ For the **Run** button and `launch_local_run` to use one agent for answer-only o
 npx -y @hue-run/sdk@0.16.0 eval --worker --command "node \"$PWD/agent.js\"" --revision "<new-agent-revision>"
 ```
 
-TypeScript 0.13.2 command workers register `direct:v1` and `environment:v1`. Adapter-file workers register world support by default; add `--capability direct:v1` only after the adapter supports direct cases. Change `--revision` when capabilities change; otherwise keep it stable.
+Command workers register `direct:v1` and `environment:v1`. Adapter-file workers register world support by default; add `--capability direct:v1` only after the adapter supports direct cases. Change `--revision` when capabilities change; otherwise keep it stable.
 
 TypeScript adapters lack `HUE_WORLD_TOKEN` and `HUE_EXECUTION_ID`: pass `context.world.env` or spawn with [`agentEnvironment(context.world)`](/reference/typescript#world-handoff). Reject missing worlds; direct adapters pass `{ HUE_EXECUTION_ID: context.executionId }` and connect no apps. Adapter-file workers register world support by default; add `--capability direct:v1` only after the adapter supports direct cases. Never mutate `process.env`; concurrency can leak worlds. Python uses [`hue_sdk.environment`](/reference/python#world-handoff) helpers. Unsupported gateway worlds have no handoff or token; required connections refuse them. See [world handoff](/evaluations/simulations#world-handoff).
 

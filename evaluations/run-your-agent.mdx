@@ -8,7 +8,7 @@ description: "Run your existing agent, local or deployed, against a published ca
 ## Before you start
 
 - Node.js 22 or 24 on the machine that runs the command, even for a Python agent.
-- A **Read and write** [project key](/quickstart#project-keys) in an ignored env file. `hue login --gitignore` writes `.env.hue` and ignores it; also add `.hue/` to `.gitignore` for checkpoints.
+- A **Read and write** [project key](/quickstart#project-keys) in an ignored env file. `hue login --gitignore` writes `.env.hue` and ignores it; when the shell has no `HUE_API_KEY`, `hue eval` loads `./.env.hue` by default. Pass `--env-file <path>` for another file, and add `.hue/` to `.gitignore` for checkpoints.
 - A start command that reads `{"inputs","config"}` as JSON on stdin and prints the answer on stdout. Logs go to stderr.
 - For cases where the agent calls apps, the one-time [mirror helper](/evaluations/eval-ready-agent) so its clients reach Hue's simulated world instead of production.
 
