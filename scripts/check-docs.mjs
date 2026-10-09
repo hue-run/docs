@@ -108,16 +108,11 @@ if (new Set(pages).size !== pages.length) fail("docs.json navigation contains du
 if (JSON.stringify(mdxFiles) !== JSON.stringify(expectedMdxFiles)) {
   fail(`docs.json must contain every MDX page exactly once; found ${mdxFiles.length} files and ${pages.length} navigation entries`);
 }
-// A new page is a deliberate change: concepts defines the product vocabulary, guides/redaction centralizes the cross-language
-// redaction recipes linked by the SDK guides and coding-agent skill, and agents/mcp-tools keeps
-// the per-tool reference off the connection guide that agents read whole during setup, and
-// evaluations/eval-ready-agent is the one committed change that points an agent's own app clients
-// at Hue's mirrors during an evaluation, and evaluations/case-from-trace is the review path that
-// turns one production trace into a published case. agents/debug-environment describes the
-// distinct trace-to-environment debugging workflow, private uploads and fresh world attempts, and
-// guides/hue-app maps the customer-facing app sidebar to its owning documentation.
-if (pages.length !== 28 || pages.length + 1 !== 29) {
-  fail(`expected 28 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
+// Concepts defines the product vocabulary, guides/redaction centralizes the cross-language
+// privacy recipes linked by the SDK guides and coding-agent skill, and agents/mcp-tools keeps
+// the per-tool reference off the connection guide that agents read whole during setup.
+if (pages.length !== 23 || pages.length + 1 !== 24) {
+  fail(`expected 23 navigated MDX pages plus skill.md, found ${pages.length + 1}`);
 }
 
 for (const page of expectedMdxFiles) {
@@ -160,7 +155,7 @@ const legacyPresetNames = [
   "Coding agent (read-only)",
   "Coding agent (read + evaluations)",
 ];
-const legacyPresetFiles = ["guides/project-keys.mdx", "agents/mcp-server.mdx"];
+const legacyPresetFiles = ["quickstart.mdx", "agents/mcp-server.mdx"];
 const presetNames = platform.serviceKeyPresets.map(({ name }) => name);
 if (JSON.stringify(presetNames) !== JSON.stringify(expectedPresetNames)) {
   fail(`platform contract has unexpected service-key presets: ${presetNames.join(", ")}`);
@@ -191,7 +186,6 @@ for (const legacy of [
 const mcpVocabularyText = [
   publicText["agents/mcp-server.mdx"],
   publicText["agents/mcp-tools.mdx"],
-  publicText["agents/investigate-production.mdx"],
 ].join("\n");
 for (const legacy of [
   "dataset_id",
@@ -272,7 +266,13 @@ for (const [profile, tools] of Object.entries(toolsets.profiles ?? {})) {
 // or Write. Role requirements follow a comma and are not in the contract.
 const referenceRows = new Map();
 let referenceGroup = null;
+let inToolReference = false;
 for (const line of publicText["agents/mcp-tools.mdx"].split("\n")) {
+  if (line.startsWith("## ")) {
+    inToolReference = line === "## Tools by toolset";
+    if (!inToolReference) continue;
+  }
+  if (!inToolReference) continue;
   const heading = /^### (?:`([a-z_]+)`|(Catalog tools))$/.exec(line);
   if (heading) referenceGroup = heading[1] ?? "catalog";
   const row = /^\| `([a-z_]+)` \| ([^|]+?) \|/.exec(line);
@@ -374,19 +374,18 @@ for (const path of publicFiles) {
     if (publicText[path].includes(name)) fail(`${path} names the retired key preset ${name}`);
   }
 }
-for (const path of ["guides/project-keys.mdx"]) {
+for (const path of ["quickstart.mdx"]) {
   for (const name of legacyPresetNames) {
     if (!publicText[path].includes(name)) fail(`${path} must explain the legacy preset ${name}`);
   }
 }
 
 const requirements = {
-  "quickstart.mdx": ["Tracing only"],
+  "quickstart.mdx": ["**Read**", "**Read and write**", "**Tracing only**"],
   "sdks/typescript.mdx": ["Tracing only", "Read and write"],
   "sdks/python.mdx": ["Tracing only", "Read and write"],
   "integrations/opentelemetry.mdx": ["Tracing only", "Read and write"],
   "integrations/reference-chatbot.mdx": ["Tracing only"],
-  "guides/production-safety.mdx": ["Tracing only", "Read and write"],
   "evaluations/first-evaluation.mdx": ["Read and write"],
   "evaluations/simulations.mdx": ["Read and write"],
   "evaluations/managed-runs.mdx": ["Read and write"],
@@ -396,7 +395,6 @@ const requirements = {
   "agents/mcp-server.mdx": ["**Read**", "Read and write", "**Settings → Connected apps**"],
   "agents/mcp-tools.mdx": ["**Read**", "Read and write", "Tracing only"],
   "guides/troubleshooting.mdx": ["Tracing only", "**Read**", "Read and write"],
-  "guides/project-keys.mdx": expectedPresetNames.map((name) => `**${name}**`),
   "skill.md": ["Tracing only", "Read and write"],
 };
 for (const [path, phrases] of Object.entries(requirements)) {
@@ -437,8 +435,8 @@ for (const language of ["typescript", "python"]) {
 }
 const typescriptVersion = sdk.packages.typescript.version;
 const pythonVersion = sdk.packages.python.version;
-if (!publicText["installation.mdx"].includes(`npm install @hue-run/sdk@${typescriptVersion}`)) fail("installation.mdx has a stale TypeScript version");
-if (!publicText["installation.mdx"].includes(`pip install hue-run==${pythonVersion}`)) fail("installation.mdx has a stale Python version");
+if (!publicText["quickstart.mdx"].includes(`npm install @hue-run/sdk@${typescriptVersion}`)) fail("quickstart.mdx has a stale TypeScript version");
+if (!publicText["quickstart.mdx"].includes(`pip install hue-run==${pythonVersion}`)) fail("quickstart.mdx has a stale Python version");
 for (const [path, text] of Object.entries(publicText)) {
   const packages = path === "skill.md" ? skillPackages : sdk.packages;
   for (const match of text.matchAll(/@hue-run\/sdk@(\d+\.\d+\.\d+)|hue-run==(\d+\.\d+\.\d+)/g)) {
@@ -592,10 +590,17 @@ for (const [path, text] of Object.entries(publicText)) {
   }
 }
 const redirects = Array.isArray(config.redirects) ? config.redirects : [];
-if (!redirects.some((redirect) =>
-  redirect?.source === "/guides/invited-setup" && redirect?.destination === "/guides/agent-setup",
-)) {
-  fail("docs.json must redirect /guides/invited-setup to /guides/agent-setup");
+for (const { source, destination } of [
+  { source: "/guides/invited-setup", destination: "/guides/agent-setup" },
+  { source: "/installation", destination: "/quickstart" },
+  { source: "/guides/project-keys", destination: "/quickstart" },
+  { source: "/guides/hue-app", destination: "/" },
+  { source: "/guides/production-safety", destination: "/sdks/typescript#production-setup" },
+  { source: "/agents/investigate-production", destination: "/agents/mcp-tools" },
+]) {
+  if (!redirects.some((redirect) => redirect?.source === source && redirect?.destination === destination)) {
+    fail(`docs.json must redirect ${source} to ${destination}`);
+  }
 }
 
 let generated;

@@ -27,7 +27,7 @@ npx --yes --package @hue-run/sdk@0.14.0 hue login --gitignore
 
 `hue login` prints the key settings page and opens it in your browser when a terminal is attached. It reads the key without echoing it, checks it against Hue, and stores it once as both `HUE_API_KEY` (for evaluations) and `HUE_MCP_KEY` (for your coding agent) in `./.env.hue`, together with `HUE_BASE_URL` and `HUE_MCP_URL`. `--gitignore` adds that file to `.gitignore`. Key values are never printed.
 
-A **Read** or **Tracing only** key is refused before anything is stored, because it cannot run evaluations. See [project keys](/guides/project-keys) for what each preset can do.
+A **Read** or **Tracing only** key is refused before anything is stored, because it cannot run evaluations. See [Project keys](/quickstart#project-keys) for what each preset can do.
 
 | Option | Effect |
 | --- | --- |

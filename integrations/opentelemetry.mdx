@@ -196,7 +196,7 @@ The Collector replaces the SDK key, so `apiKey` / `api_key` can be a non-empty p
 
 Pass `redact` when creating the transport to scrub exported content; see [Redaction](/guides/redaction#existing-providers).
 
-To keep provider ownership while using Hue content controls and diagnostics, attach its processors during construction. [Install the TypeScript package](/installation#typescript) and these dependencies:
+To keep provider ownership while using Hue content controls and diagnostics, attach its processors during construction. [Install the TypeScript package](/quickstart#typescript) and these dependencies:
 
 ```sh
 bun add @opentelemetry/sdk-trace@2.11.0 @opentelemetry/sdk-logs@0.222.0 @opentelemetry/resources@2.11.0
@@ -289,13 +289,13 @@ For example, this is the change to an existing `NodeSDK` setup after installing 
   });
 ```
 
-This is an attachment example, not a replacement bootstrap or version certification. Create the optional transport inside a fail-open boundary and append only on success. Use framework processor configuration when it owns the provider; see [production safety](/guides/production-safety).
+This is an attachment example, not a replacement bootstrap or version certification. Create the optional transport inside a fail-open boundary and append only on success. Use framework processor configuration when it owns the provider; see [production setup](/sdks/typescript#production-setup).
 
 Keep Langfuse AI SDK instrumentation: SDK 6 uses `experimental_telemetry`; SDK 7 uses its registered integration. Per-call `hueTelemetry()` replaces global integrations for that call. See [Langfuse setup](https://langfuse.com/integrations/frameworks/vercel-ai-sdk) and [compatibility](/sdks/compatibility).
 
-Langfuse's `mask` hook does not redact Hue's copy. Apply policy to both exports, then inspect synthetic content in both. See [Langfuse masking](https://langfuse.com/docs/observability/features/masking) and [Hue capture policy](/guides/production-safety#content-capture-and-retention).
+Langfuse's `mask` hook does not redact Hue's copy. Apply policy to both exports, then inspect synthetic content in both. See [Langfuse masking](https://langfuse.com/docs/observability/features/masking) and [Hue capture policy](/guides/redaction#retention).
 
-Hue reads Langfuse attributes directly. `langfuse.observation.type`, `.model.name`, `.usage_details`, `.input`, `.output`, `langfuse.session.id` and `langfuse.user.id` fill Hue fields when GenAI attributes are absent; GenAI wins. `langfuse.trace.name` names traces without request text; `langfuse.release` supplies `release` absent `service.version`. Metadata, environment, tags and levels stay raw; OpenTelemetry status marks failure. See the [field glossary](/agents/investigate-production#field-glossary).
+Hue reads Langfuse attributes directly. `langfuse.observation.type`, `.model.name`, `.usage_details`, `.input`, `.output`, `langfuse.session.id` and `langfuse.user.id` fill Hue fields when GenAI attributes are absent; GenAI wins. `langfuse.trace.name` names traces without request text; `langfuse.release` supplies `release` absent `service.version`. Metadata, environment, tags and levels stay raw; OpenTelemetry status marks failure. See the [field glossary](/agents/mcp-tools#field-glossary).
 
 TypeScript `0.13.0` or Python `0.7.0+` strip recognized Langfuse content in metadata-only mode; earlier SDKs need producer or Collector controls. Metadata and custom fields pass through. Verify each independent capture policy; see [compatibility](/sdks/compatibility).
 
@@ -307,7 +307,7 @@ Exporters cannot recover truncated data. Instrument reductions when analysis nee
 
 In AI SDK 7, add Hue processors to existing providers at startup and retain the `hue` client/providers for the server lifetime.
 
-The standalone diagnostic fails on setup errors. In serving apps, guard optional setup and use [production-safe initialization](/guides/production-safety). `createHueSafe({ transport, tracerProvider, loggerProvider })` cannot catch `createHueTransport(...)` errors, so guard that call too.
+The standalone diagnostic fails on setup errors. In serving apps, guard optional setup and use [production-safe initialization](/sdks/typescript#production-setup). `createHueSafe({ transport, tracerProvider, loggerProvider })` cannot catch `createHueTransport(...)` errors, so guard that call too.
 
 In the route, import `consumeStream` from `ai` and `after` from `next/server`, and import the server-lifetime `hue` client from your telemetry module. Replace a standalone `after(flushTelemetry)` with this option inside your existing `createAgentUIStreamResponse` call:
 
@@ -353,7 +353,7 @@ A child can arrive before its parent, and a correlated log can arrive before its
 
 ## Attributes for coding agents
 
-A coding agent that reads your traces over the [Hue MCP server](/agents/investigate-production) can only filter and group by what the spans record. These attributes make its answers precise:
+A coding agent that reads your traces over the [Hue MCP server](/agents/mcp-tools) can only filter and group by what the spans record. These attributes make its answers precise:
 
 - **Mark failures.** Set OpenTelemetry status to `ERROR`; `error.type` or Langfuse `level` alone does not mark failure.
 - **Record users and sessions.** Set stable `user.id` (or `enduser.id` / `langfuse.user.id`) across spans and sub-agents; suffixed IDs no longer group with the parent. Set `session.id` or `gen_ai.conversation.id` on the root. Langfuse propagates user IDs with TypeScript `propagateAttributes({ userId }, …)` or Python `propagate_attributes(user_id=…)`.
@@ -365,7 +365,7 @@ A coding agent that reads your traces over the [Hue MCP server](/agents/investig
 
 ## Trace checks and request timing
 
-[Trace checks](/agents/investigate-production#trace-checks) assess delegation, scope and omitted output; request timing measures time to a useful answer. They use recorded attributes and events, not inferred data, and require owner or admin consent plus an activated tested version. Run traces are excluded.
+[Trace checks](/agents/mcp-tools#trace-checks) assess delegation, scope and omitted output; request timing measures time to a useful answer. They use recorded attributes and events, not inferred data, and require owner or admin consent plus an activated tested version. Run traces are excluded.
 
 ### Mark the root span
 

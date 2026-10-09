@@ -9,13 +9,13 @@ For option defaults and method signatures, see the [Python API reference](/refer
 
 ## Install
 
-Use Python 3.10 or later. [Install the Python SDK](/installation#python), then configure your key below. Tests cover Python 3.10 and 3.14 with OpenTelemetry 1.44.0, the certified combination, and OpenTelemetry 1.40.0, the declared floor; the SDK accepts `>=1.40,<2`.
+Use Python 3.10 or later. [Install the Python SDK](/quickstart#python), then configure your key below. Tests cover Python 3.10 and 3.14 with OpenTelemetry 1.44.0, the certified combination, and OpenTelemetry 1.40.0, the declared floor; the SDK accepts `>=1.40,<2`.
 
 ## Configure your project
 
 Create a **Tracing only** project service key in **Settings → Integrations & API keys** and set `HUE_API_KEY` in your server environment. Keep it out of browser code and Git.
 
-**Tracing only** covers ingestion, connection checks, and known-trace receipt verification. Use **Read and write** when the same process also creates eval sets, evaluators, runs or managed runs. See [project keys](/guides/project-keys) for access and rotation. The SDK connects to Hue Cloud by default. Other origins are covered in [connection settings](/guides/project-keys#connection-settings).
+**Tracing only** covers ingestion, connection checks, and known-trace receipt verification. Use **Read and write** when the same process also creates eval sets, evaluators, runs or managed runs. See [Project keys](/quickstart#project-keys) for access and rotation. The SDK connects to Hue Cloud by default. Other origins are covered in [connection settings](/quickstart#connection-settings).
 
 Pass the key as the `api_key=` keyword. The first positional parameter is `base_url`, so a bare key in that position raises `TypeError` naming `api_key=`; existing `Hue(base_url, api_key)` calls keep working. The constructor reads no environment variables.
 
@@ -66,7 +66,7 @@ Open **Traces** in the project that owns the key. The root span and its `execute
 
 For a copyable email-masking callback and guidance on custom field rules, follow [Redaction](/guides/redaction).
 
-`capture_content` defaults to `True`; set it to `False` to opt out. Use `True`, the recommended setting: Hue can only show and evaluate what a trace records. `True` captures content supplied through Hue's input, output, tool, and inference-log helpers, such as prompts and messages, responses and tool inputs and outputs. Use `False` for metadata-only capture when you'd rather not send content, or when an application or data policy forbids sending it to another service; it omits that content before it enters an OpenTelemetry queue. Received content is stored under your project’s [retention policy](/guides/production-safety#content-capture-and-retention).
+`capture_content` defaults to `True`; set it to `False` to opt out. Use `True`, the recommended setting: Hue can only show and evaluate what a trace records. `True` captures content supplied through Hue's input, output, tool, and inference-log helpers, such as prompts and messages, responses and tool inputs and outputs. Use `False` for metadata-only capture when you'd rather not send content, or when an application or data policy forbids sending it to another service; it omits that content before it enters an OpenTelemetry queue. Received content is stored under your project’s [retention policy](/guides/redaction#retention).
 
 With `capture_content=False`, Hue also strips recognized GenAI, OpenInference, OpenLLMetry and Vercel AI SDK content attributes, legacy `gen_ai.*` message events, log bodies and status descriptions from every record it exports, including spans from third-party instrumentors on the same provider. The [compatibility matrix](/sdks/compatibility) lists the keys, which are identical to TypeScript's `contentPrefixes`. The setting does not classify arbitrary attribute names, span names, session IDs or another exporter's records, and unrecognized custom keys pass through. Configure an instrumentor's own content controls before enabling it; it may also send content to other exporters.
 
@@ -104,9 +104,69 @@ Only require fields the request should emit and your capture policy permits. Sup
 
 The receipt reports stored field presence, span counts, and missing expected spans. It contains no captured values. A successful result confirms the conditions you requested; inspect the trace in Hue to check the content and redaction. See the [verification API](/reference/python#trace-verification) for limits and failures.
 
-For serving requests, use [safe initialization, lifecycle deadlines and a kill switch](/guides/production-safety).
+## Production setup
 
-## Flush and shutdown
+Keep tracing best effort in a serving application: an outage should reduce observability, not prevent an answer. Hue follows OpenTelemetry's [runtime error containment](https://opentelemetry.io/docs/specs/otel/error-handling/) and [bounded-resource principles](https://opentelemetry.io/docs/specs/otel/performance/). Use a **Tracing only** project service key for application requests; use **Read and write** only when the same process also calls evaluation APIs, and keep that key off production servers.
+
+The Python SDK suppresses its own export traffic from OpenTelemetry instrumentation. If its suppression key is unavailable, Hue warns once and exports without it while its queues still ignore export work. Verify your dependency and instrumentor combination in CI.
+
+### Verify setup outside request handling
+
+Run the strict [quickstart](/quickstart), connection check and [trace receipt verification](#verify) during setup, not in readiness or customer requests.
+
+Create one client per serving process with the safe constructor and background export. Initialize after fork, once per serving process. Use safe lifecycle methods at the lifecycle boundary; never rerun an agent after a telemetry error because tools may have caused side effects.
+
+```python
+import os
+from hue_sdk import create_hue_safe
+
+# Initialize after fork, once per serving process.
+hue = create_hue_safe(
+    api_key=os.environ.get("HUE_API_KEY"),
+    service_name="customer-agent",
+    capture_content=os.environ.get("HUE_CAPTURE_CONTENT") != "false",  # Content is on unless explicitly disabled.
+    enabled=os.environ.get("HUE_TRACING_ENABLED") != "false",
+    max_queue_bytes=8 * 1024 * 1024,
+)
+
+def handle_request(inputs):
+    with hue.span("agent.request") as span:
+        span.set_input(inputs)
+        result = existing_agent(inputs)
+        span.set_output(result)
+        return result
+
+# At process shutdown, after stopping new requests:
+def shutdown_tracing():
+    return hue.shutdown_safe(timeout_millis=1000)
+# Register shutdown_tracing in your shutdown hook; observe its result without raising.
+```
+
+`existing_agent` is your function. Register shutdown in the process hook. For serverless, flush in the supported after-response lifecycle; do not shut down shared providers per request.
+
+### Failure behavior
+
+Hue omits unsafe content or redactor failures, records instrumentation failure and preserves application results and errors. Safe initialization returns a disabled client on setup failure; helpers still execute application work.
+
+Python redactors receive detached copies. Snapshots allow 1 MiB, depth 64 and 65,536 values and keys; cycles, custom objects, non-finite numbers, integers above 14,000 bits and over-budget inputs are omitted before redaction. Final redacted JSON is capped at 256 KiB. Keep redactors deterministic and side-effect free.
+
+Safe lifecycle methods return failure results. A timeout neither proves delivery nor cancels an in-flight request. `Hue`, checks, verification and strict lifecycle methods remain diagnostic and may fail.
+
+Queues limit records and bytes, including in-flight records. Python's default 8 MiB is per signal. This bounds queued telemetry, not process RSS. Overflow drops telemetry and updates counters without retrying business work.
+
+Network retries are bounded. Python keeps one worker per signal; an OS-blocked call can outlive the wait and retain one encoded request (up to 1 MiB) outside queue counters. Shutdown counts discards; process kill, full queues, disabled clients and exporter failures can lose telemetry. There is no disk spool or delivery guarantee.
+
+In-process code cannot prevent termination, OOM, stalls or third-party hooks. Keep redactors fast and offline. Safe construction cannot catch import or dependency failures, so verify startup in CI or guard the integration.
+
+### Kill switch and monitoring
+
+The snippets read `HUE_TRACING_ENABLED`; set it to `false` and restart to bypass Hue without changing application code. It is not a remote flag. Strict constructors also accept `enabled=False`; a disabled client needs neither a key nor capture settings.
+
+Inspect `hue.export_status` for failures, drops, pending bytes and exports. Counters are cumulative; pending bytes and records are current gauges. Emit only sanitized counts and status, never credentials, content or raw provider exceptions, and do not send health signals only through Hue.
+
+Before rollout, test your real entry point against a loopback receiver that returns 503, rejects its key, delays its response and exceeds queue capacity. Verify that each tool runs once, results and errors match an uninstrumented request, and shutdown meets your deadline. Start with a small canary.
+
+### Flush and shutdown
 
 `force_flush()` drains both signals and returns a boolean. It returns `False` for a timeout or any recorded failed export batch, dropped record or instrumentation failure during this client's lifetime. Check `hue.export_status` for cumulative trace and log failure counts. HTTP errors, malformed acknowledgements, and OTLP partial rejections are failures; receiver error bodies are not echoed.
 

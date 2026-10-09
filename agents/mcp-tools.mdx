@@ -3,7 +3,7 @@ title: "MCP tools"
 description: "Find each Hue MCP tool, its access level, and the role or key it requires."
 ---
 
-This page lists every tool the [Hue MCP server](/agents/mcp-server) serves, grouped by the toolsets you name in `?toolsets=`. A default connection lists the production reads and the catalog tools; call any other tool through [`search_hue_tools` and the executors](/agents/mcp-server#choose-toolsets), or list it with its toolset. For tool sequences, see [Example tasks](/agents/mcp-server#example-tasks), [Investigate production](/agents/investigate-production) and [Reproduce failures](/agents/debug-environment).
+This page lists every tool the [Hue MCP server](/agents/mcp-server) serves, grouped by the toolsets you name in `?toolsets=`. A default connection lists the production reads and the catalog tools; call any other tool through [`search_hue_tools` and the executors](/agents/mcp-server#choose-toolsets), or list it with its toolset. For tool sequences, see [Example tasks](/agents/mcp-server#example-tasks), [Recipes](#recipes) and [Environments from traces](/agents/debug-environment).
 
 The connection itself is the authority on the exact arguments: `search_hue_tools` returns each tool's input schema as your connection publishes it, including `project_id` on an organization connection.
 
@@ -52,7 +52,7 @@ The **Access** column of each table uses these levels. A level can add a role re
 
 ### `traces`
 
-Listed by default: `search_traces`, `get_trace`, `get_span`, `list_sessions`, `verify_trace`, `get_span_content`, `search_spans` and `aggregate`. The trace-check tools produce results only for projects [set up for trace checks](/agents/investigate-production#trace-checks). `search_traces`, `search_spans`, `aggregate` and `list_sessions` leave out traces your runs recorded unless `run_traces` is `include`, `only` or a run id; see [traces from runs](/agents/investigate-production#traces-from-runs).
+Listed by default: `search_traces`, `get_trace`, `get_span`, `list_sessions`, `verify_trace`, `get_span_content`, `search_spans` and `aggregate`. The trace-check tools produce results only for projects [set up for trace checks](#trace-checks). `search_traces`, `search_spans`, `aggregate` and `list_sessions` leave out traces your runs recorded unless `run_traces` is `include`, `only` or a run id; see [traces from runs](#traces-from-runs).
 
 | Tool | Access | What it does |
 | --- | --- | --- |
@@ -209,7 +209,7 @@ Listed by default: `get_intent_summary`, `list_intent_traces` and `get_request_a
 | `save_intent_taxonomy` | Destructive, owner or admin | Publishes a new version of the intent taxonomy. |
 | `get_intent_summary` | Read | Counts a window's traces per intent bucket and reports whether classification is on; with request answers, it also carries the `task_types` answer. |
 | `list_intent_traces` | Read | Lists one intent bucket's traces as `search_traces` rows. |
-| `get_request_answer` | Read | Answers one question about the agent's behavior across requests, or returns every finding with `overview`; see [request-answer details](/agents/investigate-production#request-answers). |
+| `get_request_answer` | Read | Answers one question about the agent's behavior across requests, or returns every finding with `overview`; see [request-answer details](#request-answers). |
 
 ### `docs`
 
@@ -229,3 +229,273 @@ Listed beside every selection except `all`, which lists every tool directly inst
 | `search_hue_tools` | Read | Finds the tools your access allows by keywords or toolset, 10 per page, with each tool's access, input schema and how to call it. |
 | `execute_hue_tool` | Read | Calls a read tool by name, with the same checks, audit and result as a direct call. |
 | `execute_hue_write_tool` | Destructive | Calls a write tool by name. It is annotated destructive because it can call any write; approve each call as you would the write itself. |
+
+## Recipes
+
+
+The [Hue MCP server](/agents/mcp-server) reads stored traces, spans, findings, trace checks and intents, plus counts and percentiles. It does not diagnose or classify; your agent analyzes the returned data. A **Read** key is sufficient.
+
+Connect using the [MCP setup guide](/agents/mcp-server). The default `observe` toolset includes most recipe tools. Find `get_intent_taxonomy` and trace-check reads with `search_hue_tools`, then call them through `execute_hue_tool`, or list all tools with `?toolsets=all`. `get_request_answer` covers cross-request behavior for projects whose requests Hue maps. `load_hue_guide` with `production` returns this guide in MCP; resource clients also expose `hue://guides/<topic>`. `triage_production` (`window`, default `7d`) and `investigate_trace` (`trace`) prompts appear in Claude Code as `/mcp__hue__triage_production` and `/mcp__hue__investigate_trace`.
+
+Use `aggregate` for counts and percentiles, `search_spans` for individual steps, and `get_span_content` for exact recorded values. `search_traces` and `get_trace` connect spans to requests.
+
+Each recipe is a short sequence of tool calls with their key arguments. Replace `24h` with the window the user asked for. `aggregate` and `search_spans` read spans over at most 7 days; trace reads cover up to 90 days.
+
+### Before you start
+
+- **Select the project.** Keys reach one project. For organization sign-in, confirm the project from `list_projects` and pass its id or slug as `project_id`; [pinned connections](/agents/mcp-server#pin-a-connection-to-one-project) omit that argument and report `connection.pinned: true`.
+- **Keep the tool boundary consistent.** Hue arguments and outputs use recursive `snake_case`; recorded attribute maps keep application keys. Object ids and result names use product terms, and app-page ids accept Hue links. JSON arguments that round-trip trace-check definitions, calibration or judge bars must use returned `snake_case` keys; camelCase is rejected.
+- **State the method.** Ask the agent to report its window, filters, traces opened and links; its analysis is not a Hue-generated diagnosis.
+- **Report limits.** `aggregate` and `total_count` cover the filtered window unless `scan_capped`, `partial`, `total_capped` or `total_count_capped` says otherwise. Search result pages are samples; state when the agent opens only a bounded sample.
+- **Rankings use counts.** `aggregate` returns the top 10 groups (up to 25), with the rest in `other`; filter or raise `top` to inspect rare groups.
+- **Check empty results.** A narrow window, filter or disabled feature can return nothing. `get_project_context.features` lists enabled features; widen the window or remove filters before concluding nothing happened.
+- **Rows omit null or empty fields.** Shared links may be returned once as a URL template.
+- **Content is opt-in and audited.** Request it with `get_span_content` or `include_content: true` only when needed; results mark recorded content as untrusted. See the [security model](/agents/mcp-server#security-model).
+
+### Find traces that need attention
+
+Prompt: “What needs attention in the last 24 hours, and why? Link the traces.”
+
+Sequence: `get_project_context` → `aggregate` with `{"since": "24h", "group_by": ["attention_state"]}` and `{"since": "24h", "group_by": ["finding"]}` → `search_traces` with `{"since": "24h", "attention": "needs_attention"}` or `{"since": "24h", "status": "error"}` → `get_trace` → `get_span_content` for exact evidence.
+
+Caveat: `needs_attention` includes findings and positive active trace checks; `uncertain` means Hue could not settle a finding.
+
+### Find failing tools
+
+Prompt: “Which tools failed most often yesterday, and what was their failure rate?”
+
+Sequence: `aggregate` with `{"entity": "spans", "since": "24h", "kind": "tool", "group_by": ["tool"], "metrics": ["count", "error_count", "duration_p95_ms"], "top": 25}` → `search_spans` with `{"since": "24h", "kind": "tool", "status": "error", "name": "<span name>"}` → `get_span_content` with `{"attribute_keys": ["gen_ai.tool.call.arguments", "gen_ai.tool.call.result"]}`.
+
+Caveat: Groups rank by call count, and span `name` may differ from tool name; an errored call does not prove the request failed. `search_traces` with `"finding": "unrecovered_tool_error"` lists traces where the agent did not recover.
+
+### Find slow tasks and steps
+
+Prompt: “Which task types and steps were slowest this week?”
+
+Sequence: `aggregate` with `{"since": "7d", "group_by": ["trace_name"], "metrics": ["count", "duration_p50_ms", "duration_p95_ms", "duration_p99_ms"]}` → aggregate spans with `{"entity": "spans", "since": "7d", "trace_name": "<name>", "group_by": ["name"], "metrics": ["count", "duration_p50_ms", "duration_p95_ms"]}` → `search_traces` and `search_spans` with `{"since": "7d", "trace_name": "<name>", "sort": "duration"}` → `get_trace_check_summary` with `{"since": "7d"}`.
+
+Caveat: Intent grouping needs a published taxonomy; duration sorting includes completed traces only.
+
+### Measure time to first reply
+
+Prompt: “How long did users wait for the first useful reply?”
+
+Sequence: `aggregate` with `{"entity": "spans", "since": "7d", "name": "<span that delivers the reply>", "group_by": ["trace_name"], "metrics": ["count", "start_offset_p50_ms", "start_offset_p95_ms"]}` gives the time until that span starts, per task type → `search_spans` with `{"since": "7d", "name": "<span that delivers the reply>"}` for individual reply-span rows → sum each row's `start_offset_ms` and `duration_ms` for end time, then take percentiles of those sums.
+
+Caveat: Identify the reply span, which depends on the application, and page through every row in the window with `next_cursor` in the default newest-first order, or report a sample; a `sort: "duration"` page would skew it. Separate start-offset and duration percentiles cannot be added. With timing enabled, use `search_traces.first_useful_answer_ms` or `get_trace_check_summary.requests` for first-response, useful-playback, useful-server and completion p50 and p95 values.
+
+### Compare releases
+
+Prompt: “Did the latest release regress?”
+
+Sequence: `aggregate` with `{"since": "7d", "group_by": ["release"], "metrics": ["count", "error_count", "duration_p50_ms", "duration_p95_ms"]}` → `search_traces` with `{"since": "7d", "release": "<release>", "status": "error"}` → `get_trace` to compare examples → `aggregate` with `{"since": "<T minus 24h>", "until": "<T>"}` and `{"since": "<T>", "until": "<T plus 24h>"}`.
+
+Caveat: Without a recorded release, compare rates in equal ISO-8601 windows around deploy time; concurrent releases can mix them.
+
+### List a user's or session's traces
+
+Prompt: “Show user `<id>`'s traces and sub-agent activity from the last seven days.”
+
+Sequence: `search_traces` with `{"since": "7d", "user": "<user id>"}` or `{"since": "7d", "user_prefix": "<user id>:"}` → `aggregate` with `{"since": "7d", "group_by": ["user"], "metrics": ["count", "error_count"]}` → `list_sessions` with `{"query": "<session key or part of it>", "since": "7d"}` → `search_traces` by `session_id`.
+
+Caveat: Include the separator in a user prefix to avoid matching similar IDs; sessions group users only when the application records one session per user.
+
+### Find sub-agent handoffs
+
+Prompt: “How does the agent hand work to sub-agents?”
+
+Sequence: inspect agent and handoff spans with `get_trace` or `search_spans` using `{"since": "24h", "kind": "agent"}`; follow separate roots by user, trace name, session or span links. Use `search_traces` with `{"since": "7d", "check_key": "delegation"}` for positive delegation trace-check results.
+
+Caveat: When parent IDs exist only in recorded content, read them with `get_span_content`.
+
+### Compare tool input and output sizes
+
+Prompt: “Which tools return the largest results?”
+
+Sequence: `aggregate` with `{"entity": "spans", "since": "24h", "kind": "tool", "group_by": ["tool"], "metrics": ["count", "input_bytes_p50", "output_bytes_p95", "output_bytes_max"]}` → `search_spans` for calls behind a maximum.
+
+Caveat: Byte counts are UTF-8 sizes of recorded JSON, without reading content.
+
+### Find traces by model or attribute
+
+Prompt: “Find traces for model `<model>` or attribute `app.plan=enterprise`.”
+
+Sequence: `search_traces` with `{"since": "24h", "model": "<model>"}` or `{"since": "24h", "attribute": {"key": "app.plan", "value": "enterprise"}}` → `search_spans` for attributes on any span.
+
+Caveat: Trace model or attribute searches scan the newest 5,000 matches and report `scan_capped`; content attributes are refused.
+
+### Read span content
+
+Prompt: “Show the exact tool arguments and result for `<trace>`.”
+
+Sequence: `get_span_content` with `{"attribute_keys": ["gen_ai.tool.call.result"]}` for trace and span IDs, then select `fields`, `path` or `attribute_keys`. Text uses UTF-16 slices with `total_length` and `next_offset`; omitted spans appear in `omitted_span_ids`.
+
+Caveat: Reads are audited and untrusted; each request reads up to 20 spans, in 8,000-unit slices by default. Invalid paths report available keys.
+
+### Review trace check results
+
+Prompt: “Which traces did the delegation check flag this week, and what evidence did it use?”
+
+Sequence: `list_trace_checks` → `get_trace_check_summary` with `{"since": "7d", "check_key": "delegation"}` → `search_traces` with `{"since": "7d", "check_key": "delegation"}` → `get_trace_check_results` with `{"check_key": "delegation", "state": "present"}`; follow `next_cursor`. See the [trace-check data model](#trace-checks) for definitions and states.
+
+Caveat: Excerpts require `include_content: true` and are evidence, not explanations.
+
+## Data model
+
+### Request answers
+
+`get_request_answer` answers questions about `delegation`, `added_work`, `handoff_scope`, `data_cuts`, `slow_tasks`, `task_types` and `answer_time`; `overview` returns every finding. By default it covers the last 7 days of production traffic only, for up to 90 days. `environments: ["all"]` and `include_simulated: true` include simulator traffic; `program`, `model` and `release` filter exactly.
+
+Each answer's `n` counts requests, handoffs or reads. `coverage` reports eligible, judged, pending and provisional units, the share with complete evidence, and evidence gaps. Answers include environment and user splits and example requests with traces. `limit` defaults to 5 examples per finding (up to 25); `more_call` gets the rest, and `finding` returns one finding's examples. `group_by` adds a series by day, release, model, program, environment, user or intent. `notes` lists caveats on the numbers; no notes means none. `include_content: true` adds example request text as untrusted, audited content. `no_data` means no mapped request matched the window and filters. When `get_project_context.features.request_answers.available` is false, Hue does not map the project's requests; trace checks or spans answer these questions instead. Model judgments also require **AI request judges**.
+
+### Traces and spans
+
+A **trace** is a root span and its tree; each **span** records one timed operation. In multi-agent apps, a trace may represent one agent activation rather than one user turn. **Sessions** group traces by the session id your application records.
+
+`search_traces` filters a window by `status`, `attention`, `finding`, `check_key`, `user`, `user_prefix`, `release`, `trace_name`, `model`, a root-span `attribute`, `deployment_environment`, `run_traces`, `session_id`, `min_duration_ms` and `query` (title, root span name or trace id), and sorts by `started_at` (newest first) or `duration` (longest first). It returns these fields per trace:
+
+| Field | Meaning |
+| --- | --- |
+| `id`, `trace_id`, `url` | Hue's id, the 32-hex OpenTelemetry trace id, and the link to the trace in Hue, or `traces_url_template` beside the list when every row shares it. Every `trace_id` argument accepts all three. |
+| `title` | Derived from the latest recorded request text, else a producer-supplied trace name, else the reply, else the root span name. Untrusted text. |
+| `status` | `error` when any finished span has error status; else `ok` when any span is `ok`; else `unset`. |
+| `execution_status`, `tool_error_count` | How the root span ended (`ok`, `error`, `cancelled` or `unset`), so a trace whose agent recovered reads `status: "error"` with `execution_status: "ok"`; and how many finished tool spans recorded an error. Each is left out when empty. |
+| `state` | `running` while a span is open, `stalled` after 15 minutes without new data and no end, else `ended`. |
+| `source` | `sdk` for application traffic, `experiment` for traces from evaluation runs, `playground` for playground runs. |
+| `started_at`, `ended_at`, `duration_ms` | `duration_ms` is end to end and `null` while the trace is open. |
+| `tokens`, `span_count` | Input and output token totals and the number of stored spans. |
+| `session_id`, `session_key` | Hue's session id, for `search_traces`, and your application's session key. |
+| `deployment_environment` | The deployment label your application recorded as `deployment.environment.name`, `deployment.environment` or `langfuse.environment`, on the root span or its resource; not one of Hue's simulated environments. `search_traces` and `aggregate` filter by it exactly, and an empty string selects unlabeled traces. |
+| `run_trace` | `true` when one of your runs recorded the trace; left out otherwise. See [traces from runs](#traces-from-runs). |
+| `user_id`, `release`, `trace_name` | The user id, release and trace name your application recorded, each up to 200 characters and returned whole, so each works as a filter. See the [field glossary](#field-glossary). |
+| `attention_state`, `finding_ids`, `check_state` | The attention state, the ids of the findings present, and the trace-check state. See [attention states and findings](#attention-states-and-findings) and [trace checks](#trace-checks). |
+| `first_useful_answer_ms`, `useful_answer_timing_source`, `request_start_source` | Request timing, for projects set up for it; otherwise `null`. |
+
+`get_trace` adds `has_input`, `has_output` and `revision`, `run` for a trace one of your runs recorded (the run's `id` and `name`, the `case_id`, the `execution_id` that `get_run_execution` reads, and a link to the case result), the stored `findings` (the assessment's `attention_state`, `items` with each finding's `id`, `label`, `state`, `source` and `span_ids`, and `tool_errors` with each error's span, tool and `error_type`), the trace-check results as `checks`, and span rows in start order. Each span row has `id`, `span_id`, `parent_span_id`, `name`, `kind`, `status`, `status_message`, `error_type`, `state`, `operation`, `tool`, `started_at`, `ended_at`, `duration_ms`, `model`, `tokens`, `input_bytes` and `output_bytes`. A span's `kind` is `tool`, `agent`, `embedding` or `llm` when Hue recognizes the operation. Otherwise it is the recorded operation name, such as `chain`, or the OpenTelemetry span kind, such as `internal`. A span's `status` comes only from its OpenTelemetry status code.
+
+`search_spans` returns span rows from many traces with the same fields, plus the span's `trace_id` and `start_offset_ms`, the time from its trace's start to its own. It filters a window of up to 7 days by span `name`, `kind`, `status`, `model`, `min_duration_ms` and one `attribute`, and by the trace's `trace_name`, `user`, `user_prefix`, `release`, `session_id` and `run_traces`; it sorts newest or longest first and reports `total_count`. When nothing matches a `name` or `trace_name`, it suggests the closest recorded names.
+
+`get_span` returns one span: `status` with its `code` and a `message` of up to 200 characters, `model`, `usage` (input, output, cache and reasoning tokens where recorded), `gen_ai` (`operation`, `provider`, `response_model`, `agent_name`, `session_id`, `user_id` and the detected `profiles`), `tool` (`name` and `call_id`), `has_input` and `has_output`, `service`, `attribute_keys` (the names of up to 100 recorded attributes, never their values) and `event_names`. When the result fits `max_chars`, it also carries the instrumentation scope, the dropped-attribute and dropped-event counts, and span `links`.
+
+### Traces from runs
+
+A trace that one of your runs recorded while executing a case is a run trace, whatever deployment label it carries, so a run against your staging deployment keeps `deployment_environment: "staging"`. `search_traces`, `search_spans`, `aggregate` and `list_sessions` leave run traces out unless `run_traces` says otherwise, so a question about production or staging traffic counts what your users did:
+
+| `run_traces` | Keeps |
+| --- | --- |
+| omitted or `exclude` | Every trace except run traces. |
+| `include` | Every trace, run traces included. |
+| `only` | Run traces alone. |
+| a run id or link | That run's traces alone. |
+
+To compare what the agent did across runs, call `aggregate` or `search_spans` once per run id, for example tool calls and errors per tool. An empty `search_traces` page that left run traces out says how many in `hint`. A session that holds any run trace counts as a run session. Reads by id (`get_trace`, `get_span`, `get_run_execution`) return run traces whatever the filter, and the **Traces** page in Hue follows the same default, with **Filter** > **Run traces** to include them or show only them.
+
+### Aggregates
+
+`aggregate` counts a window's `traces` (the default), or its traces' `spans` over at most 7 days. It filters by `status`, `attention`, `check_key`, `session_id`, `deployment_environment`, `user`, `user_prefix`, `release`, `trace_name`, `name` (for traces, the root span's), `min_duration_ms` and `run_traces`. Span aggregates also filter by `kind`, `model` and `tool`, and refuse `attention` and `check_key`.
+
+- `group_by` takes up to two dimensions. Traces group by `trace_name`, `name` (the root span's), `status`, `attention_state`, `finding`, `intent`, `user`, `release` and `bucket`; spans by `trace_name`, `name`, `kind`, `status`, `model`, `tool`, `user`, `release` and `bucket`. `bucket` is a time series of `5m`, `15m`, `1h`, `6h` or `1d` buckets, at most 96, and counts as one of the two dimensions. `intent` needs a published taxonomy.
+- `metrics`, up to 8: `count` (always returned), `error_count`, `duration_p50_ms`, `duration_p95_ms`, `duration_p99_ms`, `input_tokens` and `output_tokens`; for spans also `start_offset_p50_ms`, `start_offset_p95_ms`, `input_bytes_p50`, `input_bytes_p95`, `input_bytes_max`, `output_bytes_p50`, `output_bytes_p95` and `output_bytes_max`.
+- `rows` hold the `top` groups by count (10 by default, up to 25); `other` totals the rest and `group_count` counts every group. A group's value is the recorded string, so it works as a filter, and a `null` group holds the traces or spans that recorded none. `total` counts the filtered window as `search_traces` does.
+- A trace aggregate reads the window's newest 300,000 traces and says `scan_capped` and `covered_since` when the window holds more. A span aggregate reads its whole window. A part that runs out of time returns `partial: true` with `timed_out`.
+
+### Attention states and findings
+
+By default, Hue assesses each quiet, ended production trace. Evaluation-run traces are not assessed. `attention_state` is:
+
+| State | Meaning |
+| --- | --- |
+| `needs_attention` | At least one finding is present, or an active trace check has a current positive result. |
+| `uncertain` | No finding is present, but one could not be settled. |
+| `rules_only` | Only the rule findings ran; the model pass is off or unavailable for the project. |
+| `no_findings` | No findings in the recorded evidence. |
+| `not_assessable` | The trace recorded no readable request, reply or tool calls. |
+| `dismissed` | A member dismissed the assessment's findings in Hue. |
+| `null` | Not assessed yet, or an evaluation-run trace. |
+
+The `attention` filter of `search_traces` takes `needs_attention` or `uncertain`, and `finding` takes one finding id. The findings are:
+
+| Finding | Source | Present when |
+| --- | --- | --- |
+| `unrecovered_tool_error` | Rule | A tool returned an error and no later call to that tool succeeded. |
+| `model_error` | Rule | A model call ended in error and no later model call succeeded. |
+| `missing_reply` | Rule | No assistant reply text was found. |
+| `possible_inability` | Model | The reply appears to say the agent could not do this or lacked access or a capability. |
+| `possible_unresolved` | Model | The reply appears to address something other than the request, without answering or asking for input. |
+| `possible_unsupported_completion` | Model and rule | The reply appears to say the action was done, but no recorded tool call succeeded, or a tool it called failed with no later success. |
+| `possible_action_not_taken` | Model and rule | The request asks for an action, the reply neither reports it done nor asks for input, and no recorded tool call succeeded. |
+
+Model findings require **AI trace findings**, on by default; see [Data privacy](/guides/redaction#ai-processing). `finding_ids` lists present findings; `get_trace` returns their state, source and span IDs. `stale: true` means newer spans arrived after assessment. `findings.judge_state` and `skip_reason` explain when the model did not judge a trace.
+
+### Trace checks
+
+Trace checks are project-owned, versioned checks of production behavior. They are advisory, not evaluator scores. The four checks are `delegation` (execution stayed with the orchestrator instead of a sub-agent), `action_scope` (execution expanded the request), `delegation_scope` (a handoff expanded the request) and `output_omission` (needed tool information was omitted). They produce results only after a project sets them up: [instrumentation](/integrations/opentelemetry#trace-checks-and-request-timing) that marks the request and its boundaries, trace-check consent, which is off by default, and a version activated against labelled traces.
+
+A result is `present`, `absent`, `uncertain`, `unavailable` (not enough evidence) or `not_applicable`. A trace's `check_state` is `needs_attention`, `pending`, `uncertain`, `unavailable`, `not_applicable`, `no_findings` or `null` when no active version applies to it.
+
+### Intents
+
+Intents classify traces into the project's taxonomy of task types. `get_intent_summary` returns `consent` (whether AI intent classification is on), `total`, `coverage` and `buckets`. Bucket keys are `category:<key>`, `other`, `uncertain`, `no_user_text`, `failed` and `pending` (not classified yet). Classification needs a published taxonomy (`get_intent_taxonomy` returns `null` without one) and the project's **AI intent classification** setting. `get_intent_summary` and `list_intent_traces` take `since` and `until` and default to the last seven days. `list_intent_traces` returns the same trace rows as `search_traces`, with the summary's `total_count`; follow `next_cursor` with the same window and bucket. `aggregate` groups traces by `intent` for durations and error counts per task type.
+
+## Field glossary
+
+Hue reads these span attributes into its fields. When several are present, the first one listed wins, so the OpenTelemetry GenAI attribute wins over a Langfuse one. Only span attributes are read, apart from `service.version`, which a trace's `release` also takes from the resource; `get_span` returns `service.name` as `service`.
+
+A trace's `user_id`, `release` and `trace_name` are its root span's, else those of the earliest span that has one. Each is stored whole up to 200 characters. `search_traces`, `search_spans` and `aggregate` filter by them exactly with `user`, `release` and `trace_name`, `user_prefix` matches the start of `user_id`, and `aggregate` groups by `user`, `release` and `trace_name`.
+
+| Hue field | Span attributes, highest precedence first |
+| --- | --- |
+| User id (`user_id` on trace rows, `gen_ai.user_id` on spans) | `user.id`, `enduser.id`, `hue.user.id`, `ai.telemetry.metadata.userId`, `langfuse.user.id` |
+| Release (`release`) | `service.version` on the span, then on its resource, then `langfuse.release`, then `hue.agent.release` |
+| Trace name (`trace_name`) | `hue.trace.name`, `langfuse.trace.name` |
+| Session | `gen_ai.conversation.id`, `session.id`, `hue.session.id`, `ai.telemetry.metadata.sessionId`, `langfuse.session.id`. The trace's session is its root span's, else the earliest span that has one. |
+| Agent name (`gen_ai.agent_name`) | `gen_ai.agent.name`, `ai.telemetry.functionId`, `traceloop.entity.name` |
+| Operation, which sets the span `kind` | `gen_ai.operation.name`, `openinference.span.kind`, `traceloop.span.kind`, `ai.operationId`, `operation.name`, `langfuse.observation.type` |
+| Model | `gen_ai.response.model` or `ai.response.model`, else the requested model: `gen_ai.request.model`, `llm.model_name`, `ai.model.id`, `langfuse.observation.model.name` |
+| Provider | `gen_ai.provider.name`, `gen_ai.system`, `llm.provider`, `llm.system`, `ai.model.provider` |
+| Input and output tokens | `gen_ai.usage.input_tokens` and `output_tokens`, then the `prompt_tokens` and `completion_tokens` forms, `llm.token_count.prompt` and `completion`, `ai.usage.*`, and last `langfuse.observation.usage_details` |
+| Tool name and call id | `gen_ai.tool.name`, `tool.name`, `ai.toolCall.name`; `gen_ai.tool.call.id`, `tool_call.id`, `ai.toolCall.id` |
+| Tool arguments and result (content) | `gen_ai.tool.call.arguments`, `ai.toolCall.args`, `tool.parameters`; `gen_ai.tool.call.result`, `ai.toolCall.result` |
+| Messages (content) | `gen_ai.input.messages` and `gen_ai.output.messages`, OpenInference and OpenLLMetry message attributes, `ai.prompt` and `ai.response.*`, `input.value` and `output.value`, and last `langfuse.observation.input` and `output` and `langfuse.trace.input` and `output` |
+| Error type (`error_type`) | `error.type` |
+| Trace title | Derived from recorded request text first; the trace name is the fallback |
+
+Langfuse metadata (`langfuse.observation.metadata.*`, `langfuse.trace.metadata.*`), `langfuse.environment`, tags and levels are kept as raw attributes. `get_span` lists their names in `attribute_keys`; `get_span_content` with `attribute_keys` reads their values, and the `attribute` filter matches the ones that are not content or free text. The [OpenTelemetry guide](/integrations/opentelemetry#attributes-for-coding-agents) lists the attributes worth recording so these fields are filled.
+
+## Limits and errors
+
+| Limit | Value |
+| --- | --- |
+| Time windows | `since` and `until` take ISO-8601 or relative values from `15m` to `90d`. Trace reads span at most 90 days; `search_spans` and span aggregates at most 7 days. Intent reads and `get_trace_check_summary` default to the last 7 days; `list_runs` and `reassess_trace_checks` take the same window form. |
+| Page sizes | `search_traces`, `list_sessions` and `list_intent_traces` return up to 50 rows, 25 by default. `list_cases` and a `get_eval_set` case page return up to 50 (`get_eval_set` 10 by default). `search_spans`, `get_trace_check_results` and most other list tools return up to 100. Pass `next_cursor` back unchanged as `cursor`, with the same `sort`. |
+| Spans per `get_trace` call | `max_spans` from 1 to 500, 200 by default; pass `next_span_cursor` back as `span_cursor`. A trace that changes between pages answers `conflict`; start again without the cursor. |
+| Aggregates | Up to 2 `group_by` dimensions, 8 metrics, 25 groups (`top`) and 96 time buckets. Trace aggregates read the window's newest 300,000 traces; span aggregates read their whole window. |
+| Filter scans | `model` and `attribute` on `search_traces` read the newest 5,000 matching traces and say `scan_capped: true` when they stopped early. `search_spans` filters its whole window. |
+| Result size | `max_chars` from 1,000, 24,000 by default; any value above 80,000 counts as 80,000, about what clients accept in one result. A list or span tree that does not fit returns the rows that do, with `omitted_count` and a cursor for the rest (`next_cursor`, or `next_span_cursor` on `get_trace`). `aggregate` keeps whole groups and reports `omitted_count` and `omitted_groups`. `truncated: true` with a `hint` means content, detail or groups were left out, or a single row did not fit. |
+| Content reads | `get_span_content` reads up to 20 spans of one trace per call, in slices of 8,000 UTF-16 units by default. |
+| Counts | `total_count` counts up to 10,000 traces; beyond that `total_count_capped` is `true`. |
+| Query time | Searches have a 2-second budget; a slower one fails with `timeout`. An `aggregate` part that runs out of time returns `partial: true` with the rest. |
+| Request size | 1 MiB; a larger body answers HTTP `413`. |
+| Tool search and writes | `search_hue_tools` returns 10 tools per page. `add_eval_set_cases` takes 1 to 25 cases per call, `add_run` pins 1 to 100 evaluator versions, and `get_run` pages failing cases 25 at a time with `failing_cases_cursor`. |
+| Text caps | Titles and names are capped at 200 characters, session keys at 128 and status messages at 200. |
+
+A tool that fails returns an MCP error result (`isError: true`) whose text starts with a code, then the message, sometimes a hint, and `Retryable.` or `Retryable after <n> ms.` when a retry can succeed, for example `timeout: The query exceeded its time budget. Narrow the window … Retryable.` The same fields (`code`, `message`, `hint`, `retryable`, `retry_after_ms`) are in the result's `_meta` under `hue.run/error` for clients that read them programmatically. Retry only when the error says so. A write that is not safe to repeat and fails with `unavailable` or `timeout` may already have completed: its error does not say `Retryable.`, and its hint says to read the write's state before trying again.
+
+| Code | Meaning | Retry? |
+| --- | --- | --- |
+| `invalid_argument` | An argument, window or cursor is invalid, such as a span window over 7 days or an `attribute` key that records content. | No: fix the argument. |
+| `not_found` | No such object in this project. Ids from other projects answer this too, as does a `project_id` the connection cannot reach; call `list_projects`. | No. |
+| `conflict` | The object changed, or the cursor belongs to another object or version. | Reload, then retry. |
+| `content_not_captured` | The application recorded this trace without content. | No. |
+| `timeout` | The query exceeded its time budget. | Yes, with a narrower window or a lower `limit`. |
+| `rate_limited` | Too many requests for this operation. | Yes, after about a second. |
+| `unavailable` | A transient failure. | Yes. |
+| `docs_unavailable` | The documentation search is unavailable. | Yes. |
+| `judge_unavailable` | Hosted judging is not enabled for this project, or not configured in this deployment; `get_judge_budget` shows whether it is enabled. | No. |
+| `forbidden_capability`: `<tool> is not listed on this connection` | Your access allows the tool, but the connection's toolsets do not list it. The hint names the executor that reaches it. | Not as sent: call it through `execute_hue_tool` (reads) or `execute_hue_write_tool` (writes), or add `?toolsets=<group>` or `?toolsets=all` to the server URL and reconnect. |
+| `forbidden_capability`, any other message | An owner or admin must make this change; the key has no verified creating member; a connected app cannot create project keys; the connection cannot write; or the service refused the action. | No: ask an owner or admin, use a **Read and write** key, or make the change in Settings. |
+| `read_only_mode` | The request is read-only, from `?read_only=true` or the `X-Hue-MCP-Read-Only` header, which hides and rejects writes. | No: remove both on a connection with write access. |
+
+For **Read** access, or a read-only request (`read_only` on the URL or the `X-Hue-MCP-Read-Only` header set to any value but `false`, `0`, `no`, `off` or empty), write tools and `execute_hue_write_tool` are not registered at all: a direct call to a write fails as an unknown tool, and naming one to `execute_hue_tool` answers `not_found`. On a connection with write access, an executor given a tool of the other access answers `invalid_argument` naming the right executor.
+
+At the HTTP level, a busy server instance answers `503` with `Retry-After: 1`; retry after a second and keep parallel tool calls to a few. Ten failed authentications for one key within a minute answer `429` with `Retry-After: 60`. A request body over 1 MiB answers `413`, and one that is not `application/json` answers `415`. A JSON-RPC batch, a JSON array of messages, answers `400` without running any of them, so send one message per request. The [connection guide's troubleshooting](/agents/mcp-server#troubleshooting) covers these and the authentication errors.
