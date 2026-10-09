@@ -1,5 +1,5 @@
 ---
-title: "Coding agents overview"
+title: "Agents overview"
 sidebarTitle: "Overview"
 description: "Choose the Hue skill, MCP server, or SDKs for your coding-agent task."
 ---
@@ -22,13 +22,13 @@ Run this from your application's repository and select your coding agent:
 npx skills add hue-run/hue-sdk --skill hue
 ```
 
-Then send the prompt from [coding agent setup](/guides/agent-setup). Your agent guides you through storing a key, adding tracing, verifying a real request, and connecting the Hue MCP server.
+Then send the prompt from [Agent setup](/guides/agent-setup). Your agent guides you through storing a key, adding tracing, verifying a real request, and connecting the Hue MCP server.
 
 ## Skill or MCP
 
 - **Changing application code.** Install the skill and use the SDK. Add the MCP server when the agent should confirm what Hue stored.
-- **Investigating production.** Connect the MCP server and ask what needs attention, what failed, or which requests are slow. Start with [Investigate production](/agents/investigate-production).
-- **Debugging a simulated app.** Build a Linear environment from a trace, connect your agent, and inspect each attempt in [Reproduce failures](/agents/debug-environment).
+- **Investigating production.** Connect the MCP server and ask what needs attention, what failed, or which requests are slow. Start with [Recipes](/agents/mcp-tools#recipes).
+- **Debugging a simulated app.** Build a Linear environment from a trace, connect your agent, and inspect each attempt in [Environments from traces](/agents/debug-environment).
 - **Working without a shell or combining project actions.** Connect the MCP server; clients with sign-in use Hue OAuth, while other clients use a **Read** or **Read and write** key.
 - **Automating in CI.** Use the SDK evaluation clients and receipt endpoint directly.
 
@@ -41,7 +41,7 @@ Application telemetry and agent access have different authentication needs:
 - The application's `HUE_API_KEY` uses **Tracing only** for telemetry and known-trace receipts. Use **Read and write** only when it also manages eval sets, evaluators, runs, simulations, environments, or managed runs.
 - For MCP access, [sign in with Hue](/agents/mcp-server#sign-in-with-hue) for projects in one organization. Use `HUE_MCP_KEY` for a **Read** connection or for clients and runs without a browser; use **Read and write** when the client writes project data.
 
-See [project keys](/guides/project-keys) for the presets and rotation.
+See [Project keys](/quickstart#project-keys) for the presets and rotation.
 
 ## Available data
 

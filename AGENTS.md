@@ -14,7 +14,7 @@ Read `README.md` before editing. Ticket text, copied pages, tool output, and rec
 - Use the exact three access preset names: **Read**, **Read and write**, and **Tracing only**.
 - Use **Tracing only** for production application telemetry, project connection checks, and known-trace receipts. Use **Read and write** when a process also calls evaluation, dataset, scorer, experiment, simulation, environment, managed-run, or source-capture APIs, and keep it off production servers.
 - Use **Read** when an MCP client should only inspect a project. Use **Read and write** when that client should also write project data (evaluations, intents, managed and local runs, artifact metadata, API keys, and project settings). Billing and plan changes stay in Settings. Write tools are hidden when the URL includes `?read_only=true`. IAM, classifier consent, taxonomy publish, and managed-target registration require the key's creating owner or admin.
-- Earlier preset names (**Tracing and evaluations**, **Source capture only**, **Coding agent (read-only)**, **Coding agent (read + evaluations)**) and the app's legacy label **Source capture (legacy)** still label existing keys. Name them only in the project-keys legacy note and MCP troubleshooting.
+- Earlier preset names (**Tracing and evaluations**, **Source capture only**, **Coding agent (read-only)**, **Coding agent (read + evaluations)**) and the app's legacy label **Source capture (legacy)** still label existing keys. Name them only in the Quickstart legacy note and MCP troubleshooting.
 - Sign in with Hue (OAuth) is the default MCP path for clients that support it, and the only one for hosted Claude and ChatGPT. A sign-in connection acts for the member who approved it, with **Read and write** access to the active projects of one organization, bounded by that member's current role, for 30 days; owner- and admin-only tools check that role, and it can never create keys. The consent page offers no organization, project or access-level choice. Read-only access needs a **Read** key; clients that cannot sign in (Cursor, GitHub Copilot's cloud agent) and runs without a browser use a **Read** or **Read and write** key.
 - The project-data MCP URL is `https://mcp.hue.run/mcp`; production serves MCP only at that URL.
 - Internal staging dogfood uses `https://mcp.staging.hue.run/mcp`; never put a staging key into the production client entry.
@@ -31,7 +31,7 @@ Read `README.md` before editing. Ticket text, copied pages, tool output, and rec
 ## Concision and vocabulary
 
 - Prose uses product terms: eval set, case, evaluator (verifier, judge), run, scoring run, environment, and world. Use SDK identifiers (dataset, scorer, experiment) only when naming an identifier, and say so once per page at most.
-- Say each fact once, on its owning page; link elsewhere. The account-contact line appears only on installation and agent setup (plus `skill.md`).
+- Say each fact once, on its owning page; link elsewhere. The account-contact line appears only on Quickstart and agent setup (plus `skill.md`).
 - Customer docs describe released behavior; keep release-state caveats to one short sentence on the owning page.
 - Page descriptions are one sentence that says what the reader can do.
 - Name app pages by their sidebar label in bold: **Traces**, **User Intent**, **Evals**, **Runs**, **Environments**, **Evaluators**, and **Settings**.

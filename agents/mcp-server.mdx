@@ -229,7 +229,7 @@ A pinned connection omits `project_id`; `list_projects` returns only the project
 2. For clients that read `HUE_MCP_KEY`, export the key alone, without `Bearer `, in the startup shell. Use a secure credential prompt when available.
 3. Follow your [client's tab](#connect-your-client), restart from that shell and approve **hue** if asked. Desktop launchers do not inherit terminal variables.
 
-Never put the key in application code, shared configuration or prompts. See [project keys](/guides/project-keys) for access and rotation.
+Never put the key in application code, shared configuration or prompts. See [Project keys](/quickstart#project-keys) for access and rotation.
 
 <Visibility for="agents">
   **If you are a coding agent:** reference `HUE_MCP_KEY`; never ask the user to paste it. Configuration alone does not prove connection. Use the [key check](#verify-the-connection), then ask the user to restart and verify through the client. Let users complete browser consent; do not request passwords or tokens.
@@ -320,13 +320,13 @@ Write tools need **Read and write** without `?read_only=true`. Ask before each w
 
 | Task | Ask your agent | Tools |
 | --- | --- | --- |
-| Investigate production | “What needs attention in the last 24 hours, and why? Link the traces.” | `search_traces`, `get_trace`, `get_span`, `search_spans`, `aggregate`, `get_span_content`; [investigate production](/agents/investigate-production) |
-| Review behavior across requests | “How often does the agent hand work to sub-agents, and which task types are slow?” | `get_request_answer`; [request-answer details](/agents/investigate-production#request-answers) |
+| Investigate production | “What needs attention in the last 24 hours, and why? Link the traces.” | `search_traces`, `get_trace`, `get_span`, `search_spans`, `aggregate`, `get_span_content`; [Recipes](/agents/mcp-tools#recipes) |
+| Review behavior across requests | “How often does the agent hand work to sub-agents, and which task types are slow?” | `get_request_answer`; [request-answer details](/agents/mcp-tools#request-answers) |
 | Confirm trace delivery | “Did trace `<trace id>` arrive with its spans, model and usage?” | `verify_trace` |
-| Check production behavior | “Show this week’s positive delegation checks and their evidence.” | `list_trace_checks`, `get_trace_checks`, `get_trace_check_results`, `get_trace_check_summary`; [investigate production](/agents/investigate-production#review-trace-check-results) |
+| Check production behavior | “Show this week’s positive delegation checks and their evidence.” | `list_trace_checks`, `get_trace_checks`, `get_trace_check_results`, `get_trace_check_summary`; [trace check results](/agents/mcp-tools#review-trace-check-results) |
 | Read eval sets and runs | “Summarize the latest run and list its failing cases.” | `list_eval_sets`, `get_eval_set`, `list_evaluators`, `get_evaluator`, `list_runs`, `get_run`, `list_run_items`, `get_run_item`, `get_run_execution`, `list_scoring_runs`, `get_scoring_run` |
 | Author an eval set and evaluator | “Create an eval set with five cases, publish an exact-match evaluator, then start a run.” | `add_eval_set`, `add_eval_set_cases`, `freeze_eval_set_version`, `add_evaluator`, `publish_evaluator`, `add_run`; [First evaluation](/evaluations/first-evaluation) |
-| Create a simulated environment | “Create an environment from this trace and publish its version.” | `add_environment`, `publish_environment_version`; [Reproduce failures](/agents/debug-environment) |
+| Create a simulated environment | “Create an environment from this trace and publish its version.” | `add_environment`, `publish_environment_version`; [Environments from traces](/agents/debug-environment) |
 | Read reviewed cases | “List reviewed cases and show the task for `<case>`.” | `list_cases`, `get_case`; [Cases from traces](/evaluations/case-from-trace) |
 | Create a case from a trace | “Turn `<trace link>` into a draft case; show its findings and publish nothing.” | `add_case_conversion`, `get_case_conversion`, `update_case_conversion`, `publish_case_conversion`; [Cases from traces](/evaluations/case-from-trace) |
 | Convert suggested cases | “Start drafts for the first five suggested traces and report failures.” | `list_suggested_cases`, `add_case_conversion_batch`, `get_case_conversion_batch`, `update_case_conversion_batch`, `get_case_divergence`; [Cases from traces](/evaluations/case-from-trace) |
@@ -335,7 +335,7 @@ Write tools need **Read and write** without `?read_only=true`. Ask before each w
 | Run an evaluation | “Run `<case>` on my local agent; ask before launching.” | `list_local_agents`, `launch_local_run`, `get_local_run`, `list_managed_targets`, `preflight_managed_run`, `launch_managed_run`, `get_managed_run`, `cancel_managed_run`; [First evaluation](/evaluations/first-evaluation) |
 | Read artifacts and judge usage | “Show the artifacts for `<run>` and its hosted-judge usage.” | `list_artifacts`, `get_artifact`, `get_judge_budget`, `add_judge_jobs`, `cancel_judge_jobs` |
 | Manage project settings | “List project members and tell me who can change the API keys.” | `list_api_keys`, `list_members`, `add_api_key`, `revoke_api_key`, `update_project`; [permissions](/agents/mcp-tools#permissions) |
-| Debug an environment | “Build a Linear environment from this failed trace and show the requests.” | `prepare_trace_upload`, `complete_trace_upload`, `create_environment_from_trace`, `get_environment_build`, `start_environment_world`, `get_world_state`; [Reproduce failures](/agents/debug-environment) |
+| Debug an environment | “Build a Linear environment from this failed trace and show the requests.” | `prepare_trace_upload`, `complete_trace_upload`, `create_environment_from_trace`, `get_environment_build`, `start_environment_world`, `get_world_state`; [Environments from traces](/agents/debug-environment) |
 | Search Hue documentation | “How do I flush spans in a Next.js streaming route?” | `search_hue_docs`, `load_hue_guide` |
 
 ### Terminology
@@ -354,7 +354,7 @@ That is 18 tools with write access, or 17 tools with **Read** access. An executo
 
 To list tools directly, add `?toolsets=<names>` or the `X-Hue-MCP-Toolsets: <names>` header; both selections form their union. Separate names with commas.
 
-`author` and `evaluate` match the MCP guides; `debug` lists the [environment debugging workflow](/agents/debug-environment). Other names are groups from the [MCP tools](/agents/mcp-tools):
+`author` and `evaluate` match the MCP guides; `debug` lists the [Environments from traces workflow](/agents/debug-environment). Other names are groups from the [MCP tools](/agents/mcp-tools):
 
 | Selection | Directly listed tools |
 | --- | --- |
@@ -407,4 +407,4 @@ Your agent acts with your credential, and recorded application data is untrusted
 - A key's project or a sign-in connection's selected or pinned project is the tenant. Foreign IDs resolve to `not_found`. Sign-in acts as the approving member and cannot create keys; key permissions use the creator's current role.
 - `?read_only=true` or `X-Hue-MCP-Read-Only: true` hides or rejects writes. Only `false`, `0`, `no`, `off` or empty disable it; use a **Read** key for enforced read-only access.
 - Hue redacts credential-shaped strings. `add_api_key` returns a token once; later calls never return it. Store keys outside URLs, shared config and prompts.
-- Requests are limited to 1 MiB. Ten failed key authentications in a minute trigger `429` with `Retry-After: 60`, temporarily refusing even a correct key; a busy server returns `503` with `Retry-After`. See [limits](/agents/investigate-production#limits-and-errors) for result sizes, pages and query time.
+- Requests are limited to 1 MiB. Ten failed key authentications in a minute trigger `429` with `Retry-After: 60`, temporarily refusing even a correct key; a busy server returns `503` with `Retry-After`. See [limits](/agents/mcp-tools#limits-and-errors) for result sizes, pages and query time.
