@@ -98,6 +98,7 @@ An exception escaping a Hue span records error type/status, then propagates unch
 | --- | --- |
 | `trace_id` / `span_id` | Hexadecimal OpenTelemetry identifiers. |
 | `otel_span` | Underlying OpenTelemetry span for standard attributes, events and context APIs. |
+| `record_provider_tool_calls(response, *, provider=None, request=None, servers=None)` | Records up to 1,024 supported provider-executed tool items as child `execute_tool` spans. Additional items are skipped and counted; call it on a `model()` span. |
 | `set_attribute(name, value)` | Sets caller-owned OpenTelemetry metadata. |
 | `set_input(value)` / `set_output(value)` | Captures JSON helper content according to `capture_content` and the redactor. Model/tool helpers choose their corresponding GenAI field names. |
 | `set_usage(*, input_tokens=None, output_tokens=None)` | Sets known nonnegative integer token counts. `None` omits a count; booleans and negative counts are rejected. |
