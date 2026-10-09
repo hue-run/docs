@@ -24,7 +24,7 @@ npx --yes --package @hue-run/sdk@0.16.0 hue eval --case "<name|id|url>" --comman
 `--check` resolves the key's project, the selection and its evaluators, and whether cases are answer-only or get a world. It creates no run, world or checkpoint. A published case carries its own evaluators. To run an eval set, use `--set "<eval set>"` and add `--scorer-version <id>` for each evaluator; Hue's **Run** snippet for the set includes them.
 
 - **One command, one run.** The run holds every selected case: a 100-case eval set is one run with 100 executions. The command prints the `https://app.hue.run/runs/<id>` link once the run exists.
-- **Let it finish.** Start the command in the background or with a long timeout; don't stop it partway. Ctrl+C or SIGTERM closes the run, so running the command again starts a new run. If the process is killed outright, remove the stale `.lock` the next attempt names, then run the identical command to reattach to the same run from `.hue/eval/<agent-key>`. Never delete that directory to start over.
+- **Let it finish.** Start the command in the background or with a long timeout. If it stops early (Ctrl+C, SIGTERM, a tool timeout or a crash), the run stays open: run the identical command again to resume it from `.hue/eval/<agent-key>`. Finished cases are kept, and an interrupted case runs again in a fresh world. Never delete that directory to start over.
 - **Exit codes.** 0 every case passed; 1 a case failed, errored, is inconclusive or is incomplete; 2 usage error; 130 interrupted.
 - **Compare.** Pass `--baseline <run id|url>` to see improvements and regressions against an earlier run.
 
