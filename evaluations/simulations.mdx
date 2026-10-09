@@ -5,7 +5,7 @@ description: "Run an agent in a fresh simulated world per case and score its sea
 
 Your agent runs in your process; Hue runs a disposable world and records its action journal. Hue neither executes agent code nor holds provider credentials.
 
-`runSimulation()` is available in `@hue-run/sdk` 0.2.0+ for TypeScript; Python 0.5.0+ provides the lower-level [`hue_sdk.environment`](/reference/python#environment-client). Each invocation creates a fresh run, isolated world per case and resumable checkpoint. See the [simulation](/reference/typescript#run-a-simulation) and [environment](/reference/typescript#environment-client) references.
+`runSimulation()` is available in `@hue-run/sdk` 0.2.0+ for TypeScript; Python 0.5.0+ provides the lower-level [`hue_sdk.environment`](/reference/python#environment-client). Each invocation creates one run with an isolated world per case, checkpointed so that rerunning it resumes an unfinished run. See the [simulation](/reference/typescript#run-a-simulation) and [environment](/reference/typescript#environment-client) references.
 
 ## Install
 
@@ -173,7 +173,7 @@ Unreadable evidence records `EnvironmentEvidenceUnavailable`; built-ins still sc
 
 ## Cancellation and incomplete results
 
-Pass `signal` to `runSimulation()` and forward `context.signal`. Cancellation sets execution state `cancelled` and seals the world as `abandoned`.
+Pass `signal` to `runSimulation()` and forward `context.signal`. Cancellation seals the world as `abandoned`, rejects with `TargetCancelledError` and leaves the run open: call `runSimulation()` again with the same checkpoint directory to resume it. Finished cases are kept and an interrupted case runs again as a new attempt in a fresh world.
 
 If the outcome or seal is uncertain, resume raises `UncertainExecutionError` or `TargetOutcomeUncertainError` without reacquiring credentials or invoking the callback. Inspect side effects before a new attempt; deleting a checkpoint or lock is not permission to rerun.
 
