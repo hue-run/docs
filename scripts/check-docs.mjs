@@ -54,7 +54,14 @@ function canonicalCompatibility(publicCompatibility) {
     )
     .replace("[Hue MCP server](/agents/mcp-server)", "[Hue MCP server](https://docs.hue.run/agents/mcp-server)")
     .replace("[managed runs](/evaluations/managed-runs)", "[managed runs](https://docs.hue.run/evaluations/managed-runs)")
-    .replace("[production safety](/guides/production-safety)", "[production safety](https://docs.hue.run/guides/production-safety)");
+    .replace(
+      "[TypeScript production setup](/sdks/typescript#production-setup)",
+      "[TypeScript production setup](https://docs.hue.run/sdks/typescript#production-setup)",
+    )
+    .replace(
+      "[Python production setup](/sdks/python#production-setup)",
+      "[Python production setup](https://docs.hue.run/sdks/python#production-setup)",
+    );
 }
 
 const config = readJson("docs.json");

@@ -30,7 +30,7 @@ An OpenTelemetry status of `Unset` means no explicit status was recorded. It is 
 
 ## A trace stays running
 
-With TypeScript 0.7.0 or later and Python 0.4.0 or later, Hue shows **Running** while a Hue or AI span remains open (usually after 1.5 s), then resolves it when finished spans arrive. After 15 minutes without a span, log or end, it shows **No end received**. Await flush before exit; processors forwarding starts must also forward ends. Later telemetry makes it **Running** again.
+Hue shows **Running** while a Hue or AI span remains open (usually after 1.5 s), then resolves it when finished spans arrive. After 15 minutes without a span, log or end, it shows **No end received**. Await flush before exit; processors forwarding starts must also forward ends. Later telemetry makes it **Running** again.
 
 ## Input or output is missing
 
@@ -52,7 +52,11 @@ TypeScript `flush()` throws `HueExportError` for rejected or failed export work.
 
 In-memory queues can lose records on termination, overflow or sampling. A timeout does not prove rejection. Hue deduplicates exact completed-span or log replays, but rerunning work or changing IDs creates records; inspect partial-batch rejections before retrying.
 
-OTLP requests are bounded. The SDK splits batches; oversized helper content is omitted as an instrumentation failure, while raw external records remain subject to receiver limits. Keep binary files out of span attributes; file storage has a separate lifecycle.
+OTLP requests are bounded. The SDK splits batches; values may be cut when uploads or request budgets are exhausted. Keep binary files out of span attributes; file storage has a separate lifecycle.
+
+## Large values are cut off
+
+Strings over Hue's inline limit (up to 1 GB) in a span's own attributes and inline files over 64 KiB in a span's own recorded messages upload separately when possible; log records, events, links and resources aren't uploaded. If outbound HTTPS `PUT` to the upload URLs Hue returns is blocked, or an upload reaches a limit, the SDK cuts the value or keeps a file digest and reports a fallback. Check TypeScript `uploadedValues` and `uploadFallbacks` in `hue.transport.getReport()`, or Python `uploaded_values` and `upload_fallbacks` in `hue.export_status`; allow the upload traffic if your egress policy permits it.
 
 ## The example throws `Cannot use import statement outside a module`
 

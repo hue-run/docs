@@ -589,11 +589,11 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.15.0"
+      "version": "0.15.1"
     },
     "python": {
       "name": "hue-run",
-      "version": "0.9.0"
+      "version": "0.9.1"
     }
   },
   "mcp": {
@@ -1567,6 +1567,18 @@
         }
       },
       {
+        "name": "update_environment",
+        "title": "Hue: update environment",
+        "toolset": "environments",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
         "name": "publish_environment_version",
         "title": "Hue: publish environment version",
         "toolset": "environments",
@@ -2012,12 +2024,12 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "78189185c564eb9b9ac588b10296ddc91a975c04c772aaaa4edf68ce9cf3b26a",
+    "catalogSha256": "a0df6c0dd1e24f6c640b0c31f38a20541290afa6958466baa228b022f22272a3",
     "serverInstructionsSha256": "a57ca5d20b45f22f4e1edcb1935b3555d47afeb0601f7bef597bef4e45d7a2ce",
     "guides": {
       "data-model": {
         "title": "Hue data model",
-        "sha256": "70c23e1fbba48290525b03f2081ef57d388a5e3b7f422a9fe145bd7efaace23f"
+        "sha256": "d59ec989482e9c69bd6d8f03f9adae38123f1dff2b416480d8e407c05b594b6f"
       },
       "production": {
         "title": "Read production traces with Hue",
@@ -2029,11 +2041,11 @@
       },
       "author": {
         "title": "Author evaluations with Hue",
-        "sha256": "610a99a489be17cfcac5098b1f8336964f3d9c4d5e14f2b9a5924e88aa20b88d"
+        "sha256": "b0c6ffa76d891fcce79ca3a3d09a9e06d3e850fac4c241ecd45f8a5ae2aae5c6"
       },
       "evaluate": {
         "title": "Run your agent against a case",
-        "sha256": "40a5f4c83d3445e4c44e0b2ea8eda0ac180773b64afec3e60fa5ea0e68c702f2"
+        "sha256": "ed72ec482a8919a0fd94bb5ab6743ceee176a4d3a0484ee56695cac2b7321c24"
       }
     },
     "toolsets": {
@@ -2103,6 +2115,7 @@
           "list_environments",
           "get_environment",
           "add_environment",
+          "update_environment",
           "publish_environment_version"
         ],
         "evaluate": [
@@ -2131,6 +2144,7 @@
           "prepare_trace_upload",
           "complete_trace_upload",
           "create_environment_from_trace",
+          "update_environment",
           "get_environment_build",
           "retry_environment_build",
           "start_environment_world",

@@ -182,6 +182,7 @@ Simulated environments, trace builds and saved debugging worlds. The [`debug` pr
 | `list_environments` | Read | Lists simulated environments. |
 | `get_environment` | Read | Returns an environment's versions, and one version's definition and actions with `environment_version_id`. A world built from a trace returns its definition only with `include_content: true`, and a definition too large for one result pages by `definition_offset`. |
 | `add_environment` | Write | Creates an environment. |
+| `update_environment` | Destructive | Replaces an environment's display title, description or both; omitted fields stay unchanged. Archived environments cannot be changed. |
 | `publish_environment_version` | Write | Publishes an immutable environment version from a definition. |
 | `archive_environment` | Destructive | Stops an environment being attached to new cases; versions already pinned stay readable. |
 | `prepare_trace_upload` | Write | Reserves a private trace or context upload for 15 minutes, with an exact size and SHA-256. Each object can contain up to 25 MiB. |
