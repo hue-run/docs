@@ -10,17 +10,17 @@
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "ee02dc40d958268bb52efd607349fbbe52dcfc78",
+      "commit": "3d2b1a66364f1b41dbe352c386d92b9a30927cfc",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:5adf46a878c6b351be54a1209fc3b00e01c29ff386c259ff3531d2b45b87495b"
+      "sha256": "sha256:f155c1534fd13f169e83fbbf6b22313219744e6bf7000dec02dc50572b890618"
     }
   },
   "site": {
     "origin": "https://docs.hue.run",
     "projectMcpUrl": "https://mcp.hue.run/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
-    "skillUrl": "https://docs.hue.run/skill.md?v=0.6.9",
-    "pageCount": 24
+    "skillUrl": "https://docs.hue.run/skill.md?v=0.7.0",
+    "pageCount": 25
   },
   "serviceKeyPresets": [
     {
@@ -52,7 +52,7 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.15.2",
+      "version": "0.16.0",
       "entrypoints": [
         "@hue-run/sdk",
         "@hue-run/sdk/ai-sdk",
@@ -73,9 +73,9 @@
     }
   },
   "skill": {
-    "version": "0.6.9",
-    "sha256": "sha256:84f6150aa731fbe97ae8b097926ad205212f7dff141ccb732618ba848e2bf345",
-    "sdkSourceSha256": "sha256:f054fc7bb1aae3f9235959faf2e4ae4277296784399a61d4d6354a3223166c33"
+    "version": "0.7.0",
+    "sha256": "sha256:a1accae0de46deef0d4282b5838858dbdb835723134aed283a2e7ffccc44ddf6",
+    "sdkSourceSha256": "sha256:9626a599a24d5b39eb4318fd2ebfa6dd0a0414c2e78d22823e57b2742edc3d91"
   },
   "mcp": {
     "transport": "Streamable HTTP",
@@ -210,6 +210,7 @@
     "integrations/reference-chatbot",
     "guides/redaction",
     "guides/troubleshooting",
+    "evaluations/run-your-agent",
     "evaluations/first-evaluation",
     "evaluations/case-from-trace",
     "evaluations/eval-ready-agent",
