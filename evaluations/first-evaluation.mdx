@@ -216,7 +216,7 @@ To compare a different target configuration, create a new run with the same froz
 
 Read presence flags such as `hasOutput` and `hasExpected` in API responses. Do not test value truthiness: JSON `null`, `false`, `0`, and `""` can all be present values. TypeScript target return `undefined` and Python's exported `MISSING` sentinel represent unavailable output. Python `None` is a present null.
 
-A failed quality verdict is still a scored result, typically with `passed: false`. Target execution and evaluator errors have separate states. Missing evidence produces an explicit skipped result. Exact match preserves scalar types; false is not zero.
+A failed quality verdict is still a scored result, typically with `passed: false`. Target execution and evaluator errors have separate states. Missing evidence produces an explicit skipped result. For `hue eval`, each required evaluator must decide before a case can pass; an undecided required result leaves it inconclusive. Exact match preserves scalar types; false is not zero.
 
 ## Resume an interrupted run
 
