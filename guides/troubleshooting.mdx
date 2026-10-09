@@ -56,7 +56,7 @@ OTLP requests are bounded. The SDK splits batches; values may be cut when upload
 
 ## Large values are cut off
 
-Long recorded strings and inline message files over 64 KiB upload separately when possible. If outbound HTTPS `PUT` to the upload URLs Hue returns is blocked, or an upload reaches a limit, the SDK cuts the value or keeps a file digest and reports a fallback. Check TypeScript `uploadedValues` and `uploadFallbacks` in `hue.transport.getReport()`, or Python `uploaded_values` and `upload_fallbacks` in `hue.export_status`; allow the upload traffic if your egress policy permits it.
+Strings over Hue's inline limit (up to 1 GB) in a span's own attributes and inline files over 64 KiB in a span's own recorded messages upload separately when possible; log records, events, links and resources aren't uploaded. If outbound HTTPS `PUT` to the upload URLs Hue returns is blocked, or an upload reaches a limit, the SDK cuts the value or keeps a file digest and reports a fallback. Check TypeScript `uploadedValues` and `uploadFallbacks` in `hue.transport.getReport()`, or Python `uploaded_values` and `upload_fallbacks` in `hue.export_status`; allow the upload traffic if your egress policy permits it.
 
 ## The example throws `Cannot use import statement outside a module`
 

@@ -11,7 +11,7 @@ Start with the email example, then adapt it to your application's data. Pattern 
 
 The SDK examples capture content when `HUE_CAPTURE_CONTENT` is unset. Hue can show and evaluate only recorded data, including prompts, responses and tool inputs and outputs. Set `HUE_CAPTURE_CONTENT=false` for metadata-only export; this does not disable redaction or credential scrubbing. Use a redaction callback for email and custom field rules.
 
-String values over Hue's inline limit, up to 1 GB, and inline files over 64 KiB in recorded messages are uploaded separately; the span keeps the first 16 KiB. Redaction and credential scrubbing run over the whole value first, and nothing is uploaded when capture is off. In restricted-egress environments, allow export's HTTPS `PUT` to the URLs Hue returns; failed uploads fall back to cuts or file digests and are reported.
+String values over Hue's inline limit (up to 1 GB) in a span's own attributes, and inline files over 64 KiB in a span's own recorded messages, are uploaded separately; the span keeps the first 16 KiB of strings, while log records, events, links and resources aren't uploaded. Redaction and credential scrubbing run over the whole value first, and nothing is uploaded when capture is off. In restricted-egress environments, allow export's HTTPS `PUT` to the URLs Hue returns; failed uploads fall back to cuts or file digests and are reported.
 
 In metadata-only mode, both SDKs strip recognized third-party content attributes on Hue's export path, but custom keys pass through; configure third-party instrumentors separately.
 

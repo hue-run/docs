@@ -218,7 +218,7 @@ Hue omits unsafe content or redactor failures, records instrumentation failure a
 
 Safe lifecycle methods return failure results. A timeout neither proves delivery nor cancels an in-flight request. `createHue`, checks, verification and strict lifecycle methods remain diagnostic and may fail.
 
-Queues limit records and bytes, including in-flight records. `maxQueueBytes` defaults to 8 MiB shared by traces and logs; separately, the SDK can hold up to 128 MiB of large values and inline files awaiting upload. This bounds queued telemetry, not process RSS. Overflow drops telemetry and updates counters without retrying business work.
+Queues limit records and bytes, including in-flight records. `maxQueueBytes` defaults to 8 MiB shared by traces and logs. Separately, the SDK can hold up to 128 MiB of over-limit strings in a span's own attributes and inline files over 64 KiB in a span's own recorded messages while they await upload; log records, events, links and resources aren't uploaded. This bounds queued telemetry, not process RSS. Overflow drops telemetry and updates counters without retrying business work.
 
 Network retries are bounded. Shutdown counts discards; process kill, full queues, disabled clients and exporter failures can lose telemetry. There is no disk spool or delivery guarantee.
 
