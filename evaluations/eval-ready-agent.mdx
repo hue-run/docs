@@ -644,7 +644,7 @@ print(json.dumps(answer))  # logs go to stderr, never stdout
 Run with a **Read and write** key that `hue login` stored in an ignored env file:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.15.3 --package "zod@^3.25.76 || ^4.6.5" hue eval --case "<name>" --command "node \"$PWD/agent.js\"" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.15.3 --package "zod@^4.6.5" hue eval --case "<name>" --command "node \"$PWD/agent.js\"" --env-file .env.hue
 ```
 
 `hue eval` needs Node.js 22 or 24, even for Python. The two `--package` flags cache the CLI and `zod` without changing the repository. Always pin the SDK: an unpinned package can select an older local copy. Installing `zod` in the project does not help when the SDK is absent; the CLI exits with `hue eval needs zod`, even for `--help`.
@@ -668,7 +668,7 @@ Every case receives execution and case variables. Only a case with a world recei
 For the **Run** button and `launch_local_run` to use one agent for answer-only or world-backed cases, start a command worker. It claims queued runs and uses the same stdin handoff:
 
 ```sh
-npx --yes --package @hue-run/sdk@0.15.3 --package "zod@^3.25.76 || ^4.6.5" hue eval --worker --command "node \"$PWD/agent.js\"" --revision "<new-agent-revision>" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.15.3 --package "zod@^4.6.5" hue eval --worker --command "node \"$PWD/agent.js\"" --revision "<new-agent-revision>" --env-file .env.hue
 ```
 
 Command workers register `direct:v1` and `environment:v1`. Adapter-file workers register world support by default; add `--capability direct:v1` only after the adapter supports direct cases. Change `--revision` when capabilities change; otherwise keep it stable.

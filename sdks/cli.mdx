@@ -73,8 +73,8 @@ With a key, export `HUE_MCP_KEY` in the shell that starts your client; an app st
 `hue eval` runs your agent locally against a published case or a saved eval set and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It uses `HUE_API_KEY` from `--env-file` (or its alias `--env-path`). Start the agent's own command with `--command`, after the one-time change in [Evaluation setup](/evaluations/eval-ready-agent):
 
 ```sh
-npx --yes --package @hue-run/sdk@0.15.3 --package "zod@^3.25.76 || ^4.6.5" hue eval --case "<name|id|url>" --command "<start command>" --env-file .env.hue
-npx --yes --package @hue-run/sdk@0.15.3 --package "zod@^3.25.76 || ^4.6.5" hue eval --worker --command "<start command>" --revision "<new-agent-revision>" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.15.3 --package "zod@^4.6.5" hue eval --case "<name|id|url>" --command "<start command>" --env-file .env.hue
+npx --yes --package @hue-run/sdk@0.15.3 --package "zod@^4.6.5" hue eval --worker --command "<start command>" --revision "<new-agent-revision>" --env-file .env.hue
 ```
 
 The two `--package` flags put the CLI and its `zod` peer in npx's cache, so the agent's repository gains no package.json or dependency; without the second, `hue eval` exits with `hue eval needs zod`, even for `--help`, and installing zod in the project does not help when the SDK itself is not installed there. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `--package @hue-run/sdk` runs that local, possibly older, copy. `hue eval` needs Node.js 22 or 24, even for a Python agent.
