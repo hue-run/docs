@@ -1,7 +1,7 @@
 ---
 title: "Make your agent eval-ready"
 sidebarTitle: "Eval-ready agent"
-description: "Commit one helper that points your agent's own app clients at Hue's mirrors during an evaluation and leaves production unchanged, then run published cases with hue eval."
+description: "Point your agent's app clients at Hue mirrors during evaluations without changing production."
 ---
 
 In a Hue evaluation your agent runs in your process. A case with app calls gives it a fresh simulated world; an answer-only case gives it the reviewed task and context without a world. Hue never executes the agent, intercepts its network traffic or adds tools. For a case with a world, a helper you commit once points your agent's own app clients at its mirrors.

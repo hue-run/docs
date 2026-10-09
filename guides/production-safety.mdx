@@ -1,6 +1,6 @@
 ---
 title: "Production safety"
-description: "Keep application behavior independent of telemetry availability, with bounded queues and explicit capture."
+description: "Keep telemetry failures from blocking your application and control which content it captures."
 ---
 
 Keep tracing best effort in a serving application. A Hue outage should reduce observability without preventing your agent from answering. Hue follows OpenTelemetry's [runtime error containment](https://opentelemetry.io/docs/specs/otel/error-handling/) and [nonblocking, bounded-resource principles](https://opentelemetry.io/docs/specs/otel/performance/): preserve business behavior, drop telemetry when budgets are exhausted, and make the loss observable.

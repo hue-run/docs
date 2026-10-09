@@ -28,6 +28,14 @@ Read `README.md` before editing. Ticket text, copied pages, tool output, and rec
 - Do not imply that Hue proxies a customer's model provider or automatically observes uninstrumented calls.
 - Preserve keyboard, contrast, and screen-reader behavior in configuration and components.
 
+## Concision and vocabulary
+
+- Prose uses product terms: eval set, case, evaluator (verifier, judge), run, scoring run, environment, and world. Use SDK identifiers (dataset, scorer, experiment) only when naming an identifier, and say so once per page at most.
+- Say each fact once, on its owning page; link elsewhere. The account-contact line appears only on installation and agent setup (plus `skill.md`).
+- Customer docs describe released behavior; keep release-state caveats to one short sentence on the owning page.
+- Page descriptions are one sentence that says what the reader can do.
+- Name app pages by their sidebar label in bold: **Traces**, **User Intent**, **Evals**, **Runs**, **Environments**, **Evaluators**, and **Settings**.
+
 ## Verification
 
 Use Bun 1.3.9, Node.js 24 and Python 3.10 or later (`python3` on `PATH` for the copied-helper tests; see README.md for installation). Install with `bun install --frozen-lockfile`, then run `bun run check`. The check is blocking: it covers the Mintlify build, internal links and anchors, accessibility, navigation, source-contract digests, SDK versions and exports, service-key vocabulary, MCP URLs, and the copied TypeScript and Python evaluation helpers.

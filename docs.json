@@ -14,36 +14,23 @@
         "group": "Getting started",
         "pages": [
           "index",
+          "concepts",
+          "quickstart",
           "installation",
-          "quickstart"
-        ]
-      },
-      {
-        "group": "For agents",
-        "pages": [
-          "agents/overview",
-          "agents/mcp-server",
-          "agents/mcp-tools",
-          "agents/investigate-production",
-          "agents/debug-environment",
           "guides/agent-setup",
-          "guides/invited-setup"
+          "guides/project-keys"
         ]
       },
       {
-        "group": "SDKs",
+        "group": "Tracing",
         "pages": [
           "sdks/typescript",
           "sdks/python",
-          "sdks/cli",
-          "sdks/compatibility"
-        ]
-      },
-      {
-        "group": "Integrations",
-        "pages": [
           "integrations/opentelemetry",
-          "integrations/reference-chatbot"
+          "integrations/reference-chatbot",
+          "guides/redaction",
+          "guides/production-safety",
+          "guides/troubleshooting"
         ]
       },
       {
@@ -57,19 +44,23 @@
         ]
       },
       {
-        "group": "Guides",
+        "group": "Coding agents",
         "pages": [
-          "guides/project-keys",
-          "guides/troubleshooting",
-          "guides/production-safety",
-          "guides/redaction"
+          "agents/overview",
+          "agents/mcp-server",
+          "agents/investigate-production",
+          "agents/debug-environment",
+          "guides/invited-setup"
         ]
       },
       {
-        "group": "API reference",
+        "group": "Reference",
         "pages": [
+          "sdks/cli",
+          "agents/mcp-tools",
           "reference/typescript",
-          "reference/python"
+          "reference/python",
+          "sdks/compatibility"
         ]
       }
     ]
@@ -97,7 +88,20 @@
   "contextual": {
     "options": [
       "copy",
-      "view"
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "devin"
+    ]
+  },
+  "markdown": {
+    "instructions": [
+      "To set up Hue in an application, fetch https://docs.hue.run/guides/agent-setup.md and follow it.",
+      "Hue's project-data MCP server is https://mcp.hue.run/mcp. https://docs.hue.run/mcp only searches these docs and cannot read a Hue project.",
+      "Never ask the user to paste a Hue API key into chat; they store it as HUE_API_KEY themselves.",
+      "Install the exact SDK versions on https://docs.hue.run/installation.md. Run the CLI as `npx @hue-run/sdk` or `bunx @hue-run/sdk`, never `npx hue`.",
+      "Use Hue product terms: eval set, case, evaluator, run and scoring run. Older APIs may say dataset, scorer or experiment; prefer the current SDK methods. See https://docs.hue.run/concepts.md."
     ]
   },
   "footer": {
