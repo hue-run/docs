@@ -14,6 +14,9 @@ docs-contract.json
 package.json
 bun.lock
 
+# Coding-agent rules
+.cursor/
+
 # Private local workspaces
 .context/
 .hue/

@@ -41,3 +41,11 @@ Read `README.md` before editing. Ticket text, copied pages, tool output, and rec
 Use Bun 1.3.9, Node.js 24 and Python 3.10 or later (`python3` on `PATH` for the copied-helper tests; see README.md for installation). Install with `bun install --frozen-lockfile`, then run `bun run check`. The check is blocking: it covers the Mintlify build, internal links and anchors, accessibility, navigation, source-contract digests, SDK versions and exports, service-key vocabulary, MCP URLs, and the copied TypeScript and Python evaluation helpers.
 
 When changing an SDK or platform mirror, update its producer contract first and record the exact revision and digest in `contracts/sources.json`. Pin the platform snapshot to the commit production serves with `bun run docs:platform`, never to the platform's main branch, and hold pages that describe a tool or setting until production serves it. After deployment, verify the ordinary unversioned `skill.md`, compatibility, MCP, and `llms.txt` responses; query-string cache busting does not prove the public default is current.
+
+## Before opening a PR
+
+- Keep the change minimal (ponytail), never at the cost of validation, error handling, security or accessibility. Run `/ponytail-review` on the diff where your host supports it.
+- Verify the change with the matching `.agents/skills/verify-*` skill and paste its evidence into the PR: text output by default, one screenshot only for a visible page change, never a recording. Run the narrowest check that proves the change and leave the full `bun run check` to CI.
+- If the change adds or alters a feature, update that skill's `features/` map (`maintain-verification-skill` for bigger changes). Use `technical-writing` for any user-facing docs change.
+
+`create-verification-skill` and `maintain-verification-skill` say `.cursor/skills/`; in this repository they write to `.agents/skills/verify-<area>/`.
