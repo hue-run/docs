@@ -42,6 +42,8 @@ Paste the `curl` or helper output line into the PR. Attach one screenshot only w
 
 ## Cleanup
 
+Run only after the evidence lines are printed and copied.
+
 ```sh
 kill "$(cat "$SITE"/dev.pid)"; rm "$SITE"/dev.pid
 ```

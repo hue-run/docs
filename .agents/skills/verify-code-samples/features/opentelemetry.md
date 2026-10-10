@@ -19,7 +19,7 @@ Preconditions:
 
 - **Install.** Run block 0 (Node.js) or block 2 (Python) from `snippet.mjs "$R/integrations/opentelemetry.mdx"` exactly as printed, in a fresh ESM project or venv.
 - **Guard.** Run block 1 as `send.mjs` with `env -u HUE_API_KEY node send.mjs`. Expect exit 1 and `Error: Set HUE_API_KEY in your server environment.`
-- **Reach Hue.** Run `HUE_API_KEY=hue_verify_invalid node send.mjs`. Expect `Trace ID: <32 hex>`, then exit 1 with `OTLPExporterError: Unauthorized` when the export reaches Hue.
+- **Fake-key rejection (not end to end).** Run `HUE_API_KEY=hue_verify_invalid node send.mjs`. Expect `Trace ID: <32 hex>`, then exit 1 with `OTLPExporterError: Unauthorized` when the export reaches Hue.
 
 ## Gotchas
 

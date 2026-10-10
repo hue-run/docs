@@ -31,7 +31,7 @@ Recipes, failure output and gotchas: [`features/README.md`](features/README.md).
 
 ## Evidence
 
-Paste the command and its `success …` line into the PR. For a link or anchor fix, also paste the failing run from before the fix.
+Print the evidence before Cleanup: run each check as `<command>; echo "exit $?"` and paste the command, its `success …` line and the exit code into the PR. For a link or anchor fix, also paste the failing run from before the fix. For a deliberate break, print the failure before you restore the file.
 
 ## Cleanup
 

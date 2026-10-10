@@ -11,12 +11,13 @@ The maintained source for proving that published samples run against the release
 ## Driving conventions
 
 - Extract samples with `snippet.mjs`; never retype them, so the run tests the published text.
-- Run each sample twice: without a key (guard) and with the fake key (reaches Hue, gets `401`).
+- Run each sample twice: without a key (guard) and with the fake key (Hue rejects it with `401`).
+- The fake-key run is a rejection test, not an end-to-end run. It proves the imports and every call up to the first one Hue rejects; label it that way in the PR and list the calls after it as unverified.
 - A sample that needs a model provider or a real project stops at the first step you can prove; say which step.
 
 ## Proof and skip reporting
 
-- CLI proof is the command, the decisive output line and the exit code.
+- CLI proof is the command, the decisive output line and the exit code, printed with `; echo "exit $?"` before Cleanup.
 - Report a sample you could not run with the reason (needs a real key, a model provider, a Collector).
 - Do not report a sample as verified because a similar sample ran.
 

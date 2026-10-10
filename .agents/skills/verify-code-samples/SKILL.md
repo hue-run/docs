@@ -40,9 +40,11 @@ Run it per the matching file in [`features/README.md`](features/README.md). Neve
 
 ## Evidence
 
-Paste the command, the decisive output line and the exit code into the PR, for example `HUE_API_KEY=hue_verify_invalid node first-trace.mjs` → `status: 401`, exit 1.
+Print the evidence before Cleanup: run each command as `<command>; echo "exit $?"` and copy the command, the decisive output line and the exit code into the PR, for example `HUE_API_KEY=hue_verify_invalid node first-trace.mjs` → `status: 401`, `exit 1`. Label fake-key runs as rejection tests, not end-to-end runs.
 
 ## Cleanup
+
+Run only after the evidence is printed and copied.
 
 ```sh
 cd "$R" && rm -rf "$VERIFY"/node_modules "$VERIFY"/.venv

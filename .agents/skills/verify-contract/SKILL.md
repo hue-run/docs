@@ -34,7 +34,7 @@ Feature recipes, expected failures and gotchas live in [`features/README.md`](fe
 
 ## Evidence
 
-Paste the command and its last lines into the PR: the `Documentation contract is current: …` line, or `ℹ tests N / ℹ pass N / ℹ fail 0`. For a new rule, also paste the failure it reports on a deliberately broken copy (see [`features/check-docs.md`](features/check-docs.md)), so the rule is proven to fire.
+Print the evidence before Cleanup: run the command as `<command>; echo "exit $?"` and paste it with its last lines and exit code into the PR: the `Documentation contract is current: …` line, or `ℹ tests N / ℹ pass N / ℹ fail 0`. For a new rule, also paste the failure it reports on a deliberately broken copy (see [`features/check-docs.md`](features/check-docs.md)), so the rule is proven to fire.
 
 ## Cleanup
 

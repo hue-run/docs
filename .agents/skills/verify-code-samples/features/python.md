@@ -20,7 +20,7 @@ Preconditions:
 
 - **Extract.** Run `node "$R/.agents/skills/verify-code-samples/snippet.mjs" "$R/quickstart.mdx" 6 > first_trace.py`.
 - **Guard.** Run `env -u HUE_API_KEY .venv/bin/python first_trace.py`. Expect exit 1 and `ValueError: Set HUE_API_KEY and HUE_CAPTURE_CONTENT=true (recommended) or false`.
-- **Reach Hue.** Run `HUE_API_KEY=hue_verify_invalid .venv/bin/python first_trace.py`. Expect exit 1 and `hue_sdk.client.ProjectValidationError: Hue project validation failed (HTTP 401).`, under 1 s.
+- **Fake-key rejection (not end to end).** Run `HUE_API_KEY=hue_verify_invalid .venv/bin/python first_trace.py`. Expect exit 1 and `hue_sdk.client.ProjectValidationError: Hue project validation failed (HTTP 401).`, under 1 s.
 - **Extras.** For samples that use `builtin_scorers.json_schema`, install `'hue-run[evals]==<version>'`.
 
 ## Gotchas
