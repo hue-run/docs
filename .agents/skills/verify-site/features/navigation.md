@@ -20,7 +20,7 @@ Preconditions:
 
 - **Entry listed.** Run `curl -s http://localhost:3333/quickstart | grep -o 'href="/<route>"' | head -1`. Expect `href="/<route>"`.
 - **Entry removed.** Run the same grep for a removed route. Expect no output.
-- **Placement.** Run `node .agents/skills/verify-site/screenshot.mjs http://localhost:3333/<route> /tmp/hue-docs-verify/site/nav.png`. The screenshot shows the entry under its group and highlighted.
+- **Placement.** Run `node .agents/skills/verify-site/screenshot.mjs http://localhost:3333/<route> "$SITE"/nav.png`. The screenshot shows the entry under its group and highlighted.
 - **Contract.** Run `node scripts/check-docs.mjs` (about 0.1 s). It fails if a page is missing from or duplicated in `docs.json`, or the page count changed without updating the check.
 
 ## Gotchas

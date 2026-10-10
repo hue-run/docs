@@ -5,7 +5,7 @@ description: "Run hue-run/docs code samples against the published SDK releases (
 
 # Verify code samples
 
-Extract the changed sample from its page, install the pinned release in a scratch directory and run it. Without a real key the strongest offline proof is the sample's own guard; with a syntactically fake key, a sample that calls Hue proves its imports, API calls and error path by getting a `401`. Run only the samples you changed.
+Extract the changed sample from its page, install the pinned release in a scratch directory and run it. Without a real key the strongest offline proof is the sample's own guard; with a syntactically fake key, a sample that calls Hue proves its imports and every call up to the first one Hue rejects with `401`. Calls after that point (for example tracing and flush after `checkConnection()` or `validate_project()` in Quickstart) did not run; list them as unverified in the PR. Run only the samples you changed.
 
 ## Launch
 
@@ -13,7 +13,7 @@ Read the pinned versions, then make a scratch project (about 2 s for npm, 5 s fo
 
 ```sh
 jq -c '.packages | map_values(.version)' contracts/sdk-docs.json   # {"python":"0.9.1","typescript":"0.16.0"}
-export VERIFY=/tmp/hue-docs-verify/samples && mkdir -p "$VERIFY" && R="$PWD"
+export VERIFY=$(mktemp -d /tmp/hue-docs-samples.XXXXXX) && R="$PWD"
 cd "$VERIFY" && npm init -y >/dev/null && npm pkg set type=module && npm install -s @hue-run/sdk@<typescript version>
 python3 -m venv .venv && .venv/bin/pip install -q hue-run==<python version>
 ```

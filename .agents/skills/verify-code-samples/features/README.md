@@ -4,7 +4,7 @@ The maintained source for proving that published samples run against the release
 
 ## Baseline preconditions
 
-- The scratch project at `/tmp/hue-docs-verify/samples` has the versions from `contracts/sdk-docs.json` installed (see [`../SKILL.md`](../SKILL.md) Launch).
+- The scratch project in `$VERIFY` has the versions from `contracts/sdk-docs.json` installed (see [`../SKILL.md`](../SKILL.md) Launch).
 - `HUE_API_KEY` is unset. Use the fake key `hue_verify_invalid` where a recipe needs one; never a real key.
 - Network access to npm, PyPI and `https://app.hue.run` (only for the `401` step).
 

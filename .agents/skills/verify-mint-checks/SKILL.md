@@ -35,4 +35,4 @@ Paste the command and its `success …` line into the PR. For a link or anchor f
 
 ## Cleanup
 
-The checks write nothing to the working tree. Revert any deliberate breakage with `git checkout -- <file>`.
+The checks write nothing to the working tree. Before a deliberate break, save the file: `cp <file> /tmp/<name>.orig`. Restore it with `cp /tmp/<name>.orig <file>`, not `git checkout`, which also discards your own edits to that file.

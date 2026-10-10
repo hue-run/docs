@@ -18,7 +18,7 @@ Preconditions:
 - Baseline preconditions hold.
 
 - **Pass.** Run `npx mint broken-links --check-anchors`. Expect exit 0 and `success no broken links found`, about 2.5 s.
-- **Fail.** Point a link at a missing anchor in a scratch edit, for example `[keys](/quickstart#no-such-heading)`, and rerun. Expect exit 1, `found 1 broken links in 1 files`, then the file name and `⎿  /quickstart#no-such-heading`. Revert with `git checkout -- <file>`.
+- **Fail.** Point a link at a missing anchor in a scratch edit, for example `[keys](/quickstart#no-such-heading)`, and rerun. Expect exit 1, `found 1 broken links in 1 files`, then the file name and `⎿  /quickstart#no-such-heading`. Restore the copy you saved first (see Cleanup in [`../SKILL.md`](../SKILL.md)).
 
 ## Gotchas
 

@@ -18,7 +18,7 @@ Preconditions:
 - Baseline preconditions hold.
 
 - **Pass.** Run `npx mint validate`. Expect exit 0 and `success build validation passed`, about 2.5 s.
-- **Fail.** Leave a component unclosed in a scratch edit, for example delete a `</Note>`, and rerun. Expect exit 1, `warning - parsing error ./<file>.mdx:<line>:<col> - Expected a closing tag for `<Note>`` and `error Build validation failed with 1 warning(s).` Revert with `git checkout -- <file>`.
+- **Fail.** Leave a component unclosed in a scratch edit, for example delete a `</Note>`, and rerun. Expect exit 1, `warning - parsing error ./<file>.mdx:<line>:<col> - Expected a closing tag for `<Note>`` and `error Build validation failed with 1 warning(s).` Restore the copy you saved first (see Cleanup in [`../SKILL.md`](../SKILL.md)).
 
 ## Gotchas
 

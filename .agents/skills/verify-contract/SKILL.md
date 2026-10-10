@@ -38,4 +38,4 @@ Paste the command and its last lines into the PR: the `Documentation contract is
 
 ## Cleanup
 
-The tests build their own fixtures in the OS temp directory and remove them. Revert any deliberate breakage with `git checkout -- <file>` and rerun Doctor; save the evidence text before reverting.
+The tests build their own fixtures in the OS temp directory and remove them. Before a deliberate break, save the file: `cp <file> /tmp/<name>.orig`. Restore it with `cp /tmp/<name>.orig <file>`, not `git checkout`, which also discards your own edits to that file. Save the evidence text, restore, then rerun Doctor.
