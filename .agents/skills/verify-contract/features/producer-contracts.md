@@ -26,3 +26,7 @@ Preconditions:
 
 - `bun run docs:platform` rewrites `contracts/` from production through the GitHub CLI. Run it only when the task is a platform refresh.
 - Never pin the platform snapshot to the platform's main branch.
+
+## SDK media contract
+
+After a media change, mirror the verified SDK producer's `docs-contract.json`, compatibility body and Hue skill. Update the SDK commit and snapshot digest in `contracts/sources.json` only after that commit exists; a local snapshot does not prove a source revision. Generate the docs contract and run `bun run check:contract`. The media guides must distinguish binary part digests from large text content prefixes, and helper data's 25 MiB limit from whole attribute uploads' 1,000,000,000-byte limit. Preview claims must match the platform reader contract: image allowlist, native audio/video, PDF in a new tab, text and download cards. Check the platform deployment gate before shipping the SDK.

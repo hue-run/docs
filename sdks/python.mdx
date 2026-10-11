@@ -74,6 +74,38 @@ For helper content, `redactor(field, value)` receives a detached copy and can re
 
 The helpers always exclude exception messages and stacks, retaining error type and status. A context manager records an escaping error and rethrows it.
 
+## Images, documents and audio
+
+With content capture enabled, Hue uploads supported inline media from a span's own `gen_ai.input.messages`, `gen_ai.output.messages` and `ai.prompt.messages` attributes. Supported message shapes include OpenTelemetry GenAI, Vercel AI SDK, OpenAI Chat Completions and Responses, Anthropic base64 sources, Gemini inline data, Vertex media and Bedrock images and documents. OpenAI `content` arrays are supported alongside `parts` arrays. Remote URLs, file IDs and S3 references remain unchanged. The SDK never fetches them.
+
+Data URLs and fields explicitly encoded as base64 by the provider contract are decoded before hashing. Other non-data strings with a valid declared textual media type remain raw UTF-8: `YWJj` hashes as those four characters.
+
+Media has two exported forms:
+
+- **Binary:** the SDK removes the encoded bytes and adds `sha256` and `size` to the part, even for small attachments. A successful upload adds a `hue.blobs` entry keyed at the part, for example `gen_ai.input.messages#/0/parts/1`. A failed upload leaves the digest and size without an entry.
+- **Text:** text up to 64 KiB stays inline. Above that limit, a successful upload retains the first 16 KiB at a UTF-8 boundary and adds an entry keyed at the content field, for example `gen_ai.input.messages#/0/parts/1/content`. A failed upload leaves the digest and size.
+
+Blob entries include `key`, `sha256`, `size`, `content_type` and an optional `name`. Names must be nonempty, contain no control characters and have at most 256 characters; Unicode names are accepted. An invalid name from an instrumented message stays in the message but is omitted from the upload metadata. Media inspection is bounded to 8 MiB per message attribute and 16 MiB per record.
+
+To attach a file your application reads or produces, call `record_file` on its span:
+
+```python
+from pathlib import Path
+
+with hue.span("review contract") as span:
+    span.record_file(
+        role="input",
+        media_type="application/pdf",
+        data=Path("contract.pdf").read_bytes(),
+        name="contract.pdf",
+        upload=True,
+    )
+```
+
+The helper hashes and measures supplied data up to **25 MiB**. Upload defaults to `False`. Set it to `True` to upload bytes and attach an entry to the same span under `event:hue.file:<sha256>`. The `hue.file` event still records the digest, role, media type and size. No file uploads occur when content capture is off or with setup credentials. Whole string attribute uploads have a separate **1,000,000,000-byte (1 GB)** limit.
+
+Hue displays PNG, JPEG, GIF, WebP and AVIF images inline. Audio previews support MP3/MPEG, WAV, Ogg, Opus, WebM, MP4/M4A, AAC and FLAC; video previews support MP4 and WebM, subject to browser playback support. PDFs open in a new tab. Text renders as text, and other formats show download cards, including SVG, HTML and PCM16. Remote URLs appear as links and are not loaded automatically.
+
 ## Model metadata and correlation
 
 Use `hue.model(model, provider=...)` for a model operation. Report known token counts with `span.set_usage(input_tokens=..., output_tokens=...)`; leave unavailable counts as `None`. Hue does not estimate missing usage.
@@ -152,7 +184,7 @@ Python redactors receive detached copies. When uploads are available, snapshots 
 
 Safe lifecycle methods return failure results. A timeout neither proves delivery nor cancels an in-flight request. `Hue`, checks, verification and strict lifecycle methods remain diagnostic and may fail.
 
-Queues limit records and bytes, including in-flight records. `max_queue_bytes` defaults to 8 MiB per signal. Separately, the SDK can hold up to 128 MiB of over-limit strings in a span's own attributes and inline files over 64 KiB in a span's own recorded messages while they await upload; log records, events, links and resources aren't uploaded. This bounds queued telemetry, not process RSS. Overflow drops telemetry and updates counters without retrying business work.
+Queues limit records and bytes, including in-flight records. `max_queue_bytes` defaults to 8 MiB per signal. Separately, the SDK can hold up to 128 MiB of over-limit strings in a span's own attributes and recorded media and explicitly requested file uploads while they await upload; log records, other events, links and resources do not upload. This bounds queued telemetry, not process RSS. Overflow drops telemetry and updates counters without retrying business work.
 
 Network retries are bounded. Python keeps one worker per signal; an OS-blocked call can outlive the wait and retain one encoded request (up to 1 MiB) outside queue counters. Shutdown counts discards; process kill, full queues, disabled clients and exporter failures can lose telemetry. There is no disk spool or delivery guarantee.
 

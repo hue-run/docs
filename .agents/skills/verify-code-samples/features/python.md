@@ -27,3 +27,7 @@ Preconditions:
 
 - Use the venv's interpreter (`.venv/bin/python`); a system `python3` may have another `hue-run` or none.
 - The import name is `hue_sdk`, the package name is `hue-run`.
+
+## Media and explicit file uploads
+
+Install the candidate wheel in the isolated virtual environment. Run the Python guide's `record_file` example with a small synthetic PDF and a loopback receiver that implements blob reservation, PUT and completion, plus OTLP acknowledgements. Assert the receiver's exact bytes and digest, the same-span `event:hue.file:<sha256>` entry, and the existing `hue.file` event. Test omitted `upload`, `capture_content=False` and setup credentials: none may reserve or send bytes. A failed upload must keep metadata and report a fallback. Check Unicode names and rejection of control or oversized names; supplied helper data over 25 MiB is omitted and counted. Exercise automatic message uploads using the shared SDK corpus, including remote URL/file ID passthrough and the 64 KiB text boundary. A generic blob 404 stub proves fallback only. Do not call a paid model provider to run these samples.

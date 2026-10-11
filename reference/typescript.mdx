@@ -4,7 +4,7 @@ description: "Use the TypeScript SDK to trace, evaluate, score, and run simulate
 sidebarTitle: "TypeScript API"
 ---
 
-This reference covers `@hue-run/sdk` **0.16.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use [Quickstart](/quickstart#2-install-the-sdk) for the available package release.
+This reference covers `@hue-run/sdk` **0.17.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use [Quickstart](/quickstart#2-install-the-sdk) for the available package release.
 
 ## Imports
 
@@ -183,19 +183,19 @@ Each OpenAI Responses `mcp_call`, `web_search_call`, `file_search_call` or `code
 
 ### Files
 
-`recordFile` adds a `hue.file` event to the active span, or to the span of an explicit context passed second, for a file the work read, received or produced. Files are linked by content hash, so a trace can be matched to the same file elsewhere without exporting its bytes:
+`recordFile` adds a `hue.file` event to the active span, or to the span of an explicit context passed second, for a file the work read, received or produced. Files are linked by content hash. Set `upload: true` to attach supplied bytes to the span:
 
 ```ts
 import { readFile } from "node:fs/promises";
 
 await hue.withSpan("review contract", async () => {
   const pdf = await readFile("contract.pdf");
-  hue.recordFile({ role: "input", mediaType: "application/pdf", data: pdf, name: "contract.pdf" });
+  hue.recordFile({ role: "input", mediaType: "application/pdf", data: pdf, name: "contract.pdf", upload: true });
   // ...
 });
 ```
 
-A `FileRecord` has `role` (`"input"` given to the agent, `"attachment"` from a tool or message, or `"output"` produced by the agent), `mediaType`, and either `data` (a `Uint8Array`, or a string hashed as UTF-8) or `sha256`, with optional `byteSize` and `name`. `data` up to 25 MiB is hashed and measured locally and never exported; larger data is omitted and counted as an instrumentation failure, so pass `sha256` and `byteSize` when you already have them. A supplied `sha256` or `byteSize` must match `data`.
+A `FileRecord` has `role` (`"input"` given to the agent, `"attachment"` from a tool or message, or `"output"` produced by the agent), `mediaType`, and either `data` (a `Uint8Array`, or a string hashed as UTF-8) or `sha256`, with optional `byteSize` and `name`. `data` up to 25 MiB is hashed and measured locally; bytes upload only with `upload: true` and content capture enabled; larger data is omitted and counted as an instrumentation failure, so pass `sha256` and `byteSize` when you already have them. A supplied `sha256` or `byteSize` must match `data`. `upload` defaults to `false`; a successful upload adds a `hue.blobs` entry on the same span, keyed `event:hue.file:<sha256>`. Names must be nonempty, at most 256 characters and contain no control characters. See [Images, documents and audio](/sdks/typescript#images-documents-and-audio) for the upload forms and preview formats.
 
 The event carries `hue.file.sha256`, `hue.file.role`, `hue.file.media_type` and, when known, `hue.file.size`. It is metadata, so it is recorded in both capture modes; `hue.file.name` is recorded only when `captureContent` is true. An invalid record, or one without an active span, is omitted and counted as an instrumentation failure.
 
@@ -238,7 +238,7 @@ See [Redaction](/guides/redaction) for runnable email-masking examples and the c
 - `captureContent: true` permits supplied content. Received content is stored by Hue; the SDK does not set a retention timer. Helpers still omit exception messages and stack traces.
 - With `captureContent: false`, a record whose tool definitions are removed keeps a summary of them: `hue.tool.names` lists each definition's `name` (Chat Completions `function.name`, or the `type` of an unnamed built-in tool such as `mcp`) in order, and `hue.tool.definitions.sha256` is the lowercase hex SHA-256 of the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical JSON of the credential-scrubbed definition list. The digest does not change when a credential rotates. Only definitions another integration recorded can be summarized: `hueTelemetry(hue)` with `captureContent: false` records none.
 - Hosted tools carry credentials in their definitions, such as the `authorization` and `headers` of an OpenAI hosted MCP tool. Before export, and before `redact`, Hue replaces the values of credential-like fields (`authorization`, `authorization_token`, `headers`, `api_key`, `access_token`, `x-api-key`, and keys ending in `token`, `secret`, `password`, `apikey` or `credential`, case-insensitively and ignoring `-` and `_`) with `"[redacted]"` in `gen_ai.tool.definitions`, `ai.prompt.tools` and `llm.tools.*.tool.json_schema`, and in the `tools` and `mcp_servers` entries of a raw provider request or response recorded as `input.value`, `output.value` or `llm.invocation_parameters`. Parameters named in a JSON Schema `properties` object keep their schemas, so a tool that takes a `headers` argument is still described. A definition nested more than 256 levels deep rejects its record.
-- String values over Hue's inline limit (up to 1 GB) in a span's own attributes, and inline files over 64 KiB in a span's own recorded messages, are uploaded separately; spans retain the first 16 KiB of strings, while log records, events, links and resources aren't uploaded. If an upload falls back, the value is cut or the file keeps its digest and size. No upload occurs when `captureContent` is false.
+- Whole string attributes over Hue's inline limit upload separately, up to 1,000,000,000 bytes, and retain a 16 KiB prefix. Binary media in a span's recorded messages uploads at any size and exports as a digest and size; text media over 64 KiB retains a 16 KiB UTF-8 prefix after successful upload. Explicit file helpers accept supplied data up to 25 MiB and upload only when requested. Log records, other events, links and resources do not upload. Failed uploads fall back to cuts or file digests and are reported. No upload occurs when content capture is off or with setup credentials.
 - `redact(value, path)` transforms supported strings in attributes, resources, event/link attributes and log bodies before Hue exports them. It must return a string. A redactor failure rejects the affected record and becomes an export issue.
 - This policy applies to Hue's export path. Another exporter and arbitrary span/scope names remain your application's responsibility.
 
