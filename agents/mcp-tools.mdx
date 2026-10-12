@@ -58,7 +58,7 @@ Listed by default: `search_traces`, `get_trace`, `get_span`, `list_sessions`, `v
 | --- | --- | --- |
 | `search_traces` | Read | Finds traces in a window by status, attention, finding, trace check, user, release, trace name, model, root attribute, deployment environment, run, session, duration or text, newest or longest first. |
 | `get_trace` | Read | Returns one trace with its stored findings and trace-check results and a page of its span tree; recorded content with `include_content: true`. |
-| `get_span` | Read | Returns one span's status and error message, timing, model, usage, tool and attribute names; recorded values with `include_content: true` and correlated logs with `include_logs: true`. |
+| `get_span` | Read | Returns one span's status and error message, timing, model, usage, tool and attribute names and the files it records; recorded values and file download links with `include_content: true`, and correlated logs with `include_logs: true`. |
 | `list_sessions` | Read | Lists sessions by last activity, with status, trace count and token and span totals. |
 | `verify_trace` | Read | Checks a receipt: whether a trace and its expected spans are stored and which fields are present, never content. |
 | `get_span_content` | Read | Reads exact recorded values from up to 20 spans of one trace, by JSON path or attribute key, in slices. |
@@ -377,6 +377,8 @@ A **trace** is a root span and its tree; each **span** records one timed operati
 `search_spans` returns span rows from many traces with the same fields, plus the span's `trace_id` and `start_offset_ms`, the time from its trace's start to its own. It filters a window of up to 7 days by span `name`, `kind`, `status`, `model`, `min_duration_ms` and one `attribute`, and by the trace's `trace_name`, `user`, `user_prefix`, `release`, `session_id` and `run_traces`; it sorts newest or longest first and reports `total_count`. When nothing matches a `name` or `trace_name`, it suggests the closest recorded names.
 
 `get_span` returns one span: `status` with its `code` and a `message` of up to 200 characters, `model`, `usage` (input, output, cache and reasoning tokens where recorded), `gen_ai` (`operation`, `provider`, `response_model`, `agent_name`, `session_id`, `user_id` and the detected `profiles`), `tool` (`name` and `call_id`), `has_input` and `has_output`, `service`, `attribute_keys` (the names of up to 100 recorded attributes, never their values) and `event_names`. When the result fits `max_chars`, it also carries the instrumentation scope, the dropped-attribute and dropped-event counts, and span `links`.
+
+`get_span` also lists up to 64 `files`: the images, audio and documents the span records. Each has its `role` and, where known, `modality`, `media_type`, `name`, `size`, `sha256`, a remote `uri`, a provider `file_id`, or `langfuse_media_id` for a file [held in Langfuse](/integrations/opentelemetry#use-with-langfuse). A file whose bytes the span lists under `hue.blobs` also has its `key` and `state`: `stored`, `missing` (never uploaded, or erased) or `unavailable`. With `include_content: true`, each stored file adds `download_url`, a link valid for five minutes, and `download_expires_at`. A script with a **Read** or **Read and write** key gets the same link from the [trace file endpoint](/integrations/opentelemetry#download-files-from-a-trace).
 
 ### Traces from runs
 

@@ -25,6 +25,12 @@ Publication pins **Answer outcome** and the required **Answers the task** judge.
 
 An answer-only case publishes at **T4**. Run it with the [agent command or a connected worker](/evaluations/eval-ready-agent#run-it); the agent receives the task and returns its answer without world setup. Cases that made tool calls use the app or recorded-tool path. A turn without a recorded answer cannot become an answer-only case; a turn that produced output files also needs a supported way to evaluate those files.
 
+## Files in a case
+
+A case keeps its own copies of the images, documents and audio its trace recorded: files a Hue SDK uploaded, files [attached without the SDK](/integrations/opentelemetry#attach-files-without-the-sdk), and files a record holds inline as a `data:` URL or base64 part. The copies stay with the case after the trace is deleted or the case is edited. Hue copies up to 32 files of up to 25 MiB each, in the image, audio, video and PDF types the [trace view previews](/integrations/opentelemetry#images-audio-and-documents) and in Word, PowerPoint, Excel, JSON, text and CSV. A remote URL or a Langfuse media reference has no bytes to copy.
+
+The judges Hue pins when it publishes a case see PNG, JPEG, WebP, GIF and PDF files that the agent was given or produced, or that the case keeps as evaluator-only references. They see up to 8 files of 4.5 MB each and 20 MiB in all. Past those bounds, a judge sees a file's name, type and size only. Judges that earlier cases pinned keep reading text only.
+
 ## From the app
 
 1. Open **Traces** and open the trace.

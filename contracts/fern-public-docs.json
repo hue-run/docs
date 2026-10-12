@@ -2024,7 +2024,7 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "a0df6c0dd1e24f6c640b0c31f38a20541290afa6958466baa228b022f22272a3",
+    "catalogSha256": "91c5e343c2482318ad61f38835c3767ddc34ea6c577a62519261b4cd25fea152",
     "serverInstructionsSha256": "a57ca5d20b45f22f4e1edcb1935b3555d47afeb0601f7bef597bef4e45d7a2ce",
     "guides": {
       "data-model": {
@@ -2045,7 +2045,7 @@
       },
       "evaluate": {
         "title": "Run your agent against a case",
-        "sha256": "ed72ec482a8919a0fd94bb5ab6743ceee176a4d3a0484ee56695cac2b7321c24"
+        "sha256": "19b36f87539d74ba20a09a289648006bca45d2f77f094277197940de8a9a1dcb"
       }
     },
     "toolsets": {
