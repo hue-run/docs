@@ -660,7 +660,7 @@ Every case receives execution and case variables. Only a case with a world recei
 | `TRACEPARENT`, `BAGGAGE` | A world case's trace context and `hue-world=<id>`. |
 | `HUE_EXECUTION_ID`, `HUE_CASE_ID`, `HUE_CASE_KEY` | The execution and the case, including answer-only cases. |
 | `HUE_ENVIRONMENT_RUN_ID` | The world, only for a case with a world. |
-| `HUE_CASE_DIR`, `HUE_CASE_INPUTS`, `HUE_CASE_OUTPUT_DIR` | A private case directory: the inputs file, the case's input files under `files/<role>/`, and `output/`, whose files are uploaded after the case. |
+| `HUE_CASE_DIR`, `HUE_CASE_INPUTS`, `HUE_CASE_OUTPUT_DIR` | A private case directory: the inputs file, the case's input files under `files/<role>/`, and `output/`, whose files are uploaded after the case. Accepted extensions: `.pdf .docx .pptx .xlsx .json .txt .csv .png .jpg .jpeg .webp .gif .avif .mp3 .mpeg .wav .ogg .m4a .flac .opus .aac .mp4 .webm`; any other extension, or an empty file, fails the case. Declare an `.mp4` or `.webm` file's audio or video type in `manifest.json` `contentTypes`. |
 | `HUE_MCP_URL`, `HUE_MCP_TOKEN`, `HUE_MCP_EXPIRES_AT` | Legacy names for the first MCP mirror. |
 
 `hue eval` removes `HUE_API_KEY` and Hue-key-shaped values; other shell and `--env-file` variables pass through. Do not reload a file containing `HUE_API_KEY`. Store checkpoints under `.hue/eval/<agent-key>` and ignore `.hue/`; case files are under `HUE_CASE_DIR/files/<role>/`. Logs go to stderr; stdout is stored. A case passes only after each required evaluator decides; undecided results leave it inconclusive. Exit codes: 0 pass, 1 failure, error, inconclusive or incomplete, 2 usage, 130 interrupt. Compare with `--baseline <previous run id>`.

@@ -76,16 +76,18 @@ The helpers always exclude exception messages and stacks, retaining error type a
 
 ## Images, documents and audio
 
-With content capture enabled, Hue uploads supported inline media from a span's own `gen_ai.input.messages`, `gen_ai.output.messages` and `ai.prompt.messages` attributes. Supported message shapes include OpenTelemetry GenAI, Vercel AI SDK, OpenAI Chat Completions and Responses, Anthropic base64 sources, Gemini inline data, Vertex media and Bedrock images and documents. OpenAI `content` arrays are supported alongside `parts` arrays. Remote URLs, file IDs and S3 references remain unchanged. The SDK never fetches them.
+With content capture on, the SDK inspects images, documents and audio in a span's own `gen_ai.input.messages`, `gen_ai.output.messages` and `ai.prompt.messages` attributes, in `parts` and OpenAI `content` arrays. It reads GenAI `blob` parts, AI SDK `file` and `image` parts, OpenAI Chat and Responses image, file and audio parts, Anthropic base64 sources, Gemini `inlineData` and `inline_data`, Vertex `media`, and Bedrock image and document sources. Remote URLs, provider file IDs and S3 references stay unchanged; the SDK never fetches them.
 
-Data URLs and fields explicitly encoded as base64 by the provider contract are decoded before hashing. Other non-data strings with a valid declared textual media type remain raw UTF-8: `YWJj` hashes as those four characters.
+Recorded media exports in one of two forms:
 
-Media has two exported forms:
+- **Binary media** of any nonempty size: the SDK removes the bytes and the part carries `sha256` and `size`. A successful upload adds a `hue.blobs` entry keyed at the part, for example `gen_ai.input.messages#/0/parts/1`. If the upload fails, the part keeps its digest and size without an entry. An empty byte field stays as recorded.
+- **Text media**: up to 64 KiB of decoded bytes stays inline. Above that, a successful upload keeps the first 16 KiB at a UTF-8 boundary and adds an entry keyed at the content field, for example `gen_ai.input.messages#/0/parts/1/content`. If the upload fails, the part keeps its digest and size without an entry.
 
-- **Binary:** the SDK removes the encoded bytes and adds `sha256` and `size` to the part, even for small attachments. A successful upload adds a `hue.blobs` entry keyed at the part, for example `gen_ai.input.messages#/0/parts/1`. A failed upload leaves the digest and size without an entry.
-- **Text:** text up to 64 KiB stays inline. Above that limit, a successful upload retains the first 16 KiB at a UTF-8 boundary and adds an entry keyed at the content field, for example `gen_ai.input.messages#/0/parts/1/content`. A failed upload leaves the digest and size.
+Media in resources, events, links and log records never uploads: inline media up to 64 KiB stays as recorded, and larger media becomes its `sha256` and `size`.
 
-Blob entries include `key`, `sha256`, `size`, `content_type` and an optional `name`. Names must be nonempty, contain no control characters and have at most 256 characters; Unicode names are accepted. An invalid name from an instrumented message stays in the message but is omitted from the upload metadata. Media inspection is bounded to 8 MiB per message attribute and 16 MiB per record.
+Data URLs and fields the provider encodes as base64 are decoded before hashing, so a part's digest matches `record_file`'s digest of the same bytes. Another string with a declared textual media type is hashed as UTF-8: `YWJj` hashes as those four characters. Inspection is bounded to 8 Mi UTF-16 code units per message attribute and 16 Mi per record; a longer attribute follows the ordinary value limit. With `capture_content=False`, messages are removed without inspection or upload.
+
+Each `hue.blobs` entry has `key`, `sha256`, `size`, `content_type` and, when the part records a valid file name, name or title, `name`. A valid name is nonblank after trimming, at most 256 UTF-16 code units and well-formed Unicode, with no C0 control characters (U+0000–U+001F) or DEL (U+007F). An invalid name stays in the message and is left out of the entry.
 
 To attach a file your application reads or produces, call `record_file` on its span:
 
@@ -102,9 +104,9 @@ with hue.span("review contract") as span:
     )
 ```
 
-The helper hashes and measures supplied data up to **25 MiB**. Upload defaults to `False`. Set it to `True` to upload bytes and attach an entry to the same span under `event:hue.file:<sha256>`. The `hue.file` event still records the digest, role, media type and size. No file uploads occur when content capture is off or with setup credentials. Whole string attribute uploads have a separate **1,000,000,000-byte (1 GB)** limit.
+`record_file` hashes and measures up to **25 MiB** of supplied data. `upload` defaults to `False`. With `upload=True`, content capture and an ordinary project key, export uploads the bytes and adds an entry keyed `event:hue.file:<sha256>` to the same span. The `hue.file` event still records the digest, role, media type and size, and its name follows the rule above: an invalid name is left out and counted as an instrumentation failure. An upload that is not made counts in `hue.export_status.upload_fallbacks`. A span's own string attributes have a separate **1,000,000,000-byte (1 GB)** upload limit.
 
-Hue displays PNG, JPEG, GIF, WebP and AVIF images inline. Audio previews support MP3/MPEG, WAV, Ogg, Opus, WebM, MP4/M4A, AAC and FLAC; video previews support MP4 and WebM, subject to browser playback support. PDFs open in a new tab. Text renders as text, and other formats show download cards, including SVG, HTML and PCM16. Remote URLs appear as links and are not loaded automatically.
+See [Images, audio and documents](/integrations/opentelemetry#images-audio-and-documents) for what the trace view previews.
 
 ## Model metadata and correlation
 

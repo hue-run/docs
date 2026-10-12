@@ -6,6 +6,7 @@ A developer copies a Python sample from Quickstart or the Python SDK page into a
 
 - `py-guard` stops with the sample's own message when `HUE_API_KEY` is unset.
 - `py-reach` calls Hue and fails with HTTP 401 for a fake key.
+- `py-media` uploads the **Images, documents and audio** `record_file` sample's file and recorded message media to a loopback receiver.
 
 ## How to get to it (user POV)
 
@@ -22,12 +23,9 @@ Preconditions:
 - **Guard.** Run `env -u HUE_API_KEY .venv/bin/python first_trace.py`. Expect exit 1 and `ValueError: Set HUE_API_KEY and HUE_CAPTURE_CONTENT=true (recommended) or false`.
 - **Fake-key rejection (not end to end).** Run `HUE_API_KEY=hue_verify_invalid .venv/bin/python first_trace.py`. Expect exit 1 and `hue_sdk.client.ProjectValidationError: Hue project validation failed (HTTP 401).`, under 1 s.
 - **Extras.** For samples that use `builtin_scorers.json_schema`, install `'hue-run[evals]==<version>'`.
+- **Media (loopback, not end to end).** Prefix the `record_file` fragment with `Hue(api_key=..., service_name=..., capture_content=True, base_url="http://127.0.0.1:<port>", live_spans=False)`, suffix it with `hue.force_flush()` and `hue.export_status`, and run it as the TypeScript **Media** recipe describes, with `hue.model(..., provider=...)` and `set_input` for message media and `hue.tracer` for an event. Expect the same reservations, entries, fallbacks and counters, read from `uploaded_values`, `upload_fallbacks` and `instrumentation_failures`.
 
 ## Gotchas
 
 - Use the venv's interpreter (`.venv/bin/python`); a system `python3` may have another `hue-run` or none.
 - The import name is `hue_sdk`, the package name is `hue-run`.
-
-## Media and explicit file uploads
-
-Install the candidate wheel in the isolated virtual environment. Run the Python guide's `record_file` example with a small synthetic PDF and a loopback receiver that implements blob reservation, PUT and completion, plus OTLP acknowledgements. Assert the receiver's exact bytes and digest, the same-span `event:hue.file:<sha256>` entry, and the existing `hue.file` event. Test omitted `upload`, `capture_content=False` and setup credentials: none may reserve or send bytes. A failed upload must keep metadata and report a fallback. Check Unicode names and rejection of control or oversized names; supplied helper data over 25 MiB is omitted and counted. Exercise automatic message uploads using the shared SDK corpus, including remote URL/file ID passthrough and the 64 KiB text boundary. A generic blob 404 stub proves fallback only. Do not call a paid model provider to run these samples.

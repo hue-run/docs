@@ -7,6 +7,7 @@
 - `contract-generated` keeps `docs-contract.json` in sync with the snapshots.
 - `platform-pin` compares the pinned platform commit with production.
 - `platform-sync-tests` proves the sync script's refusal rules offline.
+- `sdk-refresh` mirrors a released SDK producer: its `docs-contract.json`, compatibility body and Hue skill.
 
 ## How to get to it (user POV)
 
@@ -20,13 +21,11 @@ Preconditions:
 
 - **Generated file current.** Run `bun run docs:contract:check`. Expect exit 0 and no output. After editing a snapshot, run `bun run docs:contract` and commit the regenerated `docs-contract.json`.
 - **Sync rules offline.** Run `node --test scripts/sync-platform-contract.test.mjs`. Expect `ℹ tests 9`, `ℹ pass 9`, about 0.2 s.
+- **SDK refresh.** Copy the released hue-sdk commit's `docs-contract.json` to `contracts/sdk-docs.json` byte for byte, set that commit and the file's `sha256:` digest in `contracts/sources.json`, mirror `COMPATIBILITY.md` into `sdks/compatibility.mdx` and the skill body and version into `skill.md` (and every `skill.md?v=` link), then run `bun run docs:contract` and `node scripts/check-docs.mjs`. Expect `Documentation contract is current`.
 - **Pin versus production.** Run `bun run docs:platform:check` only when the change touches the platform pin. It fails while the pin trails production; the daily **Platform pin** workflow reports that, and it never gates a pull request.
 
 ## Gotchas
 
 - `bun run docs:platform` rewrites `contracts/` from production through the GitHub CLI. Run it only when the task is a platform refresh.
 - Never pin the platform snapshot to the platform's main branch.
-
-## SDK media contract
-
-After a media change, mirror the verified SDK producer's `docs-contract.json`, compatibility body and Hue skill. Update the SDK commit and snapshot digest in `contracts/sources.json` only after that commit exists; a local snapshot does not prove a source revision. Generate the docs contract and run `bun run check:contract`. The media guides must distinguish binary part digests from large text content prefixes, and helper data's 25 MiB limit from whole attribute uploads' 1,000,000,000-byte limit. Preview claims must match the platform reader contract: image allowlist, native audio/video, PDF in a new tab, text and download cards. Check the platform deployment gate before shipping the SDK.
+- Pin the SDK snapshot only to a commit whose packages npm and PyPI already serve; pages must not describe an unreleased SDK.
