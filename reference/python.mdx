@@ -4,14 +4,14 @@ description: "Use the Python SDK to trace, evaluate, score, and drive simulated 
 sidebarTitle: "Python API"
 ---
 
-This reference covers `hue-run` **0.10.0** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use [Quickstart](/quickstart#2-install-the-sdk) for the available package release.
+This reference covers `hue-run` **0.11.0** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use [Quickstart](/quickstart#2-install-the-sdk) for the available package release.
 
 ## Imports
 
 | Module | Public exports |
 | --- | --- |
-| `hue_sdk` | `Hue`, `create_hue_safe`, `HueSpan`, `Project`, `ProjectValidationError`, `Redactor`, `ExportStatus`, `TraceReceipt`, `TraceReceiptField`, `TraceReceiptFields`, `TraceVerificationError`, `TraceVerificationResult`. |
-| `hue_sdk.evals` | `EvaluationClient`, `HueApiError`, `is_transient_api_error`, `run_experiment`, `rescore`, `builtin_scorers` (with `builtins` as an alias), `define_local_scorer`, `score_locally`, `MISSING`, `TraceEvidence`, `TargetContext`, `ScoreContext`, `Score`, `LocalScorer`, `RunnerReport` and the recovery errors. |
+| `hue_sdk` | `Hue`, `create_hue_safe`, `HueSpan`, `Attachment`, `Project`, `ProjectValidationError`, `Redactor`, `ExportStatus`, `TraceReceipt`, `TraceReceiptField`, `TraceReceiptFields`, `TraceVerificationError`, `TraceVerificationResult`. |
+| `hue_sdk.evals` | `EvaluationClient`, `HueApiError`, `is_transient_api_error`, `run_experiment`, `rescore`, `builtin_scorers` (with `builtins` as an alias), `define_local_scorer`, `score_locally`, `MISSING`, `TraceEvidence`, `TargetContext`, `ScoreContext`, `Score`, `LocalScorer`, `RunnerReport`, `LocalFile`, `CaseFileWrite`, `CaseFileError`, `ArtifactSizeError`, the [recorded media](#recorded-media) exports (`MediaClient`, `MediaFile`, `MediaFetchError`, `MediaResolveFailure`, `ResolvedMedia`, `rehydrate_media`) and the recovery errors. |
 | `hue_sdk.environment` | `EnvironmentClient`, `HueEnvironmentError`, the [world handoff](#world-handoff) helpers and the simulated-environment types. |
 | `hue_sdk.managed` | `ManagedTargetHandler`, `ManagedTargetContext`, `ManagedInputFile`, `ManagedOutputFile`, `ManagedTargetResult`, `ManagedResponse`. |
 
@@ -106,6 +106,8 @@ An exception escaping a Hue span records error type/status, then propagates unch
 | `record_file(*, role, media_type, sha256=None, data=None, byte_size=None, name=None, upload=False)` | Adds a `hue.file` event for a file the work read, received or produced. `role` is `input`, `attachment` or `output`. `data` up to 25 MiB is hashed and measured locally (a `str` is hashed as UTF-8); pass `sha256` and `byte_size` instead when you already have them. `upload` defaults to `False`. With `upload=True`, supplied `data`, content capture and an ordinary project key, export uploads the bytes and adds a `hue.blobs` entry to the same span, keyed `event:hue.file:<sha256>`; an upload that is not made counts in `export_status.upload_fallbacks` and the event remains. The event carries `hue.file.sha256`, `hue.file.role`, `hue.file.media_type`, `hue.file.size` when known and, only when content is captured, `hue.file.name`. A name must be nonblank after trimming, at most 256 UTF-16 code units and well-formed Unicode, with no C0 control characters (U+0000–U+001F) or DEL (U+007F); an invalid name is omitted and counted, and the event remains (before 0.10.0 tabs, newlines and DEL were accepted). The event is recorded in both capture modes; an invalid record is omitted and counted. |
 | `log_inference(...)` | Accepts optional keyword-only `input`, `output`, `operation`, `provider`, `model` and `system_instructions`. Emits an inference-details log correlated to this span, even outside its active scope, with a structured body and `gen_ai.*` request attributes from the enclosing `model()` block or those keywords plus `gen_ai.conversation.id` from `context()`. Omit a content keyword for an absent field; passing `None` keeps the key with an empty value. Nothing is emitted when `capture_content` is False. |
 
+`Attachment(data=None, *, path=None, content_type, name=None)` from `hue_sdk` places a file in any value Hue records: a `span()` input or output, `model()` messages, a tool's arguments or result, `log_inference()` messages, or a span attribute passed to `span(attributes=...)` or `set_attribute`. Give exactly one of `data` (bytes, or a base64 string or `data:` URL) and `path`, read when the attachment is created; either is limited to 25 MiB. It is recorded as a GenAI `blob` part in digest form and its bytes upload at export; an invalid attachment is recorded as `None` and counted. See [Attach a file anywhere](/sdks/python#attach-a-file-anywhere).
+
 Choose logs or span attributes for the same content event to avoid duplicate storage. `log_inference` emits no record when content capture is disabled. `hue.tracer`, `hue.tracer_provider` and `hue.logger_provider` expose the configured OpenTelemetry objects for integrations that accept explicit instances.
 
 ## Content policy
@@ -114,7 +116,7 @@ See [Redaction](/guides/redaction) for runnable email-masking examples and the c
 
 `capture_content=False` omits input/output content from Hue's helpers **before it enters an OpenTelemetry queue** and, at export, strips recognized GenAI, OpenInference, OpenLLMetry, Langfuse and Vercel AI SDK content attributes, legacy `gen_ai.*` message events, log bodies and status descriptions from every record on Hue's export path, including spans from third-party instrumentors on a borrowed provider. The key list is identical to TypeScript's `contentPrefixes` and is reproduced in the [compatibility matrix](/sdks/compatibility). `True` permits that content. The policy does not classify arbitrary attribute names, span names, session identifiers or another exporter's records; unrecognized custom keys pass through. Configure an external instrumentor's own content policy before enabling it.
 
-When content is captured, export scrubs hosted-tool credentials (such as `authorization`, `authorization_token`, `headers` and `api_key`) in recorded tool definitions and raw requests. A span's own string attributes over Hue's inline limit upload separately, up to 1,000,000,000 bytes, and keep a 16 KiB prefix. Nonempty binary media in a span's own recorded messages uploads at any size and exports as its `sha256` and `size`; text media over 64 KiB keeps a 16 KiB UTF-8 prefix. In resources, events, links and log records, inline media up to 64 KiB stays as recorded and larger media becomes its digest, without upload. `record_file` uploads supplied data up to 25 MiB only with `upload=True`. A failed upload falls back to a cut or, for media, to the digest without a `hue.blobs` entry, and counts in `export_status.upload_fallbacks`. Nothing uploads with `capture_content=False` or a setup credential. When metadata-only capture removes tool definitions, the record keeps `hue.tool.names` and `hue.tool.definitions.sha256`.
+When content is captured, export scrubs hosted-tool credentials (such as `authorization`, `authorization_token`, `headers` and `api_key`) in recorded tool definitions and raw requests. A span's own string attributes over Hue's inline limit upload separately, up to 1,000,000,000 bytes, and keep a 16 KiB prefix. Inline media in the span attributes and log records that [automatic capture](/sdks/python#automatically-captured-media) reads uploads and leaves its digest in place; text media over 64 KiB keeps a 16 KiB UTF-8 prefix. Resources, links and span events never upload: inline media there up to 64 KiB stays as recorded and larger media becomes its digest. An `Attachment` (up to 25 MiB) uploads at its position, and `record_file` uploads supplied data up to 25 MiB only with `upload=True`. A failed upload falls back to a cut, to the digest without a `hue.blobs` entry in recorded messages, or to the inline bytes elsewhere, and counts in `export_status.upload_fallbacks`. Nothing uploads with `capture_content=False` or a setup credential. When metadata-only capture removes tool definitions, the record keeps `hue.tool.names` and `hue.tool.definitions.sha256`.
 
 `redactor(field, value)` receives a bounded, detached content snapshot before helper JSON serialization. Supported inputs are ordinary built-in JSON-compatible scalars, dictionaries and lists, plus built-in tuples and scalar dictionary keys accepted by Python's JSON encoder. Container shape and nested values are preserved without sharing mutable application containers. When uploads are available, helper snapshots and redactors accept supported values up to 1 GB and 1,048,576 visited values and keys. Otherwise, the snapshot is bounded to 4 MiB, depth 64 and 65,536 values and keys. The budget counts UTF-8 string bytes plus value overhead; it is not a process-memory limit. The initial snapshot also runs when no redactor is configured. A redactor's returned value passes through a fresh snapshot with the same bounds before JSON encoding.
 
@@ -205,7 +207,7 @@ Use these product-named methods in new code. They call the same v1 endpoints as 
 | `create_eval_set(*, name, slug, description="", tags=None)` / `get_eval_set(eval_set_id)` / `list_eval_sets(...)` | Eval set with initial `versions` / an eval set / page of summaries. |
 | `update_eval_set(eval_set_id, *, name=None, slug=None, description=None, tags=None)` | Rename an eval set or replace its tags; omitted fields stay. |
 | `create_eval_set_version(eval_set_id, *, from_version_id=None)` / `get_eval_set_version(version_id)` | New editable version / a version. |
-| `list_eval_set_cases(version_id, ...)` / `add_eval_set_case(version_id, *, expected_revision, external_key, inputs, expected=MISSING, metadata=None)` | Page of cases / `{ "item": ..., "version": ... }`; retain the updated revision. |
+| `list_eval_set_cases(version_id, ...)` / `add_eval_set_case(version_id, *, expected_revision, external_key, inputs, expected=MISSING, metadata=None, files=None)` | Page of cases / `{ "item": ..., "version": ... }`; retain the updated revision. `files` pins input files as on `add_case`. |
 | `freeze_eval_set_version(version_id, expected_revision)` | Frozen eval set version. |
 | `create_evaluator(*, name, slug, description="", tags=None)` / `get_evaluator(evaluator_id)` / `list_evaluators(...)` | Register or retrieve evaluator identities. |
 | `update_evaluator(evaluator_id, *, name=None, description=None, tags=None)` | Rename an evaluator or replace its tags; omitted fields stay. |
@@ -242,7 +244,7 @@ billing = client.list_eval_sets(tags=["billing"])
 | `get_dataset(dataset_id)` / `list_datasets(...)` | Retrieve a dataset / page of summaries. |
 | `create_dataset_version(dataset_id, *, from_version_id=None)` | New editable version. |
 | `get_dataset_version(version_id)` / `list_cases(version_id, ...)` | Retrieve a version / page of cases. |
-| `add_case(version_id, *, expected_revision, external_key, inputs, expected=MISSING, metadata=None)` | `{ "item": ..., "version": ... }`; retain the updated revision. |
+| `add_case(version_id, *, expected_revision, external_key, inputs, expected=MISSING, metadata=None, files=None)` | `{ "item": ..., "version": ... }`; retain the updated revision. `files` pins up to 32 input files as `CaseFileWrite(role=..., artifact_id=...)`, or `CaseFileWrite(role=..., filename=..., content_type=..., data=... or path=...)`, which the client checks against the artifact policy (one of the 22 artifact content types, a name of 1–255 UTF-16 code units, 1 byte to 25 MiB) and uploads first; a file outside the policy raises `ValueError` before any request. |
 | `freeze_dataset_version(version_id, expected_revision)` | Frozen dataset version. |
 | `create_scorer(*, name, slug, description="", tags=None)` / `get_scorer(scorer_id)` / `list_scorers(...)` | Register or retrieve scorer identities. |
 | `update_scorer(scorer_id, *, name=None, description=None, tags=None)` | Rename a scorer or replace its tags; omitted fields stay. |
@@ -296,18 +298,32 @@ Runner target outputs and built-in JSON Schema declarations are limited to 200,0
 
 Submitting hosted jobs is explicit and can consume the project's allowance. Method availability does not establish that the project has a configured provider or budget. Local runners leave hosted and manual pins for their owning workflows.
 
+### Recorded media
+
+`client.media` is a `MediaClient` that reads recorded files back by SHA-256 with a **Read** or **Read and write** key; a snapshot's pinned copy needs **Read and write**. See [Read recorded media back](/sdks/python#read-recorded-media-back).
+
+| Member | Behavior |
+| --- | --- |
+| `fetch(*, sha256, trace_id=None, span_id=None, snapshot_id=None, max_bytes=67108864)` | Downloads one file through `GET /api/v1/traces/{traceId}/blobs/{sha256}` (or the snapshot's copy with `snapshot_id`), without the project key, and checks its SHA-256 → `MediaFile` with `data`, `sha256`, `size`, `content_type` and `file_name` (both `None` for a snapshot's copy). `max_bytes` is at most 1 GB. |
+| `resolve(value, *, trace_id=None, span_id=None, snapshot_id=None, as_="data_url", concurrency=4, max_bytes=67108864, blobs=None)` | Writes the bytes of every digest part in `value` back into the part's own field, as a `data:` URL or base64 (`"data_url"`) or as `bytes` → `ResolvedMedia` with a new `value`, the count `resolved` and `failures`. `concurrency` is 1–16. `blobs` takes the record's `hue.blobs` entries in any form Hue reads. |
+| `MediaFetchError` | Raised by `fetch`, with `reason`: `not_found`, `missing`, `unavailable`, `forbidden`, `too_large`, `digest_mismatch` or `failed`. An unavailable answer, a lost connection or a timeout is asked once more, after a `Retry-After` of up to 10 seconds. |
+| `MediaResolveFailure` | A part `resolve` or `rehydrate_media` left unchanged: `pointer` (RFC 6901), `sha256` and `reason`, a `MediaFetchError` reason, `not_found` for no matching local file, or `prefix_only` for a part holding only the first 16 KiB of its file. |
+| `rehydrate_media(value, files, *, as_="data_url")` | Writes case files (`LocalFile`, `ManagedInputFile`, or any object with `sha256`, `data` or `path`, and optional `content_type`) back into the digest parts of `value` by SHA-256 → `ResolvedMedia`. |
+
+The client also exposes the artifact methods that case files use: `reserve_artifact`, `request_artifact_upload`, `upload_artifact_bytes`, `complete_artifact`, `get_artifact` and `download_artifact`, which raises `ArtifactSizeError` for bytes past the size its caller expected.
+
 ## Run locally and rescore
 
 ```python
 run_experiment(
     *, client, hue, experiment_id, target,
     checkpoint_directory, persist_result_content, trace_evidence,
-    scorers=None, concurrency=1, schema_timeout_millis=2000,
+    scorers=None, concurrency=1, schema_timeout_millis=2000, files_directory=None,
 ) -> RunnerReport
 
 rescore(
     *, client, run_id, checkpoint_directory, persist_result_content,
-    scorers=None, concurrency=1, schema_timeout_millis=2000,
+    scorers=None, concurrency=1, schema_timeout_millis=2000, files_directory=None,
 ) -> RunnerReport
 ```
 
@@ -318,7 +334,8 @@ Both are exported from `hue_sdk.evals` and are synchronous entry points. They su
 | `checkpoint_directory` | Required `str` or `Path`, dedicated to this run. Preserve it for upload recovery; keep it out of Git. Checkpoint guarantees require a POSIX filesystem with private permissions and no-follow opens. |
 | `persist_result_content` | Required boolean, independent of telemetry capture. |
 | `trace_evidence` | Required for `run_experiment`: `TraceEvidence("required")`, `TraceEvidence("omit", "reason")` or `TraceEvidence("pending")`. With `"pending"`, a case whose export `force_flush` did not acknowledge completes in its true state with its trace evidence pending and the count of spans it ended; Hue attaches the trace once it holds every span, or records the evidence as omitted a day later. Only `"omit"` carries a reason. |
-| `target` | Receives `(inputs, TargetContext)` and returns the output or an awaitable. `TargetContext` has `config`, `item` and `span`. |
+| `target` | Receives `(inputs, TargetContext)` and returns the output or an awaitable. `TargetContext` has `config`, `item`, `span` and `files`, a tuple of `LocalFile` copies of the case's agent-visible input files (`artifact_id`, `role`, `filename`, `content_type`, `byte_size`, `sha256`, `path`). |
+| `files_directory` | Default `<checkpoint_directory>/files`. Before an execution starts, the runner downloads the case's pinned input files here and checks each one's size and SHA-256; a mismatch raises `CaseFileError` without spending the execution. Evaluator-only files reach local code scorers only after the target finishes and are removed when the case ends. |
 | `scorers` | Optional list of bound `LocalScorer` objects. |
 | `concurrency` | Default `1`; integer `1–100`. |
 | `schema_timeout_millis` | Default `2000`; integer `100–60000`; bounds JSON Schema validation, not arbitrary callbacks. |
@@ -337,7 +354,7 @@ Returning `MISSING` means unavailable output; returning `None` is JSON null. Wit
 | `define_local_scorer(*, source, entrypoint, metrics, score)` | Returns `LocalScorer`; source is text or bytes. |
 | `score_locally(version, context, *, scorers=None, schema_timeout_millis=2000)` | Returns `Score` without uploading it. |
 
-`ScoreContext` contains `inputs`, `has_output`, `has_expected`, optional `output`/`expected`, `metadata` and `execution_state`. A `Score` is `scored` with declared metrics and explanation/evidence, `error` with a typed error, or `skipped` with an explanation. A false quality verdict remains a scored result, with `passed: False`.
+`ScoreContext` contains `inputs`, `has_output`, `has_expected`, optional `output`/`expected`, `metadata`, `execution_state` and, when the case or subject has files, `files`. A `Score` is `scored` with declared metrics and explanation/evidence, `error` with a typed error, or `skipped` with an explanation. A false quality verdict remains a scored result, with `passed: False`.
 
 The source digest binds an explicitly supplied source declaration to the local scorer; it does not attest closures or installed dependencies. Custom callbacks have no general execution timeout or side-effect cancellation. JSON Schema uses an isolated subprocess with a deadline and no remote schema fetches. Hosted pins require judge-job dispatch; `score_locally` does not run a hosted judge.
 

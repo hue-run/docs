@@ -4,15 +4,15 @@ description: "Use the TypeScript SDK to trace, evaluate, score, and run simulate
 sidebarTitle: "TypeScript API"
 ---
 
-This reference covers `@hue-run/sdk` **0.17.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use [Quickstart](/quickstart#2-install-the-sdk) for the available package release.
+This reference covers `@hue-run/sdk` **0.18.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use [Quickstart](/quickstart#2-install-the-sdk) for the available package release.
 
 ## Imports
 
 | Entry point | Use |
 | --- | --- |
-| `@hue-run/sdk` | `createHue`, `createHueSafe`, `HueClient`, `createHueTransport`, `HueTransport`, `hueExperimentalTelemetry`, `contentPrefixes`, `HueConnectionError`, `HueExportError`, `HueTraceVerificationError` and the tracing types below. |
+| `@hue-run/sdk` | `createHue`, `createHueSafe`, `HueClient`, `createHueTransport`, `HueTransport`, `hueExperimentalTelemetry`, `Attachment`, `contentPrefixes`, `HueConnectionError`, `HueExportError`, `HueTraceVerificationError` and the tracing types below. |
 | `@hue-run/sdk/ai-sdk` | `hueTelemetry` for Vercel AI SDK 7. Requires the optional `ai` and `@ai-sdk/otel` peers. |
-| `@hue-run/sdk/evals` | Evaluation client, local runners including `runSimulation` and `runLocalAgent`, scorer definitions, file-based case helpers, published Scenario resolvers, verdict helpers, attempt-preflight validators, evaluation errors and types. Uses `zod`, a regular dependency since 0.16.0. |
+| `@hue-run/sdk/evals` | Evaluation client, [recorded media](#recorded-media) reads, local runners including `runSimulation` and `runLocalAgent`, scorer definitions, file-based case helpers, published Scenario resolvers, verdict helpers, attempt-preflight validators, evaluation errors and types. Uses `zod`, a regular dependency since 0.16.0. |
 | `@hue-run/sdk/environment` | `createEnvironmentClient`, `EnvironmentClient`, `bindEnvironmentTools`, `HueEnvironmentError`, the [world handoff](#world-handoff) helpers and the simulated-environment types. |
 | `@hue-run/sdk/managed` | `createManagedTargetHandler` and the managed-target types. |
 
@@ -124,7 +124,7 @@ Content helpers (`setInput`, `setOutput`, `tool` arguments and results, `recordM
 | Option | Default and behavior |
 | --- | --- |
 | `kind?: SpanKind` | `SpanKind.INTERNAL`. |
-| `attributes?: Attributes` | Additional OpenTelemetry attributes; arbitrary names and values are caller-owned. |
+| `attributes?: { [key: string]: AttributeValue \| AttachmentJson \| undefined }` | Additional attributes; arbitrary names and values are caller-owned. A JSON object, an array OpenTelemetry cannot hold or an `Attachment` is recorded as JSON text, each attachment as its digest part. `AttachmentJson` is JSON that may hold an `Attachment` anywhere. |
 | `input?: unknown` | Optional root input, recorded as `input.value`. Omitted when content capture is disabled. |
 | `sessionId?: string` | Inherits from the surrounding Hue callback; maps to `gen_ai.conversation.id`. |
 | `userId?: string` | Inherits from the surrounding Hue callback; maps to `user.id`. This is your application identity, not a Hue account. |
@@ -199,6 +199,8 @@ A `FileRecord` has `role` (`"input"` given to the agent, `"attachment"` from a t
 
 The event carries `hue.file.sha256`, `hue.file.role`, `hue.file.media_type` and, when known, `hue.file.size`. It is metadata, so it is recorded in both capture modes; `hue.file.name` is recorded only when `captureContent` is true. A name must be nonblank after trimming, at most 256 UTF-16 code units and well-formed Unicode, with no C0 control characters (U+0000–U+001F) or DEL (U+007F). An invalid name is omitted and counted as an instrumentation failure, and the event remains; before 0.17.0 tabs, newlines and DEL were accepted. An invalid record, or one without an active span, is omitted and counted as an instrumentation failure.
 
+`new Attachment(options: AttachmentOptions)` places a file in any value Hue records: a `withSpan()` input or output, `model()` messages, a tool's arguments or result, `recordMessages()` messages or a span attribute. `AttachmentOptions` takes exactly one of `data` (an `ArrayBufferView`, an `ArrayBuffer`, or a base64 string or `data:` URL) and `path` (read when the attachment is created), plus `contentType` and an optional `name`; either is limited to 25 MiB. The attachment exposes readonly `contentType`, `name` (when valid), `sha256` and `size` (both `undefined` when invalid). It is recorded as a GenAI `blob` part in digest form, and its bytes upload at export. An invalid attachment is recorded as `null` and counted as an instrumentation failure. See [Attach a file anywhere](/sdks/typescript#attach-a-file-anywhere).
+
 ## Vercel AI SDK adapter
 
 ```ts
@@ -238,7 +240,7 @@ See [Redaction](/guides/redaction) for runnable email-masking examples and the c
 - `captureContent: true` permits supplied content. Received content is stored by Hue; the SDK does not set a retention timer. Helpers still omit exception messages and stack traces.
 - With `captureContent: false`, a record whose tool definitions are removed keeps a summary of them: `hue.tool.names` lists each definition's `name` (Chat Completions `function.name`, or the `type` of an unnamed built-in tool such as `mcp`) in order, and `hue.tool.definitions.sha256` is the lowercase hex SHA-256 of the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical JSON of the credential-scrubbed definition list. The digest does not change when a credential rotates. Only definitions another integration recorded can be summarized: `hueTelemetry(hue)` with `captureContent: false` records none.
 - Hosted tools carry credentials in their definitions, such as the `authorization` and `headers` of an OpenAI hosted MCP tool. Before export, and before `redact`, Hue replaces the values of credential-like fields (`authorization`, `authorization_token`, `headers`, `api_key`, `access_token`, `x-api-key`, and keys ending in `token`, `secret`, `password`, `apikey` or `credential`, case-insensitively and ignoring `-` and `_`) with `"[redacted]"` in `gen_ai.tool.definitions`, `ai.prompt.tools` and `llm.tools.*.tool.json_schema`, and in the `tools` and `mcp_servers` entries of a raw provider request or response recorded as `input.value`, `output.value` or `llm.invocation_parameters`. Parameters named in a JSON Schema `properties` object keep their schemas, so a tool that takes a `headers` argument is still described. A definition nested more than 256 levels deep rejects its record.
-- A span's own string attributes over Hue's inline limit upload separately, up to 1,000,000,000 bytes, and keep a 16 KiB prefix. Nonempty binary media in a span's own recorded messages uploads at any size and exports as its `sha256` and `size`; text media over 64 KiB keeps a 16 KiB UTF-8 prefix. In resources, events, links and log records, inline media up to 64 KiB stays as recorded and larger media becomes its digest, without upload. `recordFile` uploads supplied data up to 25 MiB only with `upload: true`. A failed upload falls back to a cut or, for media, to the digest without a `hue.blobs` entry, and counts in `uploadFallbacks`. Nothing uploads with `captureContent: false` or a setup credential.
+- A span's own string attributes over Hue's inline limit upload separately, up to 1,000,000,000 bytes, and keep a 16 KiB prefix. Inline media in the span attributes and log records that [automatic capture](/sdks/typescript#automatically-captured-media) reads uploads and leaves its digest in place; text media over 64 KiB keeps a 16 KiB UTF-8 prefix. Resources, links and span events never upload: inline media there up to 64 KiB stays as recorded and larger media becomes its digest. An `Attachment` (up to 25 MiB) uploads at its position, and `recordFile` uploads supplied data up to 25 MiB only with `upload: true`. A failed upload falls back to a cut, to the digest without a `hue.blobs` entry in recorded messages, or to the inline bytes elsewhere, and counts in `uploadFallbacks`. Nothing uploads with `captureContent: false` or a setup credential.
 - `redact(value, path)` transforms supported strings in attributes, resources, event/link attributes and log bodies before Hue exports them. It must return a string. A redactor failure rejects the affected record and becomes an export issue.
 - This policy applies to Hue's export path. Another exporter and arbitrary span/scope names remain your application's responsibility.
 
@@ -325,7 +327,8 @@ Evaluation responses are limited to **4 MiB**. `listCases(versionId, page?)` inc
 | `LocalFile` | A verified copy of a case input or generated output on the runner's disk: the `CaseFile` fields with `role` including `output`, the absolute `path` and optional `primary`. Generated files receive their `artifactId` after upload. |
 | `OutputFile` | A file the target generated for one case: `filename` (sanitized to one path segment), `contentType`, optional `primary` (at most one per execution) and either a local `path` or in-memory `bytes`. |
 | `EvalSet` / `EvalSetVersion` / `EvalSetCase` | The product-named forms of `Dataset`, `DatasetVersion` and `DatasetCase`: an eval set's `versions` are `EvalSetVersion` values, which add `evalSetId`, and a case adds `evalSetVersionId`. The v1 fields remain present. |
-| `CaseWrite` | Input for `addEvalSetCase` and `addCase`; optional `environmentVersionId` selects an immutable simulated-world version for the case. |
+| `CaseWrite` | Input for `addEvalSetCase` and `addCase`; optional `environmentVersionId` selects an immutable simulated-world version for the case, and optional `files` pins up to 32 input files. |
+| `CaseFileReference` / `CaseFileWrite` | A pinned input file: `{ artifactId, role }` for an artifact the project holds / that reference, or `{ role, filename, contentType }` with `bytes` or a `path` that the client checks (one of `outputContentTypes`, a name of 1–255 UTF-16 code units without path separators or control characters, 1 byte to 25 MiB) and uploads as a verified artifact before the case. A file outside that policy throws `TypeError` or `RangeError` before any request; repeating the write reuses the uploaded artifact. |
 | `Scorer` / `ScorerVersion` | A scorer and its published `versions` / an immutable published definition with `contentDigest`. |
 | `Evaluator` / `EvaluatorVersion` | The product-named forms of `Scorer`, with optional `versions`, and `ScorerVersion`, which adds `evaluatorId` when the server supplies it; older v1 responses may omit it. |
 | `ScorerDefinition` / `MetricDefinition` | The pinned definition variants / a typed metric a scorer declares. |
@@ -467,6 +470,22 @@ Submitting hosted jobs is an explicit platform operation and can consume the pro
 | `downloadArtifact(id)` | The verified bytes of one ready artifact in this project as a `Uint8Array`, bounded to 25 MiB. |
 
 `ArtifactReservation` has `id`, `filename`, `declaredContentType`, `declaredBytes`, `declaredSha256`, `state` (`reserved`, `verifying`, `ready`, `rejected`, `cancelled` or `abandoned`; only `ready` artifacts are verified and downloadable), `copyState` (`none`, `started` or `acknowledged`), `verifiedBytes` and `verifiedSha256` (`null` until ready) and `failureCode`. `ArtifactUpload` is `{ uploadUrl, method: "PUT", headers?, expiresAt }`; omitted or `null` headers mean the file content type only.
+
+### Recorded media
+
+`client.media` is a `MediaClient` that reads recorded files back by SHA-256 with a **Read** or **Read and write** key; a snapshot's pinned copy needs **Read and write**. See [Read recorded media back](/sdks/typescript#read-recorded-media-back).
+
+| Member | Result or behavior |
+| --- | --- |
+| `fetch(target: MediaFetchTarget, options?: MediaFetchOptions)` | Downloads one file through `GET /api/v1/traces/{traceId}/blobs/{sha256}`, without the project key, and checks its SHA-256 → `MediaFile` with `bytes`, `sha256`, `size`, `contentType` and `fileName` (both absent for a snapshot's copy). |
+| `MediaFetchTarget` | `{ traceId, sha256, spanId? }`, where `traceId` is Hue's ID or the 32-hex OpenTelemetry ID and `spanId` limits the read to that span's record, or `{ snapshotId, sha256 }` for a snapshot's pinned copy. |
+| `MediaFetchOptions` | `maxBytes` (default 64 MiB, at most 1 GB; a larger file fails as `too_large` before any byte downloads) and `signal`. |
+| `resolve(value, options: MediaResolveOptions)` | Writes the bytes of every digest part in `value` back into the part's own field → `MediaResolution` with a new `value`, the count `resolved` and `failures`. |
+| `MediaResolveOptions` | `traceId` and optional `spanId`, or `snapshotId`; `as`; `blobs`, the record's `hue.blobs` entries in any form Hue reads, which type a part that declares none and mark `prefix_only` parts; `concurrency` (1–16, default 4), `maxBytes` and `signal`. |
+| `MediaWriteOptions` | `as: "dataUrl"` (the default) writes a `data:` URL where the part's field takes one and bare base64 where its convention requires it; `as: "bytes"` writes a `Uint8Array`. |
+| `MediaFetchError` | Thrown by `fetch`, with `reason` (`MediaFetchErrorReason`: `not_found`, `missing`, `unavailable`, `forbidden`, `too_large`, `digest_mismatch` or `failed`), `status` and `retryAfterSeconds`. An unavailable answer, a lost connection or a timeout is asked once more, after a `Retry-After` of up to 10 seconds. |
+| `MediaResolveFailure` | A part left unchanged: `pointer` (RFC 6901), `sha256` and `reason`, a `MediaFetchErrorReason`, `not_found` for no matching local file, or `prefix_only` for a part holding only the first 16 KiB of its file. |
+| `rehydrateMedia(value, files: MediaSourceFile[], options?: MediaWriteOptions)` | Writes case files back into the digest parts of `value` by SHA-256 → `MediaResolution`. A `MediaSourceFile` is `{ sha256, contentType?, path }`, such as a runner's `LocalFile`, or `{ sha256, contentType?, bytes }`. |
 
 ### Published scenarios and eval sets
 
