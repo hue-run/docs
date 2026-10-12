@@ -4,22 +4,22 @@
   "sources": {
     "platform": {
       "repository": "hue-run/fern",
-      "commit": "c3ce3b43942fd60f01a72089a956fc2f158c39d7",
+      "commit": "eac049a1aecc55e5505b66f41869a1bd23d656a9",
       "contractFile": "contracts/fern-public-docs.json",
-      "sha256": "sha256:5620d97b242e3c73ccc7059df84af1c321a8fe5042f8da0f716113366841fafa"
+      "sha256": "sha256:e0e12de26f03221dacf4259b1c0e8545f92a448a0330a3a23f1ce75b115a5517"
     },
     "sdk": {
       "repository": "https://github.com/hue-run/hue-sdk",
-      "commit": "a4996e02d0e9d8af8eb26db8159925fb6034bc7a",
+      "commit": "0d4d205883c8970ac9af7109c44acb1fd336db0e",
       "contractFile": "contracts/sdk-docs.json",
-      "sha256": "sha256:35aa2356ad7d9d64b160610ba89a72db71c144d54e6759cb9214cc44c84f8a45"
+      "sha256": "sha256:0c6baf31d2d6ffe3699111eda7c19d9e7b60ccdf25dc3568d108f0a138059615"
     }
   },
   "site": {
     "origin": "https://docs.hue.run",
     "projectMcpUrl": "https://mcp.hue.run/mcp",
     "docsMcpUrl": "https://docs.hue.run/mcp",
-    "skillUrl": "https://docs.hue.run/skill.md?v=0.7.1",
+    "skillUrl": "https://docs.hue.run/skill.md?v=0.7.2",
     "pageCount": 25
   },
   "serviceKeyPresets": [
@@ -52,7 +52,7 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.17.0",
+      "version": "0.18.0",
       "entrypoints": [
         "@hue-run/sdk",
         "@hue-run/sdk/ai-sdk",
@@ -64,7 +64,7 @@
     },
     "python": {
       "name": "hue-run",
-      "version": "0.10.0",
+      "version": "0.11.0",
       "modules": [
         "hue_sdk",
         "hue_sdk.evals",
@@ -73,9 +73,9 @@
     }
   },
   "skill": {
-    "version": "0.7.1",
-    "sha256": "sha256:1b6ff1baa7c5bed25047f26ee9f33c56a73a1d950d292baa37b2ceb49c46e35a",
-    "sdkSourceSha256": "sha256:768e06f25bc3fca425ac3ce167b4f100aae858f5deff8b6e5b159ebc5b5cf428"
+    "version": "0.7.2",
+    "sha256": "sha256:492397c7b54751d9b5c73f6b88f217e56cff4f700ba0c169ffe46620c81e9434",
+    "sdkSourceSha256": "sha256:9ecb1354a2bbe87ba67e159897c57e327b01d49f6a7500c48d6fc52baed572d7"
   },
   "mcp": {
     "transport": "Streamable HTTP",
@@ -198,7 +198,7 @@
       "search_hue_docs",
       "load_hue_guide"
     ],
-    "catalogSha256": "91c5e343c2482318ad61f38835c3767ddc34ea6c577a62519261b4cd25fea152"
+    "catalogSha256": "1403fd41a4905399344335470f8826519258d9d63387d6339bd5b2e47a9ba8bb"
   },
   "pages": [
     "index",
