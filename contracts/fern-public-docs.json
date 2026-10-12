@@ -589,11 +589,11 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.16.0"
+      "version": "0.18.0"
     },
     "python": {
       "name": "hue-run",
-      "version": "0.9.1"
+      "version": "0.11.0"
     }
   },
   "mcp": {
@@ -2024,7 +2024,7 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "1403fd41a4905399344335470f8826519258d9d63387d6339bd5b2e47a9ba8bb",
+    "catalogSha256": "4f26362aaa0936221bf34e80a656b0f0b7376328ce57ab89178b0c1e3951a873",
     "serverInstructionsSha256": "a57ca5d20b45f22f4e1edcb1935b3555d47afeb0601f7bef597bef4e45d7a2ce",
     "guides": {
       "data-model": {
@@ -2045,7 +2045,7 @@
       },
       "evaluate": {
         "title": "Run your agent against a case",
-        "sha256": "19b36f87539d74ba20a09a289648006bca45d2f77f094277197940de8a9a1dcb"
+        "sha256": "0073e99ec552e57044364ff0d6d2949ac6e8bd4561ec3a5da22085c335a6caf6"
       }
     },
     "toolsets": {
