@@ -297,6 +297,8 @@ Langfuse's `mask` hook does not redact Hue's copy. Apply policy to both exports,
 
 Hue reads Langfuse attributes directly. `langfuse.observation.type`, `.model.name`, `.usage_details`, `.input`, `.output`, `langfuse.session.id` and `langfuse.user.id` fill Hue fields when GenAI attributes are absent; GenAI wins. `langfuse.trace.name` names traces without request text; `langfuse.release` supplies `release` absent `service.version`. Metadata, environment, tags and levels stay raw; OpenTelemetry status marks failure. See the [field glossary](/agents/mcp-tools#field-glossary).
 
+Langfuse's SDKs upload an image, audio file or document in recorded input, output or metadata to Langfuse and replace it in the span with a media reference (`@@@langfuseMedia:type=…|id=…|source=…@@@`). A trace that holds such a reference carries no bytes for the file. Hue shows it with its media type as **Held in Langfuse**, with nothing to open or download, and a case built from the trace has nothing to copy. Open the file in Langfuse. A file the trace holds inline is shown like any other [image, audio file or document](#images-audio-and-documents).
+
 Current SDKs strip recognized Langfuse content in metadata-only mode; older SDKs need producer or Collector controls. Metadata and custom fields pass through. Verify each independent capture policy; see [compatibility](/sdks/compatibility).
 
 Test a real request with model and tool spans, preserved IDs and parentage and both exporters flushed by the host deadline. Check content and fields in both destinations. Hue's [trace receipt](/sdks/typescript#verify) checks span and field presence, not payload correctness or Langfuse delivery; also test errors and cancellation.
@@ -350,6 +352,170 @@ Supported profile families include generic OpenTelemetry, GenAI conventions, Ope
 Prefer current GenAI attributes when your instrumentation supports them, including `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, and `gen_ai.usage.output_tokens`. Preserve unavailable fields as absent. Do not submit `0` for unknown usage or `null` for an output that was never captured.
 
 A child can arrive before its parent, and a correlated log can arrive before its span. Preserve the same trace ID and the correct parent and span IDs across services. Root-span completion does not prove that the whole distributed trace has arrived. Evaluations use a pinned evidence revision.
+
+## Images, audio and documents
+
+Hue shows the files a span records when you open the span in **Traces**. A file inside a message appears in place. Other files appear in the span's **Files** section. Hue recognizes files in these forms:
+
+- Message parts in the OpenTelemetry GenAI (`blob`, `uri` and `file`), Vercel AI SDK, OpenAI Chat Completions and Responses, Anthropic, Gemini, Vertex AI and Amazon Bedrock Converse formats, including OpenAI assistant audio and Responses computer screenshots.
+- OpenInference's flattened image contents and OpenLLMetry's JSON-encoded multipart prompts.
+- A whole `data:` URL that declares its media type, anywhere in recorded input, output, tool arguments, tool results or metadata.
+- `hue.file` events and files listed in the `hue.blobs` span attribute, which Hue SDKs upload and an [exporter without the SDK](#attach-files-without-the-sdk) can attach.
+- Langfuse media references; see [Use with Langfuse](#use-with-langfuse).
+
+Images, audio and documents that OpenInference, OpenLLMetry or another instrumentation records inline therefore appear as files without any Hue code.
+
+| File | In the trace view |
+| --- | --- |
+| PNG, JPEG, GIF, WebP and AVIF images | Shown inline |
+| MP3, WAV, Ogg, Opus, WebM, MP4, AAC and FLAC audio | Played with the browser's controls |
+| MP4 and WebM video | Played with the browser's controls |
+| PDF | Opens in a new tab |
+| Text documents | Shown as text |
+| SVG, HTML, Word documents and other types | Download only |
+| Remote URL | Shown as a link; Hue never loads it |
+
+Playback depends on the browser's support for the format. A file whose bytes the span lists under `hue.blobs` also shows a state: **Stored**, **Not uploaded** (never uploaded, or erased) or **Unavailable** (Hue could not read the storage).
+
+### Attach files without the SDK
+
+An exporter that writes OTLP itself can record a small file inline, as a `data:` URL or base64 part, within the [1 MiB value limit](#collector-responses). To attach a larger file, up to 1,000,000,000 bytes (1 GB), upload it apart from the span with the key that sends the trace (**Tracing only** in production):
+
+1. Reserve the upload with `POST https://app.hue.run/api/v1/otlp/blobs` and a JSON body of `traceId` (the span's 32-hex trace ID), `sha256` (the lowercase hex SHA-256 of the bytes), `byteSize`, `contentType` (the media type) and `key` (the file's `hue.blobs` key, below). If Hue already holds the bytes for this trace, it answers `{"status": "exists", "ref": …}`; go to step 4. Otherwise it answers `{"status": "upload", "url": …, "method": "PUT", "headers": …, "expiresAt": …, "ref": …}`.
+2. Send the bytes with `PUT` to `url` within 15 minutes, with exactly the returned `headers` and no `Authorization` header. A `412` answer means the bytes are already stored.
+3. Complete the upload with `POST https://app.hue.run/api/v1/otlp/blobs/complete` and a JSON body of `traceId` and `sha256`. Hue checks the stored bytes against the reservation.
+4. Name the file on a span of that trace and list it in the span's `hue.blobs` attribute. The span can reach Hue before or after the upload.
+
+Name the file in one of two forms:
+
+- **A `hue.file` event**, for a file the work read, received or produced: `hue.file.sha256`, `hue.file.size`, `hue.file.media_type`, `hue.file.role` (`input`, `attachment` or `output`) and an optional `hue.file.name`. Its key is `event:hue.file:<sha256>`, and the file appears in the span's **Files** section.
+- **A message part in digest form**, for a file inside recorded messages: the part carries `sha256` and `size` in place of its content, for example `{"type": "blob", "modality": "image", "mime_type": "image/png", "sha256": "<64 hex>", "size": 48213}`. Its key is the attribute and the part's JSON pointer, such as `gen_ai.input.messages#/0/parts/1`, and the file appears in place in the message.
+
+`hue.blobs` is a string-array span attribute with one compact JSON entry per file: `key`, `sha256`, `size`, `content_type` and an optional `name` of 1 to 256 characters. The reservation's `ref` is that entry without `name`. Hue reads up to 64 entries per span, one per key, and ignores an entry it cannot parse. The Hue SDKs make these calls and write these entries for the files they upload; see [compatibility](/sdks/compatibility).
+
+With the packages from the [Python tab](#send-from-any-language), save this as `attach.py` next to a `chart.png` and run `python attach.py`:
+
+```python
+import hashlib
+import json
+import os
+import urllib.error
+import urllib.request
+
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+HUE = "https://app.hue.run"
+api_key = os.environ["HUE_API_KEY"]  # Raises when unset; keep the key in the server environment.
+
+
+def post(path, body):
+    request = urllib.request.Request(
+        HUE + path,
+        data=json.dumps(body).encode(),
+        method="POST",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=60) as response:
+        return json.load(response)
+
+
+def attach_file(span, data, media_type, name, role="input"):
+    """Uploads a file under the span's trace, records its hue.file event and returns its hue.blobs entry."""
+    trace_id = format(span.get_span_context().trace_id, "032x")
+    sha256 = hashlib.sha256(data).hexdigest()
+    reserved = post("/api/v1/otlp/blobs", {
+        "traceId": trace_id,
+        "sha256": sha256,
+        "byteSize": len(data),
+        "contentType": media_type,
+        "key": f"event:hue.file:{sha256}",
+    })
+    if reserved["status"] == "upload":
+        put = urllib.request.Request(reserved["url"], data=data, method="PUT", headers=reserved["headers"])
+        try:
+            urllib.request.urlopen(put, timeout=300).close()
+        except urllib.error.HTTPError as error:
+            if error.code != 412:  # 412: the bytes are already stored.
+                raise
+        post("/api/v1/otlp/blobs/complete", {"traceId": trace_id, "sha256": sha256})
+    span.add_event("hue.file", {
+        "hue.file.sha256": sha256,
+        "hue.file.size": len(data),
+        "hue.file.media_type": media_type,
+        "hue.file.role": role,
+        "hue.file.name": name,
+    })
+    return json.dumps({**reserved["ref"], "name": name}, separators=(",", ":"))
+
+
+provider = TracerProvider(resource=Resource.create({"service.name": "file-demo"}))
+provider.add_span_processor(
+    BatchSpanProcessor(
+        OTLPSpanExporter(
+            endpoint=f"{HUE}/api/v1/otlp/v1/traces",
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
+    )
+)
+tracer = provider.get_tracer("example.instrumentation")
+
+with tracer.start_as_current_span("agent.request") as span:
+    with open("chart.png", "rb") as file:
+        entry = attach_file(span, file.read(), "image/png", "chart.png")
+    span.set_attribute("hue.blobs", [entry])  # Every file the span names, in one list.
+    print("Trace ID:", format(span.get_span_context().trace_id, "032x"))
+provider.shutdown()  # Flushes the batch processor and the exporter.
+```
+
+Send audio in a format browsers play, such as WAV, MP3 or Opus; raw PCM is download only. An uploaded file is recorded content: it follows its trace's [retention](/guides/redaction#retention), and reading it needs **Read** access.
+
+The upload calls answer errors as JSON `{"error": …}`:
+
+| Status | Meaning |
+| --- | --- |
+| `400` | A malformed body or field. `traceId` is 32 hex characters and not all zeros, `sha256` is 64 hex characters, `byteSize` is a whole number from 1, `contentType` is a media type, and `key` has 1 to 256 characters and no control characters. |
+| `401` | The key is missing, unknown, revoked or expired. |
+| `403` | The key cannot send traces, such as a **Read** key. |
+| `404` | The project is archived, or a completion names a value that was never reserved. |
+| `409` | `"status": "size"`: the digest was reserved with another size. `"status": "missing"`: the completion came before the upload. `"status": "differs"`: the stored object does not match the reservation. |
+| `413` | A file over 1 GB, or a request body over 4 KiB. |
+| `415` | The body is not `application/json`. |
+| `429` | The project's per-minute limit is reached, or the key failed authentication too often; retry after `Retry-After`. |
+| `503` | Hue is busy or storage is unavailable; retry after `Retry-After`. |
+
+### Download files from a trace
+
+`GET https://app.hue.run/api/v1/traces/{traceId}/blobs/{sha256}` returns a download link for a file that a span of the trace lists under `hue.blobs`. Use a **Read** or **Read and write** key; any other key gets `403`, because files are recorded content.
+
+- `traceId` is Hue's trace ID or the 32-hex OpenTelemetry trace ID.
+- `sha256` is the file's lowercase hex SHA-256, as MCP [`get_span`](/agents/mcp-tools#traces-and-spans) lists it under `files`.
+- The optional `spanId` query parameter, a 16-hex OpenTelemetry span ID, reads only that span, which is faster in a long trace. That span must list the file.
+
+```json
+{
+  "sha256": "<64 hex>",
+  "size": 48213,
+  "contentType": "image/png",
+  "fileName": "chart.png",
+  "url": "https://…",
+  "method": "GET",
+  "expiresAt": "2026-10-12T18:05:00.000Z"
+}
+```
+
+`url` is valid for five minutes and downloads the file as `fileName`. Request it without your `Authorization` header.
+
+| Status | Meaning |
+| --- | --- |
+| `400` | A malformed `traceId`, `sha256` or `spanId`. |
+| `401` | The key is missing, unknown, revoked or expired. |
+| `403` | The key has no **Read** access. |
+| `404` | The trace is not in the key's project, or no span (or not the named span) lists the file. With `"state": "missing"`, a span lists the file but its bytes were never uploaded or have been erased. |
+| `429` | The key failed authentication too often; retry after `Retry-After`. |
+| `503` | Storage is unavailable; retry after `Retry-After`. |
 
 ## Attributes for coding agents
 

@@ -394,7 +394,7 @@ Your agent acts with your credential, and recorded application data is untrusted
 
 ### Content access
 
-- Prompts, outputs, tool arguments and raw attributes require `include_content: true` or `get_span_content`; defaults return metadata and attribute names.
+- Prompts, outputs, tool arguments and raw attributes require `include_content: true` or `get_span_content`, and file download links require `include_content: true`; defaults return metadata and attribute names.
 - Content reads audit credential and objects, never content; sign-in reads name the approving member. `content_not_captured` means no content was recorded.
 
 ### Write approval
