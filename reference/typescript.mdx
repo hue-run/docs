@@ -4,7 +4,7 @@ description: "Use the TypeScript SDK to trace, evaluate, score, and run simulate
 sidebarTitle: "TypeScript API"
 ---
 
-This reference covers `@hue-run/sdk` **0.16.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use [Quickstart](/quickstart#2-install-the-sdk) for the available package release.
+This reference covers `@hue-run/sdk` **0.17.0** on Node.js 22 or 24 and Bun 1.4. For installation and a runnable first trace, use the [TypeScript guide](/sdks/typescript). See [compatibility](/sdks/compatibility) for supported runtimes and integration versions. Use [Quickstart](/quickstart#2-install-the-sdk) for the available package release.
 
 ## Imports
 
@@ -183,21 +183,21 @@ Each OpenAI Responses `mcp_call`, `web_search_call`, `file_search_call` or `code
 
 ### Files
 
-`recordFile` adds a `hue.file` event to the active span, or to the span of an explicit context passed second, for a file the work read, received or produced. Files are linked by content hash, so a trace can be matched to the same file elsewhere without exporting its bytes:
+`recordFile` adds a `hue.file` event to the active span, or to the span of an explicit context passed second, for a file the work read, received or produced. Files are linked by content hash. Set `upload: true` to attach supplied bytes to the span:
 
 ```ts
 import { readFile } from "node:fs/promises";
 
 await hue.withSpan("review contract", async () => {
   const pdf = await readFile("contract.pdf");
-  hue.recordFile({ role: "input", mediaType: "application/pdf", data: pdf, name: "contract.pdf" });
+  hue.recordFile({ role: "input", mediaType: "application/pdf", data: pdf, name: "contract.pdf", upload: true });
   // ...
 });
 ```
 
-A `FileRecord` has `role` (`"input"` given to the agent, `"attachment"` from a tool or message, or `"output"` produced by the agent), `mediaType`, and either `data` (a `Uint8Array`, or a string hashed as UTF-8) or `sha256`, with optional `byteSize` and `name`. `data` up to 25 MiB is hashed and measured locally and never exported; larger data is omitted and counted as an instrumentation failure, so pass `sha256` and `byteSize` when you already have them. A supplied `sha256` or `byteSize` must match `data`.
+A `FileRecord` has `role` (`"input"` given to the agent, `"attachment"` from a tool or message, or `"output"` produced by the agent), `mediaType`, and either `data` (a `Uint8Array`, or a string hashed as UTF-8) or `sha256`, with optional `byteSize`, `name` and `upload`. `data` up to 25 MiB is hashed and measured locally; larger data is omitted and counted as an instrumentation failure, so pass `sha256` and `byteSize` when you already have them. A supplied `sha256` or `byteSize` must match `data`. `upload` defaults to `false`. With `upload: true`, supplied `data`, `captureContent: true` and an ordinary project key, export uploads the bytes and adds a `hue.blobs` entry to the same span, keyed `event:hue.file:<sha256>`. An upload that is not made counts in `uploadFallbacks`, and the event remains. See [Images, documents and audio](/sdks/typescript#images-documents-and-audio).
 
-The event carries `hue.file.sha256`, `hue.file.role`, `hue.file.media_type` and, when known, `hue.file.size`. It is metadata, so it is recorded in both capture modes; `hue.file.name` is recorded only when `captureContent` is true. An invalid record, or one without an active span, is omitted and counted as an instrumentation failure.
+The event carries `hue.file.sha256`, `hue.file.role`, `hue.file.media_type` and, when known, `hue.file.size`. It is metadata, so it is recorded in both capture modes; `hue.file.name` is recorded only when `captureContent` is true. A name must be nonblank after trimming, at most 256 UTF-16 code units and well-formed Unicode, with no C0 control characters (U+0000–U+001F) or DEL (U+007F). An invalid name is omitted and counted as an instrumentation failure, and the event remains; before 0.17.0 tabs, newlines and DEL were accepted. An invalid record, or one without an active span, is omitted and counted as an instrumentation failure.
 
 ## Vercel AI SDK adapter
 
@@ -238,7 +238,7 @@ See [Redaction](/guides/redaction) for runnable email-masking examples and the c
 - `captureContent: true` permits supplied content. Received content is stored by Hue; the SDK does not set a retention timer. Helpers still omit exception messages and stack traces.
 - With `captureContent: false`, a record whose tool definitions are removed keeps a summary of them: `hue.tool.names` lists each definition's `name` (Chat Completions `function.name`, or the `type` of an unnamed built-in tool such as `mcp`) in order, and `hue.tool.definitions.sha256` is the lowercase hex SHA-256 of the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical JSON of the credential-scrubbed definition list. The digest does not change when a credential rotates. Only definitions another integration recorded can be summarized: `hueTelemetry(hue)` with `captureContent: false` records none.
 - Hosted tools carry credentials in their definitions, such as the `authorization` and `headers` of an OpenAI hosted MCP tool. Before export, and before `redact`, Hue replaces the values of credential-like fields (`authorization`, `authorization_token`, `headers`, `api_key`, `access_token`, `x-api-key`, and keys ending in `token`, `secret`, `password`, `apikey` or `credential`, case-insensitively and ignoring `-` and `_`) with `"[redacted]"` in `gen_ai.tool.definitions`, `ai.prompt.tools` and `llm.tools.*.tool.json_schema`, and in the `tools` and `mcp_servers` entries of a raw provider request or response recorded as `input.value`, `output.value` or `llm.invocation_parameters`. Parameters named in a JSON Schema `properties` object keep their schemas, so a tool that takes a `headers` argument is still described. A definition nested more than 256 levels deep rejects its record.
-- String values over Hue's inline limit (up to 1 GB) in a span's own attributes, and inline files over 64 KiB in a span's own recorded messages, are uploaded separately; spans retain the first 16 KiB of strings, while log records, events, links and resources aren't uploaded. If an upload falls back, the value is cut or the file keeps its digest and size. No upload occurs when `captureContent` is false.
+- A span's own string attributes over Hue's inline limit upload separately, up to 1,000,000,000 bytes, and keep a 16 KiB prefix. Nonempty binary media in a span's own recorded messages uploads at any size and exports as its `sha256` and `size`; text media over 64 KiB keeps a 16 KiB UTF-8 prefix. In resources, events, links and log records, inline media up to 64 KiB stays as recorded and larger media becomes its digest, without upload. `recordFile` uploads supplied data up to 25 MiB only with `upload: true`. A failed upload falls back to a cut or, for media, to the digest without a `hue.blobs` entry, and counts in `uploadFallbacks`. Nothing uploads with `captureContent: false` or a setup credential.
 - `redact(value, path)` transforms supported strings in attributes, resources, event/link attributes and log bodies before Hue exports them. It must return a string. A redactor failure rejects the affected record and becomes an export issue.
 - This policy applies to Hue's export path. Another exporter and arbitrary span/scope names remain your application's responsibility.
 
@@ -537,7 +537,7 @@ To save generated documents, return `withFiles(output, files)`: it takes a JSON 
 | --- | --- |
 | `targetFileRoles` | Roles the target receives: `source`, `attached_template`, `attached_reference` and `original`. |
 | `outputFileLimits` | `{ count: 32, bytes: 26214400 }`: at most 32 generated files per execution, each at most 25 MiB. |
-| `outputContentTypes` | Accepted generated content types: PDF, Word (`.docx`), PowerPoint (`.pptx`) and Excel (`.xlsx`) documents, `application/json`, `text/plain`, `text/csv`, `image/png`, `image/jpeg` and `image/webp`. |
+| `outputContentTypes` | The 22 accepted generated content types, the same for Python managed outputs: PDF, Word (`.docx`), PowerPoint (`.pptx`) and Excel (`.xlsx`) documents, `application/json`, `text/plain`, `text/csv`, `image/png`, `image/jpeg`, `image/webp`, `image/gif`, `image/avif`, `audio/mpeg`, `audio/wav`, `audio/ogg`, `audio/webm`, `audio/mp4`, `audio/flac`, `audio/opus`, `audio/aac`, `video/mp4` and `video/webm`. Declare `audio/mp4` or `video/mp4` for an `.mp4` file, and `audio/webm` or `video/webm` for a `.webm` file. |
 | `safeFilename(name)` | Reduces a declared file name to one printable path segment of at most 200 characters, or `"file"` when nothing remains. |
 | `OutputFileError` | Thrown when declared files cannot be used: too many, more than one `primary`, a missing or duplicate filename, an unsupported type, or a file that is unreadable, empty or larger than 25 MiB. The runner records it as the target's `TargetError`, not an uncertain execution. |
 | `ArtifactSizeError` | Stops an artifact download that exceeds the caller's expected byte count, exposed as `maxBytes`. |

@@ -88,7 +88,7 @@ For a copyable email-masking callback and guidance on custom field rules, follow
 
 `captureContent` defaults to `true` for an enabled client; set it to `false` to opt out. Use `true`: Hue can only show and evaluate what a trace records. Use `false` for metadata-only capture when you'd rather not send content, or when an application or data policy forbids sending it to another service. A disabled client (`enabled: false`) exports nothing and defaults it to `false`.
 
-- `true`, the recommended setting, captures content you provide to supported helpers and instrumentations: prompts and messages, responses and tool inputs and outputs, alongside model, usage, timing and errors. Hue stores received content under your project’s [retention policy](/guides/redaction#retention). Before export, the SDK scrubs credentials in recorded tool definitions and uploads inline files over 64 KiB in recorded messages; see the [content policy](/reference/typescript#content-policy).
+- `true`, the recommended setting, captures content you provide to supported helpers and instrumentations: prompts and messages, responses and tool inputs and outputs, alongside model, usage, timing and errors. Hue stores received content under your project’s [retention policy](/guides/redaction#retention). Before export, the SDK scrubs credentials in recorded tool definitions and uploads binary media and text media over 64 KiB in recorded messages; see the [content policy](/reference/typescript#content-policy).
 - `false` disables Hue helper content and removes recognized GenAI, Vercel AI SDK, OpenInference, and OpenLLMetry content fields before Hue exports them, including spans from other instrumentations on a shared provider. It also removes log bodies, status descriptions and exception text. The exported `contentPrefixes` array lists the removed keys.
 - `redact(value, path)` can transform supported strings before export. Redactor and capture failures omit unsafe content and increment instrumentation failure counters without changing application results.
 
@@ -99,6 +99,42 @@ Queued records snapshot supported values when a span ends or a log is emitted, s
 Custom attribute names cannot be classified automatically. Keep secrets and unnecessary user content out of span names, identifiers, resource metadata, and arbitrary attributes. The setting applies to Hue's export path, not another exporter in your application.
 
 Missing usage stays missing: the SDK does not estimate tokens or cost. Captured JSON `null`, `false`, `0`, and an empty string remain distinct from absent content.
+
+## Images, documents and audio
+
+With content capture on, the SDK inspects images, documents and audio in a span's own `gen_ai.input.messages`, `gen_ai.output.messages` and `ai.prompt.messages` attributes, in `parts` and OpenAI `content` arrays. It reads GenAI `blob` parts, AI SDK `file` and `image` parts, OpenAI Chat and Responses image, file and audio parts, Anthropic base64 sources, Gemini `inlineData` and `inline_data`, Vertex `media`, and Bedrock image and document sources. Remote URLs, provider file IDs and S3 references stay unchanged; the SDK never fetches them.
+
+Recorded media exports in one of two forms:
+
+- **Binary media** of any nonempty size: the SDK removes the bytes and the part carries `sha256` and `size`. A successful upload adds a `hue.blobs` entry keyed at the part, for example `gen_ai.input.messages#/0/parts/1`. If the upload fails, the part keeps its digest and size without an entry. An empty byte field stays as recorded.
+- **Text media**: up to 64 KiB of decoded bytes stays inline. Above that, a successful upload keeps the first 16 KiB at a UTF-8 boundary and adds an entry keyed at the content field, for example `gen_ai.input.messages#/0/parts/1/content`. If the upload fails, the part keeps its digest and size without an entry.
+
+Media in resources, events, links and log records never uploads: inline media up to 64 KiB stays as recorded, and larger media becomes its `sha256` and `size`.
+
+Data URLs and fields the provider encodes as base64 are decoded before hashing, so a part's digest matches `recordFile`'s digest of the same bytes. Another string with a declared textual media type is hashed as UTF-8: `YWJj` hashes as those four characters. Inspection is bounded to 8 Mi UTF-16 code units per message attribute and 16 Mi per record; a longer attribute follows the ordinary value limit. With `captureContent: false`, messages are removed without inspection or upload.
+
+Each `hue.blobs` entry has `key`, `sha256`, `size`, `content_type` and, when the part records a valid file name, name or title, `name`. A valid name is nonblank after trimming, at most 256 UTF-16 code units and well-formed Unicode, with no C0 control characters (U+0000–U+001F) or DEL (U+007F). An invalid name stays in the message and is left out of the entry.
+
+To attach a file your application reads or produces, call `recordFile` inside a span:
+
+```ts
+import { readFile } from "node:fs/promises";
+
+await hue.withSpan("review contract", async () => {
+  const pdf = await readFile("contract.pdf");
+  hue.recordFile({
+    role: "input",
+    mediaType: "application/pdf",
+    data: pdf,
+    name: "contract.pdf",
+    upload: true,
+  });
+});
+```
+
+`recordFile` hashes and measures up to **25 MiB** of supplied data. `upload` defaults to `false`. With `upload: true`, content capture and an ordinary project key, export uploads the bytes and adds an entry keyed `event:hue.file:<sha256>` to the same span. The `hue.file` event still records the digest, role, media type and size, and its name follows the rule above: an invalid name is left out and counted as an instrumentation failure. An upload that is not made counts in `uploadFallbacks` in `hue.transport.getReport()`. A span's own string attributes have a separate **1,000,000,000-byte (1 GB)** upload limit.
+
+See [Images, audio and documents](/integrations/opentelemetry#images-audio-and-documents) for what the trace view previews.
 
 ## Model spans and context
 
@@ -218,7 +254,7 @@ Hue omits unsafe content or redactor failures, records instrumentation failure a
 
 Safe lifecycle methods return failure results. A timeout neither proves delivery nor cancels an in-flight request. `createHue`, checks, verification and strict lifecycle methods remain diagnostic and may fail.
 
-Queues limit records and bytes, including in-flight records. `maxQueueBytes` defaults to 8 MiB shared by traces and logs. Separately, the SDK can hold up to 128 MiB of over-limit strings in a span's own attributes and inline files over 64 KiB in a span's own recorded messages while they await upload; log records, events, links and resources aren't uploaded. This bounds queued telemetry, not process RSS. Overflow drops telemetry and updates counters without retrying business work.
+Queues limit records and bytes, including in-flight records. `maxQueueBytes` defaults to 8 MiB shared by traces and logs. Separately, the SDK can hold up to 128 MiB of over-limit strings in a span's own attributes and recorded media and explicitly requested file uploads while they await upload; log records, other events, links and resources do not upload. This bounds queued telemetry, not process RSS. Overflow drops telemetry and updates counters without retrying business work.
 
 Network retries are bounded. Shutdown counts discards; process kill, full queues, disabled clients and exporter failures can lose telemetry. There is no disk spool or delivery guarantee.
 

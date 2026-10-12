@@ -6,6 +6,7 @@ A developer copies a Python sample from Quickstart or the Python SDK page into a
 
 - `py-guard` stops with the sample's own message when `HUE_API_KEY` is unset.
 - `py-reach` calls Hue and fails with HTTP 401 for a fake key.
+- `py-media` uploads the **Images, documents and audio** `record_file` sample's file and recorded message media to a loopback receiver.
 
 ## How to get to it (user POV)
 
@@ -22,6 +23,7 @@ Preconditions:
 - **Guard.** Run `env -u HUE_API_KEY .venv/bin/python first_trace.py`. Expect exit 1 and `ValueError: Set HUE_API_KEY and HUE_CAPTURE_CONTENT=true (recommended) or false`.
 - **Fake-key rejection (not end to end).** Run `HUE_API_KEY=hue_verify_invalid .venv/bin/python first_trace.py`. Expect exit 1 and `hue_sdk.client.ProjectValidationError: Hue project validation failed (HTTP 401).`, under 1 s.
 - **Extras.** For samples that use `builtin_scorers.json_schema`, install `'hue-run[evals]==<version>'`.
+- **Media (loopback, not end to end).** Prefix the `record_file` fragment with `Hue(api_key=..., service_name=..., capture_content=True, base_url="http://127.0.0.1:<port>", live_spans=False)`, suffix it with `hue.force_flush()` and `hue.export_status`, and run it as the TypeScript **Media** recipe describes, with `hue.model(..., provider=...)` and `set_input` for message media and `hue.tracer` for an event. Expect the same reservations, entries, fallbacks and counters, read from `uploaded_values`, `upload_fallbacks` and `instrumentation_failures`.
 
 ## Gotchas
 

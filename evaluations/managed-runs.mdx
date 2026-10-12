@@ -9,7 +9,7 @@ Hue manages eval-set versions, dispatch and scoring. Your application keeps its 
 
 ## 1. Wrap your existing function
 
-Install `@hue-run/sdk@0.16.0` for Node.js 22 or 24 or `hue-run==0.9.1` for Python 3.10+. Configure a **Read and write** key in the same Hue project as the eval set, then set up [tracing](/quickstart).
+Install `@hue-run/sdk@0.17.0` for Node.js 22 or 24 or `hue-run==0.10.0` for Python 3.10+. Configure a **Read and write** key in the same Hue project as the eval set, then set up [tracing](/quickstart).
 
 This guide creates a dedicated evaluation endpoint. Its delivery checks record whether evaluation evidence arrived; use [safe initialization and bounded lifecycle hooks](/sdks/typescript#production-setup) for ordinary customer requests. A telemetry failure must not rerun the agent's business work.
 
@@ -149,7 +149,7 @@ This release runs built-in deterministic checks and configured document verifier
 
 Input files arrive as verified bytes with their original name, type, size, hash and role. Only permitted inputs reach the target; expected answers, grading specifications and evaluator-only files stay in Hue.
 
-Return actual generated file bytes. A message saying a document was created is not a file. At most one returned file may be primary. The adapter supports up to 16 files, 25 MiB each and 64 MiB total in each direction; your application may have stricter limits.
+Return actual generated file bytes. A message saying a document was created is not a file. Each file needs one of the 22 [supported content types](/reference/typescript#file-based-cases) that match its bytes; another type, such as `audio/pcm`, records the invocation as an error before any upload. At most one returned file may be primary. The adapter supports up to 16 files, 25 MiB each and 64 MiB total in each direction; your application may have stricter limits.
 
 Hue saves the outcome before the target finishes its response, then verifies declared telemetry and saves the evidence for scoring. Document checks read the verified stored output in a pinned, isolated environment. **Checks** preserves individual pass, fail, warn, skipped and error findings. A quality failure is distinct from an execution, upload or verifier failure.
 
