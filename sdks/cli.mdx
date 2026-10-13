@@ -1,28 +1,28 @@
 ---
 title: "CLI"
-description: "Store a key, connect an agent to Hue MCP, and run evaluations from your terminal."
+description: "Store a key, connect an agent to Hue MCP, run evaluations and import Langfuse traces from your terminal."
 ---
 
-`@hue-run/sdk` includes the `hue` command. It stores a key you create in Hue, configures your coding agent for the [Hue MCP server](/agents/mcp-server), and runs a local agent against an eval set. Install it in the project where your agent lives:
+`@hue-run/sdk` includes the `hue` command. It stores a key you create in Hue, configures your coding agent for the [Hue MCP server](/agents/mcp-server), runs a local agent against an eval set, and copies a Langfuse project's traces into Hue. Install it in the project where your agent lives:
 
 <CodeGroup>
 ```sh npm
-npm install @hue-run/sdk@0.18.0
+npm install @hue-run/sdk@0.18.1
 ```
 
 ```sh Bun
-bun add @hue-run/sdk@0.18.0
+bun add @hue-run/sdk@0.18.1
 ```
 </CodeGroup>
 
-Run the commands from that project with `npx -y @hue-run/sdk@0.18.0 …`. Always name the package: a bare `npx hue` can run an unrelated npm package called `hue`. Every command accepts `--help`.
+Run the commands from that project with `npx -y @hue-run/sdk@0.18.1 …`. Always name the package: a bare `npx hue` can run an unrelated npm package called `hue`. Every command accepts `--help`.
 
 ## Store your key
 
 Create a **Read and write** key in **Settings → Integrations & API keys** for the project you want to use, then run:
 
 ```sh
-npx -y @hue-run/sdk@0.18.0 login --gitignore
+npx -y @hue-run/sdk@0.18.1 login --gitignore
 ```
 
 `hue login` prints the key settings page and opens it in your browser when a terminal is attached. It reads the key without echoing it, checks it against Hue, and stores it once as both `HUE_API_KEY` (for evaluations) and `HUE_MCP_KEY` (for your coding agent) in `./.env.hue`, together with `HUE_BASE_URL` and `HUE_MCP_URL`. `--gitignore` adds that file to `.gitignore`. Key values are never printed.
@@ -45,7 +45,7 @@ To revoke evaluation and agent access separately, run `--keys evaluations` and `
 ## Connect your coding agent
 
 ```sh
-npx -y @hue-run/sdk@0.18.0 mcp install --client claude-code --auth oauth
+npx -y @hue-run/sdk@0.18.1 mcp install --client claude-code --auth oauth
 ```
 
 `hue mcp install` writes a server named `hue` at `https://mcp.hue.run/mcp` for your client. Supported clients are `claude-code`, `codex`, `conductor`, `cursor`, `vscode`, `windsurf` and `gemini`. For `windsurf` it only prints the snippet; merge it into the configuration opened by Cascade's **… (Actions) → MCPs → Open MCP config file**. See the [Cascade MCP guide](https://docs.devin.ai/desktop/cascade/mcp) for that client's configuration. Add `--dry-run` to see the change first, or `--print` for the snippet only.
@@ -73,8 +73,8 @@ With a key, export `HUE_MCP_KEY` in the shell that starts your client; an app st
 `hue eval` runs your agent locally against a published case or a saved eval set and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It reads `HUE_API_KEY` from the environment, or from `./.env.hue`, the file `hue login` writes, when the environment has none; `--env-file <path>` names another file. Start the agent's own command with `--command`, after the one-time change in [Evaluation setup](/evaluations/eval-ready-agent):
 
 ```sh
-npx -y @hue-run/sdk@0.18.0 eval --case "<name|id|url>" --command "<start command>"
-npx -y @hue-run/sdk@0.18.0 eval --worker --command "<start command>" --revision "<new-agent-revision>"
+npx -y @hue-run/sdk@0.18.1 eval --case "<name|id|url>" --command "<start command>"
+npx -y @hue-run/sdk@0.18.1 eval --worker --command "<start command>" --revision "<new-agent-revision>"
 ```
 
 npx caches the CLI, so the agent's repository gains no package.json or dependency. See [Run an eval with your agent](/evaluations/run-your-agent) for one-shot runs, `--check` and resuming after interruption. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `npx @hue-run/sdk` runs that local, possibly older, copy. `hue eval` needs Node.js 22 or 24, even for a Python agent.
@@ -112,3 +112,44 @@ One-shot runs store case outputs, target error messages and explanations by defa
 An evaluator that does not apply to a case shows `n/a` and neither passes nor fails it. A case with no applicable pinned evaluator is an error.
 
 A TypeScript adapter file (`./hue-agent.ts` exporting `runMyAgent(inputs, context)`) is the in-process alternative. It runs inside `hue eval`'s own process, where `HUE_WORLD_TOKEN` and `HUE_EXECUTION_ID` are not set, so pass the execution context to the helper. A world-only adapter throws when `context.world` is missing, then passes `context.world.env` as the helper's environment argument or spawns the agent with `agentEnvironment(context.world)`. A direct adapter receives `context.mode: "direct"` and `context.executionId`; pass `{ HUE_EXECUTION_ID: context.executionId }` to the helper and skip app connections. Adapter-file workers register world support by default; opt into direct cases with `--capability direct:v1` only after handling that context. Never set `process.env` yourself: with `--concurrency` above 1 it leaks one case's world into another. See [simulations](/evaluations/simulations) for what the adapter receives and the [TypeScript reference](/reference/typescript) for the underlying current local-run APIs.
+
+## Import traces from Langfuse
+
+`hue import langfuse` copies a Langfuse project's traces, and optionally its media, into Hue. It runs on your machine: it reads Langfuse's public API with the Langfuse project's own keys, which go only to Langfuse, and sends the spans with your Hue project key. It runs with `npx` whatever language your application uses; the Python SDK has no counterpart.
+
+Put the Langfuse keys in an env file kept out of version control, count what would be imported, then import:
+
+```sh
+# .env.langfuse
+#   LANGFUSE_PUBLIC_KEY=pk-lf-...
+#   LANGFUSE_SECRET_KEY=sk-lf-...
+#   LANGFUSE_BASE_URL=https://cloud.langfuse.com
+npx -y @hue-run/sdk@0.18.1 import langfuse --env-path .env.langfuse --from 2026-01-01 --dry-run
+npx -y @hue-run/sdk@0.18.1 import langfuse --env-path .env.langfuse --from 2026-01-01 --media
+```
+
+The secret key is read only from `LANGFUSE_SECRET_KEY` in the environment or the env file, never from the command line, where shell history and other processes can read it. The Langfuse host is `--langfuse-host`, then `LANGFUSE_BASE_URL`, then `LANGFUSE_HOST`, then `https://cloud.langfuse.com`; use your region's host or your self-hosted URL. `HUE_API_KEY` comes from the environment, the env file or `./.env.hue`; a **Tracing only** key or the **Read and write** key `hue login` stores works. The command checks it against Hue before it reads Langfuse.
+
+| Flag | Meaning |
+| --- | --- |
+| `--env-path <path>` | Load an env file first; variables already set keep their values. |
+| `--from <time>` | Traces that started at or after this time: an ISO 8601 date (midnight UTC) or a date and time with a zone. |
+| `--to <time>` | Traces that started before this time. Default: an hour before the command starts, so traces still running are left for a later run. |
+| `--limit <n>` | At most this many traces, newest first. |
+| `--trace-id <id>` | Only this Langfuse trace; repeatable, up to 1,000. Not combined with `--from`, `--to` or `--limit`. |
+| `--media` | Copy the files that Langfuse media references (`@@@langfuseMedia:…@@@`) point to. |
+| `--no-content` | Send metadata only: no inputs, outputs, status messages or model parameters. |
+| `--dry-run` | Read Langfuse and count traces, spans and media references; needs no Hue key and sends nothing. |
+| `--yes` | Import without asking for confirmation, required without a terminal. |
+| `--service-name <name>` | `service.name` of the imported spans (default `langfuse`). |
+| `--origin <url>` | Hue origin (default `HUE_BASE_URL`, then `https://app.hue.run`). |
+| `--langfuse-host <url>` | Langfuse host, instead of the variables. |
+| `--langfuse-public-key <key>` | Public key, instead of `LANGFUSE_PUBLIC_KEY`. |
+
+The command reads Langfuse Cloud and self-hosted Langfuse v4 through the Observations API v2, and self-hosted v3 through the v1 traces and observations API. Each observation becomes the completed span a Langfuse OpenTelemetry SDK records, with the `langfuse.observation.*` and `langfuse.trace.*` attributes Hue reads, the user, session, release and environment, and the model and token counts as GenAI attributes; see [Use with Langfuse](/integrations/opentelemetry#use-with-langfuse). Content is sent by default, and inline files and values over the 1 MiB inline limit are uploaded as the SDK uploads them.
+
+Without `--media`, Langfuse media references stay as recorded, and Hue shows them as files held in Langfuse. With `--media`, each referenced file up to 25 MiB is downloaded from Langfuse, uploaded under its trace and placed in the [digest form](/sdks/typescript#automatically-captured-media) the SDK writes. A reference Langfuse holds no bytes for stays as recorded.
+
+Langfuse ids are kept as OpenTelemetry ids where they already are one, and other ids are derived from them, so running the same command again resumes an interrupted import without duplicating what Hue already holds. Keep `--media`, `--no-content` and `--service-name` the same when you resume, and leave traces that already reached Hue through OpenTelemetry out of the window. A file or value that cannot be stored holds its span back for the next run. Langfuse `429` answers are waited out for as long as `Retry-After` asks.
+
+The summary reports the traces imported, the spans sent and accepted, and the media files uploaded and left in Langfuse, and names each trace not fully imported with the reason. Exit codes: `0` every selected trace was imported, `1` a trace, span or file was not (or a key was refused), `2` usage error, `130` stopped; run the same command again to resume.

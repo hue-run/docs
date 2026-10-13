@@ -17,8 +17,8 @@ description: "Run your existing agent, local or deployed, against a published ca
 Check first, then run the same command without `--check`:
 
 ```sh
-npx -y @hue-run/sdk@0.18.0 eval --case "<name|id|url>" --command "<start command>" --check
-npx -y @hue-run/sdk@0.18.0 eval --case "<name|id|url>" --command "<start command>"
+npx -y @hue-run/sdk@0.18.1 eval --case "<name|id|url>" --command "<start command>" --check
+npx -y @hue-run/sdk@0.18.1 eval --case "<name|id|url>" --command "<start command>"
 ```
 
 `--check` resolves the key's project, the selection and its evaluators, and whether cases are answer-only or get a world. It creates no run, world or checkpoint. A published case carries its own evaluators. To run an eval set, use `--set "<eval set>"` and add `--scorer-version <id>` for each evaluator; Hue's **Run** snippet for the set includes them.
