@@ -34,13 +34,6 @@ description: "Install the Hue skill and set up tracing and MCP access with your 
   Prefer to set it up by hand? Start with [Quickstart](/quickstart).
 </Visibility>
 
-<Note>
-  **If you are a coding agent:** this page is the complete setup; you don't need the documentation index above it. Start by checking whether the project already has a Hue key, as step 1 describes: check only that it is present and never read its value. Then, in your first reply, list the steps below that apply and, if step 1 applies, include its message to the user. Wait for the user before you install packages or change files. If the user has no Hue account yet, change nothing.
-
-  These steps need network access to docs.hue.run, app.hue.run, mcp.hue.run and the npm or PyPI registry. If your sandbox blocks a command, ask the user to approve it instead of skipping the step. If the user pastes a key into the chat, don't use it or repeat it; suggest they delete that key in Hue and store a new one as step 1 describes.
-
-</Note>
-
 ## 1. Get your Hue API key
 
 This setup uses one **Read and write** project key, stored as `HUE_API_KEY`. It sends traces, checks what Hue stored and runs evaluations. Claude Code, Codex and Conductor connect to the [Hue MCP server](/agents/mcp-server) in step 4 by signing in with Hue and need no key. A client that connects with a key instead reads the same key as `HUE_MCP_KEY`: Cursor, VS Code, Windsurf and Gemini CLI, a client that runs without a browser or must keep access past a sign-in's 30 days, and any client when the user asks for a key.
@@ -59,7 +52,7 @@ Otherwise, tell the user, in this wording or close to it:
 
 For a client that connects with a key, say "Store it as `HUE_API_KEY` and `HUE_MCP_KEY`" in item 2.
 
-Don't run `hue login` yourself: it waits for the key at a hidden prompt. Never print, log or commit the key, and wait until the user says it's stored.
+Don't run `hue login` yourself: it waits for the key at a hidden prompt. Never print, log or commit the key, and wait until the user says it's stored. If the user pastes a key into the chat, don't use it; ask them to delete that key in Hue and store a new one.
 
 `hue login` checks the key against Hue, writes it to `.env.hue` as both `HUE_API_KEY` and `HUE_MCP_KEY`, and adds the file to `.gitignore` if it isn't ignored yet. It refuses a **Read** or **Tracing only** key and never prints the key. If the application loads another ignored env file, add `--env-path` with that file's path to the command in your message; add `--force` if the file already holds a different `HUE_API_KEY` or `HUE_MCP_KEY`.
 
