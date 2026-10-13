@@ -360,6 +360,9 @@ A child can arrive before its parent, and a correlated log can arrive before its
 Hue shows the files a span records when you open the span in **Traces**. A file inside a message appears in place. Other files appear in the span's **Files** section. Hue recognizes files in these forms:
 
 - Message parts in the OpenTelemetry GenAI (`blob`, `uri` and `file`), Vercel AI SDK, OpenAI Chat Completions and Responses, Anthropic, Gemini, Vertex AI and Amazon Bedrock Converse formats, including OpenAI assistant audio and Responses computer screenshots.
+- MCP tool results' `image` and `audio` blocks, and embedded `resource` blocks that hold bytes (`blob`), named by the last segment of the resource's URI. A text resource stays text.
+- Pydantic AI `binary` parts, `image-url`, `audio-url`, `video-url` and `document-url` parts, and a tool's `BinaryContent` return.
+- LangChain `image`, `audio`, `video` and `file` content blocks with `base64` data, a `url` or a provider `file_id`, in LangChain v1's standard form or the earlier `source_type` form.
 - OpenInference's flattened image contents and OpenLLMetry's JSON-encoded multipart prompts.
 - A whole `data:` URL that declares its media type, anywhere in recorded input, output, tool arguments, tool results or metadata.
 - `hue.file` events and files listed in the `hue.blobs` span attribute, which Hue SDKs upload and an [exporter without the SDK](#attach-files-without-the-sdk) can attach.
@@ -381,7 +384,7 @@ Playback depends on the browser's support for the format. A file whose bytes the
 
 ### Attach files without the SDK
 
-An exporter that writes OTLP itself can record a small file inline, as a `data:` URL or base64 part, within the [1 MiB value limit](#collector-responses). To attach a larger file, up to 1,000,000,000 bytes (1 GB), upload it apart from the span with the key that sends the trace (**Tracing only** in production):
+An exporter that writes OTLP itself can record a small file inline, as a `data:` URL or base64 part, within the [1 MiB value limit](#collector-responses). Hue serves it by digest from the [trace file endpoint](#download-files-from-a-trace), as it serves an uploaded file. To attach a larger file, up to 1,000,000,000 bytes (1 GB), upload it apart from the span with the key that sends the trace (**Tracing only** in production):
 
 1. Reserve the upload with `POST https://app.hue.run/api/v1/otlp/blobs` and a JSON body of `traceId` (the span's 32-hex trace ID), `sha256` (the lowercase hex SHA-256 of the bytes), `byteSize`, `contentType` (the media type) and `key` (the file's `hue.blobs` key, below). If Hue already holds the bytes for this trace, it answers `{"status": "exists", "ref": …}`; go to step 4. Otherwise it answers `{"status": "upload", "url": …, "method": "PUT", "headers": …, "expiresAt": …, "ref": …}`.
 2. Send the bytes with `PUT` to `url` within 15 minutes, with exactly the returned `headers` and no `Authorization` header. A `412` answer means the bytes are already stored.
@@ -490,11 +493,11 @@ The upload calls answer errors as JSON `{"error": …}`:
 
 ### Download files from a trace
 
-`GET https://app.hue.run/api/v1/traces/{traceId}/blobs/{sha256}` returns a download link for a file that a span of the trace lists under `hue.blobs`. Use a **Read** or **Read and write** key; any other key gets `403`, because files are recorded content.
+`GET https://app.hue.run/api/v1/traces/{traceId}/blobs/{sha256}` returns a download link for a file of the trace: one that a span or correlated log record lists under `hue.blobs`, or one that a span or log record holds inline as a `data:` URL or base64 part of up to 1 MiB, as an exporter without the SDK records it. Use a **Read** or **Read and write** key; any other key gets `403`, because files are recorded content.
 
 - `traceId` is Hue's trace ID or the 32-hex OpenTelemetry trace ID.
 - `sha256` is the file's lowercase hex SHA-256, as MCP [`get_span`](/agents/mcp-tools#traces-and-spans) lists it under `files`.
-- The optional `spanId` query parameter, a 16-hex OpenTelemetry span ID, reads only that span, which is faster in a long trace. That span must list the file.
+- The optional `spanId` query parameter, a 16-hex OpenTelemetry span ID, reads only that span and its correlated log records, which is faster in a long trace. One of them must list or hold the file. A file that a log record holds inline, or that a span holds in a format Hue began reading after the trace was recorded, is found only with `spanId`.
 
 ```json
 {
@@ -508,14 +511,14 @@ The upload calls answer errors as JSON `{"error": …}`:
 }
 ```
 
-`url` is valid for five minutes and downloads the file as `fileName`. Request it without your `Authorization` header.
+`url` is valid for five minutes and downloads the file as `fileName`. Request it without your `Authorization` header. An inline file downloads under its recorded name, or else one made from its role and digest, such as `input-4bf92f3577b3.png`.
 
 | Status | Meaning |
 | --- | --- |
 | `400` | A malformed `traceId`, `sha256` or `spanId`. |
 | `401` | The key is missing, unknown, revoked or expired. |
 | `403` | The key has no **Read** access. |
-| `404` | The trace is not in the key's project, or no span (or not the named span) lists the file. With `"state": "missing"`, a span lists the file but its bytes were never uploaded or have been erased. |
+| `404` | The trace is not in the key's project; no span or log record lists or holds the file (with `spanId`, none of that span's); or an inline file is over 1 MiB. With `"state": "missing"`, a record lists the file but its bytes were never uploaded or have been erased. |
 | `429` | The key failed authentication too often; retry after `Retry-After`. |
 | `503` | Storage is unavailable; retry after `Retry-After`. |
 
