@@ -137,7 +137,9 @@ The SDK leaves these as recorded:
 
 - Remote URLs, provider file IDs, S3 references and Langfuse media tokens. Neither the SDK nor Hue fetches them.
 - A file more than ten levels below a value's root, attribute JSON nested past 32 levels or holding an integer past 2^53 (Hue keeps such JSON as text), and an OpenInference `input.value` or `output.value` whose record declares it `text/plain`.
-- Text past 8 Mi UTF-16 code units in one attribute or 16 Mi in one record; such an attribute follows the ordinary value limit.
+- In a log record, text past 8 Mi UTF-16 code units in one attribute or 16 Mi in one record; such a value follows the ordinary value limit.
+
+A span's own attribute past those bounds, such as a model call that carries minutes of base64 audio, is still read for files when it is exported, without parsing or copying the whole value. Each base64 or `data:` URL string in it that is longer than 16 Ki code units and written without escapes is decoded, hashed and uploaded a 1 MiB slice at a time, up to 1 GB, and takes the same digest form as above. The rest of the value's JSON must fit within 8 Mi code units; a value past that follows the ordinary value limit.
 
 With `captureContent: false`, the SDK inspects and uploads nothing.
 
@@ -166,7 +168,7 @@ await hue.withSpan(
 );
 ```
 
-Give exactly one of `data` (bytes, or a base64 string or `data:` URL) and `path` (read when the attachment is created), a `contentType` and an optional `name`. The bytes are read and hashed when the attachment is created and are limited to 25 MiB; they stay in memory until export, within the 128 MiB held for values awaiting upload.
+Give exactly one of `data` (bytes, or a base64 string or `data:` URL) and `path`, a `contentType` and an optional `name`. `data`, limited to 25 MiB, and a file up to 25 MiB given by `path` are read and hashed when the attachment is created and stay in memory until export, within the 128 MiB held for values awaiting upload. A larger file given by `path`, up to 1 GB, is hashed when the attachment is created and streamed from disk when it uploads, so it is never held in memory. Keep such a file in place and unchanged until the client flushes: a file that changed or is gone by then is not uploaded and counts in `uploadFallbacks` in `hue.transport.getReport()`.
 
 At its position the attachment is recorded as a GenAI `blob` part in digest form, `{"type":"blob","mime_type":"application/pdf","modality":"document","sha256":"<64 hex>","size":48213,"name":"contract.pdf"}`, with `modality` read from the content type. Export uploads the bytes, keyed `<attribute>#<JSON pointer to the part>`: `input.value#/contract` and `metadata#/scan` above, or `body#/gen_ai.input.messages/0/parts/1` in a `recordMessages()` log record. An attribute value that is an attachment, or a JSON object or array OpenTelemetry cannot hold, is recorded as JSON text. Put files under `metadata` for Hue to list them as the span's metadata files. A value that is still over the 1 MiB inline limit with its attachments as digest parts uploads whole and keeps only its first 16 KiB inline: the attachments' bytes are stored, and `client.media.fetch({ traceId, sha256 })` reads them by digest, but readers do not place them at their positions in the value.
 
@@ -174,24 +176,28 @@ With `captureContent: false` or a setup credential (`hue_setup_…`), no bytes l
 
 ### Record a file
 
-To record a file your application reads or produces, call `recordFile` inside a span:
+To record a file your application reads or produces, such as the audio of a voice turn, call `recordFile` inside a span:
 
 ```ts
-import { readFile } from "node:fs/promises";
-
-await hue.withSpan("review contract", async () => {
-  const pdf = await readFile("contract.pdf");
+await hue.withSpan("voice turn", async () => {
   hue.recordFile({
     role: "input",
-    mediaType: "application/pdf",
-    data: pdf,
-    name: "contract.pdf",
+    mediaType: "audio/wav",
+    path: "turns/0042-user.wav",
+    name: "user.wav",
+    upload: true,
+  });
+  hue.recordFile({
+    role: "output",
+    mediaType: "audio/wav",
+    path: "turns/0042-reply.wav",
+    name: "reply.wav",
     upload: true,
   });
 });
 ```
 
-`recordFile` hashes and measures up to **25 MiB** of supplied data. `upload` defaults to `false`. With `upload: true`, content capture and an ordinary project key, export uploads the bytes and adds an entry keyed `event:hue.file:<sha256>` to the same span. The `hue.file` event still records the digest, role, media type and size, and its name follows the rule above: an invalid name is left out and counted as an instrumentation failure. An upload that is not made counts in `uploadFallbacks` in `hue.transport.getReport()`. A span's own string attributes have a separate **1,000,000,000-byte (1 GB)** upload limit.
+Give the file as `data` (bytes, up to **25 MiB**, held in memory until export) or `path` (a file on disk, up to **1 GB**; a file over 25 MiB is streamed from disk when it uploads, as an [attachment given by path](#attach-a-file-anywhere) is). All uploads of one export share six export timeouts, 60 seconds at the default `timeoutMillis` of 10,000, so a 1 GB file needs about 17 MB/s; raise `timeoutMillis` (up to 60,000) for slower links. Record audio in a format the trace view plays, such as WAV, MP3 or Opus; [wrap raw PCM in a WAV header](/integrations/opentelemetry#attach-a-voice-turn) first. `upload` defaults to `false`. With `upload: true`, content capture and an ordinary project key, export uploads the bytes and adds an entry keyed `event:hue.file:<sha256>` to the same span. The `hue.file` event still records the digest, role, media type and size, and its name follows the rule above: an invalid name is left out and counted as an instrumentation failure. An upload that is not made counts in `uploadFallbacks` in `hue.transport.getReport()`. A span's own string attributes have a separate **1,000,000,000-byte (1 GB)** upload limit.
 
 ### Read recorded media back
 
