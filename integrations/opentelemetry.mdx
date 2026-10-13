@@ -475,7 +475,42 @@ with tracer.start_as_current_span("agent.request") as span:
 provider.shutdown()  # Flushes the batch processor and the exporter.
 ```
 
-Send audio in a format browsers play, such as WAV, MP3 or Opus; raw PCM is download only. An uploaded file is recorded content: it follows its trace's [retention](/guides/redaction#retention), and reading it needs **Read** access.
+#### Attach a voice turn
+
+Attach a voice turn's audio the same way: one `attach_file` call per clip, with every entry in the span's `hue.blobs`. The trace view plays WAV, MP3, Opus and the other formats [listed above](#images-audio-and-documents). Raw PCM, which realtime voice APIs stream, carries no header that names its sample rate, so wrap it in a WAV header first; Python's `wave` module does that without re-encoding, and the file then plays in any player. In `attach.py`, in place of the `agent.request` span:
+
+```python
+import io
+import wave
+
+
+def wav_from_pcm16(pcm, rate=24000, channels=1):
+    """Wraps 16-bit little-endian PCM, such as OpenAI's pcm16 (24 kHz mono), in a WAV header."""
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as wav:
+        wav.setnchannels(channels)
+        wav.setsampwidth(2)
+        wav.setframerate(rate)
+        wav.writeframes(pcm)
+    return buffer.getvalue()
+
+
+with open("user.pcm", "rb") as file:
+    user_pcm = file.read()
+with open("reply.pcm", "rb") as file:
+    reply_pcm = file.read()
+
+with tracer.start_as_current_span("voice.turn") as span:
+    span.set_attribute("hue.blobs", [
+        attach_file(span, wav_from_pcm16(user_pcm), "audio/wav", "user.wav", role="input"),
+        attach_file(span, wav_from_pcm16(reply_pcm), "audio/wav", "reply.wav", role="output"),
+    ])
+provider.shutdown()
+```
+
+Each clip appears in the span's **Files** section with its role.
+
+An uploaded file is recorded content: it follows its trace's [retention](/guides/redaction#retention), and reading it needs **Read** access.
 
 The upload calls answer errors as JSON `{"error": …}`:
 
