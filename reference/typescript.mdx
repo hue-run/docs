@@ -478,7 +478,7 @@ Submitting hosted jobs is an explicit platform operation and can consume the pro
 | Member | Result or behavior |
 | --- | --- |
 | `fetch(target: MediaFetchTarget, options?: MediaFetchOptions)` | Downloads one file through `GET /api/v1/traces/{traceId}/blobs/{sha256}`, without the project key, and checks its SHA-256 → `MediaFile` with `bytes`, `sha256`, `size`, `contentType` and `fileName` (both absent for a snapshot's copy). |
-| `MediaFetchTarget` | `{ traceId, sha256, spanId? }`, where `traceId` is Hue's ID or the 32-hex OpenTelemetry ID and `spanId` limits the read to that span's record, or `{ snapshotId, sha256 }` for a snapshot's pinned copy. |
+| `MediaFetchTarget` | `{ traceId, sha256, spanId? }`, where `traceId` is Hue's ID or the 32-hex OpenTelemetry ID and `spanId` limits the read to that span's record and its correlated log records (a file a log record holds inline is found only this way), or `{ snapshotId, sha256 }` for a snapshot's pinned copy. |
 | `MediaFetchOptions` | `maxBytes` (default 64 MiB, at most 1 GB; a larger file fails as `too_large` before any byte downloads) and `signal`. |
 | `resolve(value, options: MediaResolveOptions)` | Writes the bytes of every digest part in `value` back into the part's own field → `MediaResolution` with a new `value`, the count `resolved` and `failures`. |
 | `MediaResolveOptions` | `traceId` and optional `spanId`, or `snapshotId`; `as`; `blobs`, the record's `hue.blobs` entries in any form Hue reads, which type a part that declares none and mark `prefix_only` parts; `concurrency` (1–16, default 4), `maxBytes` and `signal`. |

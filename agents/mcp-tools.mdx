@@ -61,7 +61,7 @@ Listed by default: `search_traces`, `get_trace`, `get_span`, `list_sessions`, `v
 | `get_span` | Read | Returns one span's status and error message, timing, model, usage, tool and attribute names and the files it records; recorded values and file download links with `include_content: true`, and correlated logs with `include_logs: true`. |
 | `list_sessions` | Read | Lists sessions by last activity, with status, trace count and token and span totals. |
 | `verify_trace` | Read | Checks a receipt: whether a trace and its expected spans are stored and which fields are present, never content. |
-| `get_span_content` | Read | Reads exact recorded values from up to 20 spans of one trace, by JSON path or attribute key, in slices. |
+| `get_span_content` | Read | Reads exact recorded values from up to 20 spans of one trace, or from up to 20 correlated logs of one span with `log_ids`, by JSON path or attribute key, in slices. |
 | `search_spans` | Read | Finds spans across traces in a window of up to 7 days, by name, kind, status, model, duration, attribute or their trace's fields. |
 | `aggregate` | Read | Counts, error counts, percentiles and token sums over a window's traces or spans, grouped by up to two dimensions. |
 | `list_trace_checks` | Read | Reports the active trace-check version, trace-check consent and which checks are enabled. |
@@ -169,7 +169,8 @@ Managed and local runs, and artifacts.
 | `cancel_managed_run` | Destructive | Cancels a managed dispatch; cases in flight may still finish. |
 | `list_local_agents` | Read | Lists registered local agents and whether each is online. |
 | `launch_local_run` | Write | Creates a run for an online local agent that can run every case. |
-| `get_local_run` | Read | Reports a local run's status. |
+| `get_local_run` | Read | Reports a local run's status, whether its worker's claim is stale and whether a requeue would be accepted. |
+| `recover_local_run` | Destructive | Recovers a local run with the same checks as the run page: `release` a stale claim, which moves the run to attention; `requeue` a run in attention when `get_local_run` says `requeueable`; `relaunch` a run in attention as a new run with the same pinned versions and config; or `cancel` a run that has not completed. |
 | `list_artifacts` | Read | Lists artifacts and the storage allowance; bytes stay on HTTP. |
 | `get_artifact` | Read | Returns one artifact's metadata. |
 
@@ -331,7 +332,9 @@ Prompt: “Show the exact tool arguments and result for `<trace>`.”
 
 Sequence: `get_span_content` with `{"attribute_keys": ["gen_ai.tool.call.result"]}` for trace and span IDs, then select `fields`, `path` or `attribute_keys`. Text uses UTF-16 slices with `total_length` and `next_offset`; omitted spans appear in `omitted_span_ids`.
 
-Caveat: Reads are audited and untrusted; each request reads up to 20 spans, in 8,000-unit slices by default. Invalid paths report available keys.
+For a log record's values, pass one span in `span_ids`, the ids of logs that `get_span` with `include_logs: true` listed in `log_ids`, and the `log_cursor` of that page, if any. `fields` are `body`, the default, and `attributes`. A span or log names the values Hue stored apart from it under `blobs`; pass one's key, such as `body#/details`, in `attribute_keys` to read it whole. A value that holds only the first 16 KiB of one is marked `partial`, with its `blob_keys`.
+
+Caveat: Reads are audited and untrusted; each request reads up to 20 spans or logs, in 8,000-unit slices by default. Invalid paths report available keys.
 
 ### Review trace check results
 
@@ -378,7 +381,7 @@ A **trace** is a root span and its tree; each **span** records one timed operati
 
 `get_span` returns one span: `status` with its `code` and a `message` of up to 200 characters, `model`, `usage` (input, output, cache and reasoning tokens where recorded), `gen_ai` (`operation`, `provider`, `response_model`, `agent_name`, `session_id`, `user_id` and the detected `profiles`), `tool` (`name` and `call_id`), `has_input` and `has_output`, `service`, `attribute_keys` (the names of up to 100 recorded attributes, never their values) and `event_names`. When the result fits `max_chars`, it also carries the instrumentation scope, the dropped-attribute and dropped-event counts, and span `links`.
 
-`get_span` also lists up to 64 `files`: the images, audio and documents the span records. Each has its `role` and, where known, `modality`, `media_type`, `name`, `size`, `sha256`, a remote `uri`, a provider `file_id`, or `langfuse_media_id` for a file [held in Langfuse](/integrations/opentelemetry#use-with-langfuse). A file whose bytes the span lists under `hue.blobs` also has its `key` and `state`: `stored`, `missing` (never uploaded, or erased) or `unavailable`. With `include_content: true`, each stored file adds `download_url`, a link valid for five minutes, and `download_expires_at`. A script with a **Read** or **Read and write** key gets the same link from the [trace file endpoint](/integrations/opentelemetry#download-files-from-a-trace).
+`get_span` also lists up to 64 `files`: the images, audio and documents the span records. Each has its `role` and, where known, `modality`, `media_type`, `name`, `size`, `sha256`, a remote `uri`, a provider `file_id`, or `langfuse_media_id` for a file [held in Langfuse](/integrations/opentelemetry#use-with-langfuse). A file whose bytes the span lists under `hue.blobs` also has its `key` and `state`: `stored`, `missing` (never uploaded, or erased) or `unavailable`. With `include_content: true`, each stored file, and each file held inline as a `data:` URL or base64 part of up to 1 MiB, adds `download_url`, a link valid for five minutes, and `download_expires_at`; with `include_logs: true` as well, so do the files of each log on the page. A script with a **Read** or **Read and write** key gets the same link from the [trace file endpoint](/integrations/opentelemetry#download-files-from-a-trace).
 
 ### Traces from runs
 
@@ -475,7 +478,7 @@ Langfuse metadata (`langfuse.observation.metadata.*`, `langfuse.trace.metadata.*
 | Aggregates | Up to 2 `group_by` dimensions, 8 metrics, 25 groups (`top`) and 96 time buckets. Trace aggregates read the window's newest 300,000 traces; span aggregates read their whole window. |
 | Filter scans | `model` and `attribute` on `search_traces` read the newest 5,000 matching traces and say `scan_capped: true` when they stopped early. `search_spans` filters its whole window. |
 | Result size | `max_chars` from 1,000, 24,000 by default; any value above 80,000 counts as 80,000, about what clients accept in one result. A list or span tree that does not fit returns the rows that do, with `omitted_count` and a cursor for the rest (`next_cursor`, or `next_span_cursor` on `get_trace`). `aggregate` keeps whole groups and reports `omitted_count` and `omitted_groups`. `truncated: true` with a `hint` means content, detail or groups were left out, or a single row did not fit. |
-| Content reads | `get_span_content` reads up to 20 spans of one trace per call, in slices of 8,000 UTF-16 units by default. |
+| Content reads | `get_span_content` reads up to 20 spans of one trace, or 20 logs of one span, per call, in slices of 8,000 UTF-16 units by default. |
 | Counts | `total_count` counts up to 10,000 traces; beyond that `total_count_capped` is `true`. |
 | Query time | Searches have a 2-second budget; a slower one fails with `timeout`. An `aggregate` part that runs out of time returns `partial: true` with the rest. |
 | Request size | 1 MiB; a larger body answers HTTP `413`. |

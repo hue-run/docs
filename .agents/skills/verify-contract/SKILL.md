@@ -15,7 +15,7 @@ Nothing to start. Needs `bun install --frozen-lockfile`, Node.js 24 and `python3
 
 ```sh
 node scripts/check-docs.mjs
-# Documentation contract is current: 25 public pages, 3 key presets, 116 MCP tools.
+# Documentation contract is current: 25 public pages, 3 key presets, 117 MCP tools.
 ```
 
 About 0.1 s. A failure lists every broken rule; on a clean `main` it must pass, so a failure here is yours to fix.

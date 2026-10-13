@@ -589,11 +589,11 @@
   "packages": {
     "typescript": {
       "name": "@hue-run/sdk",
-      "version": "0.18.0"
+      "version": "0.18.1"
     },
     "python": {
       "name": "hue-run",
-      "version": "0.11.0"
+      "version": "0.11.1"
     }
   },
   "mcp": {
@@ -1939,6 +1939,18 @@
         }
       },
       {
+        "name": "recover_local_run",
+        "title": "Hue: recover local run",
+        "toolset": "runners",
+        "access": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        }
+      },
+      {
         "name": "list_artifacts",
         "title": "Hue: list artifacts",
         "toolset": "runners",
@@ -2024,7 +2036,7 @@
       }
     ],
     "compatibilityAliases": {},
-    "catalogSha256": "4f26362aaa0936221bf34e80a656b0f0b7376328ce57ab89178b0c1e3951a873",
+    "catalogSha256": "d171ce8ea192929b6f047919b8df99014cea227ab73eef2639f2c4f1a25da577",
     "serverInstructionsSha256": "a57ca5d20b45f22f4e1edcb1935b3555d47afeb0601f7bef597bef4e45d7a2ce",
     "guides": {
       "data-model": {
@@ -2045,7 +2057,7 @@
       },
       "evaluate": {
         "title": "Run your agent against a case",
-        "sha256": "0073e99ec552e57044364ff0d6d2949ac6e8bd4561ec3a5da22085c335a6caf6"
+        "sha256": "3f539117e00566a1280875d471e175ef59f91fe845bbaa51a1b9c612a33a4bef"
       }
     },
     "toolsets": {
@@ -2107,6 +2119,8 @@
           "finish_run",
           "launch_managed_run",
           "launch_local_run",
+          "get_local_run",
+          "recover_local_run",
           "add_case_conversion",
           "get_case_conversion",
           "update_case_conversion",
@@ -2132,6 +2146,7 @@
           "list_local_agents",
           "launch_local_run",
           "get_local_run",
+          "recover_local_run",
           "get_run",
           "list_run_items",
           "get_run_item",
