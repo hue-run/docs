@@ -4,7 +4,7 @@ description: "Use the Python SDK to trace, evaluate, score, and drive simulated 
 sidebarTitle: "Python API"
 ---
 
-This reference covers `hue-run` **0.11.0** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use [Quickstart](/quickstart#2-install-the-sdk) for the available package release.
+This reference covers `hue-run` **0.11.1** on Python 3.10 or later, tested on 3.10 and 3.14 with OpenTelemetry 1.44.0 and on 3.10 and 3.12 with OpenTelemetry 1.40.0; the accepted range is `>=1.40,<2`. Start with the [Python guide](/sdks/python) for installation and a runnable trace, and [compatibility](/sdks/compatibility) for supported runtimes and instrumentation. Use [Quickstart](/quickstart#2-install-the-sdk) for the available package release.
 
 ## Imports
 
@@ -244,7 +244,7 @@ billing = client.list_eval_sets(tags=["billing"])
 | `get_dataset(dataset_id)` / `list_datasets(...)` | Retrieve a dataset / page of summaries. |
 | `create_dataset_version(dataset_id, *, from_version_id=None)` | New editable version. |
 | `get_dataset_version(version_id)` / `list_cases(version_id, ...)` | Retrieve a version / page of cases. |
-| `add_case(version_id, *, expected_revision, external_key, inputs, expected=MISSING, metadata=None, files=None)` | `{ "item": ..., "version": ... }`; retain the updated revision. `files` pins up to 32 input files as `CaseFileWrite(role=..., artifact_id=...)`, or `CaseFileWrite(role=..., filename=..., content_type=..., data=... or path=...)`, which the client checks against the artifact policy (one of the 22 artifact content types, a name of 1–255 UTF-16 code units, 1 byte to 25 MiB) and uploads first; a file outside the policy raises `ValueError` before any request. |
+| `add_case(version_id, *, expected_revision, external_key, inputs, expected=MISSING, metadata=None, files=None)` | `{ "item": ..., "version": ... }`; retain the updated revision. `files` pins up to 32 input files as `CaseFileWrite(role=..., artifact_id=...)`, or `CaseFileWrite(role=..., filename=..., content_type=..., data=... or path=...)`, which the client checks against the artifact policy (one of the 22 artifact content types, a name of 1–255 UTF-16 code units, 1 byte to 25 MiB) and uploads first; a file outside the policy raises `ValueError` before any request. A `path` file is hashed when the case is checked and read again for its upload, one file at a time; one that changed or can no longer be read raises `ValueError` and the case is not written. |
 | `freeze_dataset_version(version_id, expected_revision)` | Frozen dataset version. |
 | `create_scorer(*, name, slug, description="", tags=None)` / `get_scorer(scorer_id)` / `list_scorers(...)` | Register or retrieve scorer identities. |
 | `update_scorer(scorer_id, *, name=None, description=None, tags=None)` | Rename a scorer or replace its tags; omitted fields stay. |
@@ -306,7 +306,7 @@ Submitting hosted jobs is explicit and can consume the project's allowance. Meth
 | --- | --- |
 | `fetch(*, sha256, trace_id=None, span_id=None, snapshot_id=None, max_bytes=67108864)` | Downloads one file through `GET /api/v1/traces/{traceId}/blobs/{sha256}` (or the snapshot's copy with `snapshot_id`), without the project key, and checks its SHA-256 → `MediaFile` with `data`, `sha256`, `size`, `content_type` and `file_name` (both `None` for a snapshot's copy). `max_bytes` is at most 1 GB. |
 | `resolve(value, *, trace_id=None, span_id=None, snapshot_id=None, as_="data_url", concurrency=4, max_bytes=67108864, blobs=None)` | Writes the bytes of every digest part in `value` back into the part's own field, as a `data:` URL or base64 (`"data_url"`) or as `bytes` → `ResolvedMedia` with a new `value`, the count `resolved` and `failures`. `concurrency` is 1–16. `blobs` takes the record's `hue.blobs` entries in any form Hue reads. |
-| `MediaFetchError` | Raised by `fetch`, with `reason`: `not_found`, `missing`, `unavailable`, `forbidden`, `too_large`, `digest_mismatch` or `failed`. An unavailable answer, a lost connection or a timeout is asked once more, after a `Retry-After` of up to 10 seconds. |
+| `MediaFetchError` | Raised by `fetch`, with `reason`: `not_found`, `missing`, `unavailable`, `forbidden`, `too_large`, `digest_mismatch` or `failed`. A `forbidden` read of a snapshot's copy says that it needs a **Read and write** key; the keyword-only `snapshot` argument selects that message. An unavailable answer, a lost connection or a timeout is asked once more, after a `Retry-After` of up to 10 seconds. |
 | `MediaResolveFailure` | A part `resolve` or `rehydrate_media` left unchanged: `pointer` (RFC 6901), `sha256` and `reason`, a `MediaFetchError` reason, `not_found` for no matching local file, or `prefix_only` for a part holding only the first 16 KiB of its file. |
 | `rehydrate_media(value, files, *, as_="data_url")` | Writes case files (`LocalFile`, `ManagedInputFile`, or any object with `sha256`, `data` or `path`, and optional `content_type`) back into the digest parts of `value` by SHA-256 → `ResolvedMedia`. |
 
