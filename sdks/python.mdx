@@ -13,7 +13,7 @@ Use Python 3.10 or later. [Install the Python SDK](/quickstart#python), then con
 
 ## Configure your project
 
-Create a **Tracing only** project service key in **Settings → Integrations & API keys** and set `HUE_API_KEY` in your server environment. Keep it out of browser code and Git.
+Create a **Tracing only** project service key in **Settings → API keys** and set `HUE_API_KEY` in your server environment. Keep it out of browser code and Git.
 
 **Tracing only** covers ingestion, connection checks, and known-trace receipt verification. Use **Read and write** when the same process also creates eval sets, evaluators, runs or managed runs. See [Project keys](/quickstart#project-keys) for access and rotation. The SDK connects to Hue Cloud by default. Other origins are covered in [connection settings](/quickstart#connection-settings).
 
