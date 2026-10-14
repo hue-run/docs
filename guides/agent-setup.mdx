@@ -44,7 +44,7 @@ Otherwise, tell the user, in this wording or close to it:
 
 > Hue needs a **Read and write** API key from your Hue account. You create and store it yourself, so please don't paste it into this chat.
 >
-> 1. Sign in at https://app.hue.run, select the project that should receive this application's traces, open **Settings → Integrations & API keys** (https://app.hue.run/settings/integrations) and create a **Read and write** key. Members ask an owner or admin for one.
+> 1. Sign in at https://app.hue.run, select the project that should receive this application's traces, open **Settings → API keys** (https://app.hue.run/settings/integrations) and create a **Read and write** key. Members ask an owner or admin for one.
 > 2. Store it as `HUE_API_KEY` in your secret manager, or run this in your own terminal from the repository root and paste the key at its hidden prompt: `npx -y @hue-run/sdk@0.18.2 login --gitignore`
 > 3. Tell me when it's stored. You don't need to run the next steps it prints; I'll do those.
 >
@@ -72,7 +72,7 @@ This check sends no telemetry. `200` means the key works: tell the user the proj
 
 ## 3. Add tracing
 
-Use curl to read [Hue's skill](https://docs.hue.run/skill.md?v=0.7.4) on this site and follow it from **Choose the integration** through **Verify delivery** for the application's language and framework. Its **Get a Hue API key** section is already done. Hold its **Handoff** and come back here for step 4. The skill covers installing the SDK, choosing a capture policy, isolating serving requests from Hue and verifying a real request.
+Use curl to read [Hue's skill](https://docs.hue.run/skill.md?v=0.7.5) on this site and follow it from **Choose the integration** through **Verify delivery** for the application's language and framework. Its **Get a Hue API key** section is already done. Hold its **Handoff** and come back here for step 4. The skill covers installing the SDK, choosing a capture policy, isolating serving requests from Hue and verifying a real request.
 
 Set this up for complete traces with `captureContent: true` in TypeScript or `capture_content=True` in Python, including on older SDKs that require the option. An unset `HUE_CAPTURE_CONTENT` enables capture; only explicit `false` disables it. Explain that this sends supplied prompts, responses and tool inputs and outputs to Hue. Honor an explicit metadata-only choice or an existing application policy that forbids sending that content to another service. Keep redaction and credential filtering either way. Instrument every request path that calls a model or tool, with model and tool child spans and the application's session identifier. When content capture is enabled, verify that the actual request's input and output arrived before reporting setup complete.
 

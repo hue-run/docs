@@ -225,7 +225,7 @@ A pinned connection omits `project_id`; `list_projects` returns only the project
 
 ## Connect with a project key
 
-1. An owner or admin creates a **Read** key, or **Read and write** if the agent changes data, in **Settings → Integrations & API keys**. Save it in a secret manager; it is shown once. Keep it separate from production **Tracing only** `HUE_API_KEY`; development can use one **Read and write** key from [`hue login`](/sdks/cli#store-your-key).
+1. An owner or admin creates a **Read** key, or **Read and write** if the agent changes data, in **Settings → API keys**. Save it in a secret manager; it is shown once. Keep it separate from production **Tracing only** `HUE_API_KEY`; development can use one **Read and write** key from [`hue login`](/sdks/cli#store-your-key).
 2. For clients that read `HUE_MCP_KEY`, export the key alone, without `Bearer `, in the startup shell. Use a secure credential prompt when available.
 3. Follow your [client's tab](#connect-your-client), restart from that shell and approve **hue** if asked. Desktop launchers do not inherit terminal variables.
 
@@ -289,7 +289,7 @@ For keys, use the [curl check](#verify-the-connection) when a client shows only 
 | `Malformed initial access token Authorization header` or `Dynamic Client Registration rejected (HTTP 401)` | A failing, empty or unexpanded key header was sent during sign-in | Fix or remove the header, then restart or sign in. |
 | Codex reports `Environment variable HUE_MCP_KEY for MCP server 'hue' is not set` or `… is empty` | The variable is missing, empty or set without `export` in the shell that started Codex | Export the key in that shell and restart Codex. |
 | `401` `The bearer token is not a Hue credential` | The client sent an unexpanded reference or a quoted or extra value | Set the key alone and use client syntax: `${HUE_MCP_KEY}` for Claude Code, `${env:HUE_MCP_KEY}` for Cursor, or Codex's `bearer_token_env_var`. |
-| `401` `A valid project service key is required` | The key is wrong, truncated, revoked or expired | Copy the key again from your secret manager, or create a new one in **Settings → Integrations & API keys**. |
+| `401` `A valid project service key is required` | The key is wrong, truncated, revoked or expired | Copy the key again from your secret manager, or create a new one in **Settings → API keys**. |
 | `403` `This key cannot read project data` | The key is **Tracing only** or a legacy **Tracing and evaluations** or **Source capture (legacy)** key | Create a **Read** or **Read and write** key and configure it in your client. Or [sign in with Hue](#sign-in-with-hue). |
 | `403` `Origin is not allowed.` | A browser-based client or web page called the server from an origin Hue does not accept. The key or sign-in is not the problem | Connect from a CLI or desktop client, a hosted connector described in [connect your client](#connect-your-client), or a local tool served from `localhost`, such as MCP Inspector. |
 | `413` `MCP request exceeds 1 MiB` | The request body is larger than 1 MiB, usually a large batch of cases or a long JSON argument | Split the call, for example into several `add_eval_set_cases` calls of at most 25 cases. |
