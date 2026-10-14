@@ -374,13 +374,14 @@ Images, audio and documents that OpenInference, OpenLLMetry or another instrumen
 | --- | --- |
 | PNG, JPEG, GIF, WebP and AVIF images | Shown inline |
 | MP3, WAV, Ogg, Opus, WebM, MP4, AAC and FLAC audio | Played with the browser's controls |
+| Raw 16-bit PCM whose media type declares its rate, and OpenAI `pcm16` audio | Played, up to 32 MiB; Hue adds a WAV header in the browser and leaves the stored bytes as sent |
 | MP4 and WebM video | Played with the browser's controls |
 | PDF | Opens in a new tab |
 | Text documents | Shown as text |
 | SVG, HTML, Word documents and other types | Download only |
 | Remote URL | Shown as a link; Hue never loads it |
 
-Playback depends on the browser's support for the format. A file whose bytes the span lists under `hue.blobs` also shows a state: **Stored**, **Not uploaded** (never uploaded, or erased) or **Unavailable** (Hue could not read the storage).
+Raw PCM plays when its media type names its sample rate: `audio/L16;rate=24000` (big-endian, as RFC 2586 defines it) or `audio/pcm;rate=16000;channels=1` (little-endian), with a whole `rate` from 8000 to 192000 and 1 or 2 `channels`. OpenAI audio declared `pcm16` plays as 24 kHz mono. Raw PCM without a declared rate is download only. Playback depends on the browser's support for the format. A file whose bytes the span lists under `hue.blobs` also shows a state: **Stored**, **Not uploaded** (never uploaded, or erased) or **Unavailable** (Hue could not read the storage).
 
 ### Attach files without the SDK
 
@@ -477,7 +478,7 @@ provider.shutdown()  # Flushes the batch processor and the exporter.
 
 #### Attach a voice turn
 
-Attach a voice turn's audio the same way: one `attach_file` call per clip, with every entry in the span's `hue.blobs`. The trace view plays WAV, MP3, Opus and the other formats [listed above](#images-audio-and-documents). Raw PCM, which realtime voice APIs stream, carries no header that names its sample rate, so wrap it in a WAV header first; Python's `wave` module does that without re-encoding, and the file then plays in any player. In `attach.py`, in place of the `agent.request` span:
+Attach a voice turn's audio the same way: one `attach_file` call per clip, with every entry in the span's `hue.blobs`. The trace view plays WAV, MP3, Opus and the other formats [listed above](#images-audio-and-documents). Raw PCM, which realtime voice APIs stream, carries no header that names its sample rate: declare it in the media type, as [above](#images-audio-and-documents), or wrap it in a WAV header first. Python's `wave` module does that without re-encoding, and the file then plays in any player. In `attach.py`, in place of the `agent.request` span:
 
 ```python
 import io
