@@ -7,22 +7,22 @@ description: "Store a key, connect an agent to Hue MCP, run evaluations and impo
 
 <CodeGroup>
 ```sh npm
-npm install @hue-run/sdk@0.19.0
+npm install @hue-run/sdk@0.19.1
 ```
 
 ```sh Bun
-bun add @hue-run/sdk@0.19.0
+bun add @hue-run/sdk@0.19.1
 ```
 </CodeGroup>
 
-Run the commands from that project with `npx -y @hue-run/sdk@0.19.0 …`. Always name the package: a bare `npx hue` can run an unrelated npm package called `hue`. Every command accepts `--help`.
+Run the commands from that project with `npx -y @hue-run/sdk@0.19.1 …`. Always name the package: a bare `npx hue` can run an unrelated npm package called `hue`. Every command accepts `--help`.
 
 ## Store your key
 
 Create a **Read and write** key in **Settings → API keys** for the project you want to use, then run:
 
 ```sh
-npx -y @hue-run/sdk@0.19.0 login --gitignore
+npx -y @hue-run/sdk@0.19.1 login --gitignore
 ```
 
 `hue login` prints the key settings page and opens it in your browser when a terminal is attached. It reads the key without echoing it, checks it against Hue, and stores it once as both `HUE_API_KEY` (for evaluations) and `HUE_MCP_KEY` (for your coding agent) in `./.env.hue`, together with `HUE_BASE_URL` and `HUE_MCP_URL`. `--gitignore` adds that file to `.gitignore`. Key values are never printed.
@@ -45,7 +45,7 @@ To revoke evaluation and agent access separately, run `--keys evaluations` and `
 ## Connect your coding agent
 
 ```sh
-npx -y @hue-run/sdk@0.19.0 mcp install --client claude-code --auth oauth
+npx -y @hue-run/sdk@0.19.1 mcp install --client claude-code --auth oauth
 ```
 
 `hue mcp install` writes a server named `hue` at `https://mcp.hue.run/mcp` for your client. Supported clients are `claude-code`, `codex`, `conductor`, `cursor`, `vscode`, `windsurf` and `gemini`. For `windsurf` it only prints the snippet; merge it into the configuration opened by Cascade's **… (Actions) → MCPs → Open MCP config file**. See the [Cascade MCP guide](https://docs.devin.ai/desktop/cascade/mcp) for that client's configuration. Add `--dry-run` to see the change first, or `--print` for the snippet only.
@@ -73,8 +73,8 @@ With a key, export `HUE_MCP_KEY` in the shell that starts your client; an app st
 `hue eval` runs your agent locally against a published case or a saved eval set and prints Hue's verdicts. Your agent, prompts and model credentials stay on your machine. It reads `HUE_API_KEY` from the environment, or from `./.env.hue`, the file `hue login` writes, when the environment has none; `--env-file <path>` names another file. Start the agent's own command with `--command`, after the one-time change in [Evaluation setup](/evaluations/eval-ready-agent):
 
 ```sh
-npx -y @hue-run/sdk@0.19.0 eval --case "<name|id|url>" --command "<start command>"
-npx -y @hue-run/sdk@0.19.0 eval --worker --command "<start command>" --revision "<new-agent-revision>"
+npx -y @hue-run/sdk@0.19.1 eval --case "<name|id|url>" --command "<start command>"
+npx -y @hue-run/sdk@0.19.1 eval --worker --command "<start command>" --revision "<new-agent-revision>"
 ```
 
 npx caches the CLI, so the agent's repository gains no package.json or dependency. See [Run an eval with your agent](/evaluations/run-your-agent) for one-shot runs, `--check` and resuming after interruption. Always pin the version: in a project that already depends on `@hue-run/sdk`, an unpinned `npx @hue-run/sdk` runs that local, possibly older, copy. `hue eval` needs Node.js 22 or 24, even for a Python agent.
@@ -124,8 +124,8 @@ Put the Langfuse keys in an env file kept out of version control, count what wou
 #   LANGFUSE_PUBLIC_KEY=pk-lf-...
 #   LANGFUSE_SECRET_KEY=sk-lf-...
 #   LANGFUSE_BASE_URL=https://cloud.langfuse.com
-npx -y @hue-run/sdk@0.19.0 import langfuse --env-path .env.langfuse --from 2026-01-01 --dry-run
-npx -y @hue-run/sdk@0.19.0 import langfuse --env-path .env.langfuse --from 2026-01-01 --media
+npx -y @hue-run/sdk@0.19.1 import langfuse --env-path .env.langfuse --from 2026-01-01 --dry-run
+npx -y @hue-run/sdk@0.19.1 import langfuse --env-path .env.langfuse --from 2026-01-01 --media
 ```
 
 The secret key is read only from `LANGFUSE_SECRET_KEY` in the environment or the env file, never from the command line, where shell history and other processes can read it. The Langfuse host is `--langfuse-host`, then `LANGFUSE_BASE_URL`, then `LANGFUSE_HOST`, then `https://cloud.langfuse.com`; use your region's host or your self-hosted URL. `HUE_API_KEY` comes from the environment, the env file or `./.env.hue`; a **Tracing only** key or the **Read and write** key `hue login` stores works. The command checks it against Hue before it reads Langfuse.

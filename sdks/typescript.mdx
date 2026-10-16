@@ -127,7 +127,8 @@ Inside those values the SDK recognizes GenAI `blob` parts, AI SDK `file` and `im
 Each uploaded file takes one of these forms:
 
 - A provider part loses its byte field and carries `sha256` and `size`, keyed at the part, for example `gen_ai.input.messages#/0/parts/1`. An OpenAI assistant message's `audio` loses `audio.data`, and the message carries the digest.
-- A whole `data:` URL string becomes a GenAI `blob` part, `{"type":"blob","mime_type":"image/png","modality":"image","sha256":"<64 hex>","size":68}`, keyed at the string. A text data URL up to 64 KiB stays inline.
+- Raw 16-bit PCM keeps the format its type declares: `audio/pcm`, `audio/x-pcm` or `audio/L16` with a `rate` is listed as, for example, `audio/pcm;rate=24000;channels=1`, and OpenAI `pcm16` audio as `audio/pcm;rate=24000;channels=1`, so the stored file [plays in the trace](/integrations/opentelemetry#images-audio-and-documents).
+- A whole `data:` URL string becomes a GenAI `blob` part, `{"type":"blob","mime_type":"image/png","modality":"image","sha256":"<64 hex>","size":68}`, keyed at the string. A value that is entirely one, such as the string input or output Langfuse's SDK records as it is, becomes that part's JSON text, keyed `<attribute>#`. A text data URL up to 64 KiB stays inline.
 - A file inside a JSON-encoded tool string takes the digest form inside the string. No JSON pointer can address inside a string, so Hue matches it by digest.
 - Text media over 64 KiB of decoded bytes keeps a UTF-8-safe 16 KiB prefix in its content field, keyed at that field, for example `gen_ai.input.messages#/0/parts/1/content`. Smaller text stays inline. A text file that a GenAI `blob`, Vertex `media`, or AI SDK `file` or `image` part holds as bare base64 is decoded first, as Hue reads it: over 64 KiB of decoded bytes, it uploads and takes the digest form at the part, like binary media.
 
@@ -244,6 +245,7 @@ async function target(inputs, { files }) {
 | Traces already recorded in a Langfuse project | | [`hue import langfuse`](/sdks/cli#import-traces-from-langfuse), run with your Langfuse keys |
 | Base64 data URIs in an observation's input, output or metadata | | [Automatic capture](#automatically-captured-media), for the attributes and shapes listed there |
 | `LangfuseMedia` | `Attachment` | [`Attachment`](#attach-a-file-anywhere), at the same position |
+| `LangfuseMedia` and data URIs, keeping Langfuse's SDK | | Unchanged: with Hue's processor [beside Langfuse's](/integrations/opentelemetry#use-with-langfuse), each file uploads to Hue in the background |
 | `resolveMediaReferences({ obj, resolveWith: "base64DataUri" })` | | `client.media.resolve(obj, { traceId })` |
 | `GET /api/public/media/{mediaId}` | `ReadonlyAttachment.data()` | `client.media.fetch({ traceId, sha256 })` |
 | | `JSONAttachment` | Nothing: a span's own string attribute over the inline limit uploads whole, up to 1,000,000,000 bytes |
