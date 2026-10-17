@@ -767,7 +767,9 @@ The runtime validators are `zod` schemas (`z.ZodType`) for the types of the same
 | `secretFreeBindingV2(bundle)` | Removes endpoints and bearers from a validated bundle, retaining its dependency identity as a `DependencyManifestV2`. |
 | `projectMcpConnectionV2(bundle, providerInstanceKey)` | The `SimulationMcpCapability` projection of the provider's MCP surface, or `null`. This legacy `context.mcp` projection is credential-bearing and is never another source of binding truth. |
 
-## Environment client
+<span id="environment-client" />
+
+## World client
 
 ```ts
 import { createEnvironmentClient } from "@hue-run/sdk/environment";
@@ -775,7 +777,7 @@ import { createEnvironmentClient } from "@hue-run/sdk/environment";
 const environments = createEnvironmentClient({ apiKey: process.env.HUE_API_KEY! });
 ```
 
-`createEnvironmentClient(options: EnvironmentClientOptions): EnvironmentClient` and `new EnvironmentClient(options)` create a typed client for authored environments, isolated runs and immutable journals.
+`createEnvironmentClient(options: EnvironmentClientOptions): EnvironmentClient` and `new EnvironmentClient(options)` create a typed client for authored Worlds, isolated instances and immutable journals.
 
 | Option | Type | Default and behavior |
 | --- | --- | --- |
@@ -786,7 +788,9 @@ const environments = createEnvironmentClient({ apiKey: process.env.HUE_API_KEY! 
 
 Run mutations retry on transport failure and on HTTP 408, 429, 500, 502, 503 and 504 with exponential backoff, reusing the same invocation or idempotency identity. When a 429 or 503 carries `Retry-After`, the client waits that long instead, at most 10 seconds. `createEnvironment` and `publishVersion` are non-idempotent registry writes and are not retried. Failures throw `HueEnvironmentError`, whose fixed message never includes response text or credentials; `status` carries the HTTP status when Hue answered and is absent for transport, timeout or parse failure, and `retryAfterMs` carries Hue's bounded `Retry-After` from a 429 or 503. Responses are limited to 4 MiB and request bodies to 1 MiB; a published definition may contain up to 240 KB.
 
-### Environments and versions
+<span id="environments-and-versions" />
+
+### Worlds and versions
 
 | Method | Result or purpose |
 | --- | --- |

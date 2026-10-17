@@ -326,7 +326,7 @@ Write tools need **Read and write** without `?read_only=true`. Ask before each w
 | Check production behavior | “Show this week’s positive delegation checks and their evidence.” | `list_trace_checks`, `get_trace_checks`, `get_trace_check_results`, `get_trace_check_summary`; [trace check results](/agents/mcp-tools#review-trace-check-results) |
 | Read eval sets and runs | “Summarize the latest run and list its failing cases.” | `list_eval_sets`, `get_eval_set`, `list_evaluators`, `get_evaluator`, `list_runs`, `get_run`, `list_run_items`, `get_run_item`, `get_run_execution`, `list_scoring_runs`, `get_scoring_run` |
 | Author an eval set and evaluator | “Create an eval set with five cases, publish an exact-match evaluator, then start a run.” | `add_eval_set`, `add_eval_set_cases`, `freeze_eval_set_version`, `add_evaluator`, `publish_evaluator`, `add_run`; [First evaluation](/evaluations/first-evaluation) |
-| Create a simulated environment | “Create an environment from this trace and publish its version.” | `add_environment`, `publish_environment_version`; [Environments from traces](/agents/debug-environment) |
+| Create a simulated environment | “Create an environment from this trace and publish its version.” | `add_environment`, `publish_environment_version`; [Environments from traces](/agents/debug-world) |
 | Read reviewed cases | “List reviewed cases and show the task for `<case>`.” | `list_cases`, `get_case`; [Trace to case](/evaluations/case-from-trace) |
 | Create a case from a trace | “Turn `<trace link>` into a draft case; show its findings and publish nothing.” | `add_case_conversion`, `get_case_conversion`, `update_case_conversion`, `publish_case_conversion`; [Trace to case](/evaluations/case-from-trace) |
 | Convert suggested cases | “Start drafts for the first five suggested traces and report failures.” | `list_suggested_cases`, `add_case_conversion_batch`, `get_case_conversion_batch`, `update_case_conversion_batch`, `get_case_divergence`; [Trace to case](/evaluations/case-from-trace) |
@@ -335,7 +335,7 @@ Write tools need **Read and write** without `?read_only=true`. Ask before each w
 | Run an evaluation | “Run `<case>` on my local agent; ask before launching.” | `list_local_agents`, `launch_local_run`, `get_local_run`, `recover_local_run`, `list_managed_targets`, `preflight_managed_run`, `launch_managed_run`, `get_managed_run`, `cancel_managed_run`; [First evaluation](/evaluations/first-evaluation) |
 | Read artifacts and judge usage | “Show the artifacts for `<run>` and its hosted-judge usage.” | `list_artifacts`, `get_artifact`, `get_judge_budget`, `add_judge_jobs`, `cancel_judge_jobs` |
 | Manage project settings | “List project members and tell me who can change the API keys.” | `list_api_keys`, `list_members`, `add_api_key`, `revoke_api_key`, `update_project`; [permissions](/agents/mcp-tools#permissions) |
-| Debug an environment | “Build a Linear environment from this failed trace and show the requests.” | `prepare_trace_upload`, `complete_trace_upload`, `create_environment_from_trace`, `get_environment_build`, `start_environment_world`, `get_world_state`; [Environments from traces](/agents/debug-environment) |
+| Debug an environment | “Build a Linear environment from this failed trace and show the requests.” | `prepare_trace_upload`, `complete_trace_upload`, `create_environment_from_trace`, `get_environment_build`, `start_environment_world`, `get_world_state`; [Environments from traces](/agents/debug-world) |
 | Search Hue documentation | “How do I flush spans in a Next.js streaming route?” | `search_hue_docs`, `load_hue_guide` |
 
 ### Terminology
@@ -354,7 +354,7 @@ That is 18 tools with write access, or 17 tools with **Read** access. An executo
 
 To list tools directly, add `?toolsets=<names>` or the `X-Hue-MCP-Toolsets: <names>` header; both selections form their union. Separate names with commas.
 
-`author` and `evaluate` match the MCP guides; `debug` lists the [Environments from traces workflow](/agents/debug-environment). Other names are groups from the [MCP tools](/agents/mcp-tools):
+`author` and `evaluate` match the MCP guides; `debug` lists the [Environments from traces workflow](/agents/debug-world). Other names are groups from the [MCP tools](/agents/mcp-tools):
 
 | Selection | Directly listed tools |
 | --- | --- |

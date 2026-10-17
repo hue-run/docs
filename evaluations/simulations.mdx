@@ -3,7 +3,7 @@ title: "Simulations"
 description: "Run an agent in a fresh simulated world per case and score its sealed journal."
 ---
 
-Your agent runs in your process; Hue runs a disposable world and records its action journal. Hue neither executes agent code nor holds provider credentials.
+Your agent runs in your process; Hue runs an isolated instance of a World and records its action journal. Hue neither executes agent code nor holds provider credentials.
 
 `runSimulation()` runs TypeScript agents against simulated worlds; Python provides the lower-level [`hue_sdk.environment`](/reference/python#environment-client). Each invocation creates a fresh run, an isolated world per case and a resumable checkpoint. See the [simulation](/reference/typescript#run-a-simulation) and [environment](/reference/typescript#environment-client) references.
 
@@ -19,9 +19,13 @@ Set `HUE_API_KEY` to a [project service key](/quickstart#project-keys) created w
 
 ## How worlds work
 
-An environment is an immutable, versioned world definition: initial collections of JSON entities and a closed action catalog. Each action maps to a deterministic kernel semantic, such as `hue.collection.get@1`, `hue.gmail.create_draft@1` or `hue.slack.read_channel@1`, with flat `string`, `number`, `boolean` or `string[]` parameters. Publishing creates a version and content digest; unchanged definitions reuse their version.
+A World is starting state. An instance is an isolated running copy. Instances can share immutable
+starting data, but their mutations and journals remain separate. Each case execution receives
+its own instance, even when several cases use the same World and represented time.
 
-A run instantiates one version into an isolated world with a virtual clock, lease, at most 500 actions and a journal. Each step records validated arguments, the observation, normalized effects and state digest; repeating an invocation identity replays its result. Sealing as `completed` or `abandoned` freezes journal and final state as evidence.
+A World definition contains initial collections of JSON entities and a closed action catalog. Each action maps to a deterministic kernel semantic, such as `hue.collection.get@1`, `hue.gmail.create_draft@1` or `hue.slack.read_channel@1`, with flat `string`, `number`, `boolean` or `string[]` parameters. Publishing creates a version and content digest; unchanged definitions reuse their version.
+
+An instance starts from one immutable World version with a virtual clock, lease, at most 500 actions and a journal. Each step records validated arguments, the observation, normalized effects and state digest; repeating an invocation identity replays its result. Sealing as `completed` or `abandoned` freezes journal and final state as evidence.
 
 An observation with `status: "error"` is a recorded world answer, for example a guard that refused a mutation. It is not a transport exception.
 

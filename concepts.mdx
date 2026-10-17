@@ -25,8 +25,22 @@ Hue observes your application through OpenTelemetry traces, then turns traces in
 | Evaluator | How quality is measured: a deterministic **verifier** or a hosted LLM **judge** with a pinned model and rubric. | [**Evaluators**](/evaluations/first-evaluation) |
 | Run | Your agent executed over an eval set version, with each case's output, trace and scores. Compare runs to catch regressions. | [**Runs**](/evaluations/first-evaluation) |
 | Scoring run | Evaluators applied to outputs a run already stored, without running the agent again. | [**Runs**](/evaluations/first-evaluation) |
-| Environment | A simulated app (for example Linear or Gmail): its starting data and the actions an agent can take. | [**Environments**](/evaluations/simulations) |
-| World | A fresh instance of an environment version for one execution. Its journal of actions is scoring evidence. | [**Environments**](/evaluations/simulations) |
+| World | The reconstructed starting state at a chosen time, across the user's supported apps and accounts. | [**Worlds**](/evaluations/simulations) |
+| Instance | An isolated running copy of a World. Its changes do not affect other instances or the starting World. | [**Worlds**](/evaluations/simulations) |
+
+## Worlds over time
+
+A World model is the history Hue retains for one user or entity in your project. Traces add
+evidence to that history. A World at a chosen time uses the latest completed reconstruction
+of that time, including later observations that establish what was already true then.
+
+For example, a later trace can supply the missing body of a message that existed at T2.
+A message created after T2 stays excluded from T2. Each new run freezes its starting World,
+and every case receives an isolated instance. Later evidence does not change existing instances.
+
+To reproduce an earlier instance, start another instance using its original starting World.
+The new instance starts without the previous instance's changes. Reproduction requires the
+original starting data to remain retained.
 
 ## Access
 

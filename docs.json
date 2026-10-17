@@ -45,7 +45,7 @@
         "pages": [
           "agents/overview",
           "agents/mcp-server",
-          "agents/debug-environment"
+          "agents/debug-world"
         ]
       },
       {
@@ -85,6 +85,10 @@
     {
       "source": "/agents/investigate-production",
       "destination": "/agents/mcp-tools"
+    },
+    {
+      "source": "/agents/debug-environment",
+      "destination": "/agents/debug-world"
     }
   ],
   "logo": {
