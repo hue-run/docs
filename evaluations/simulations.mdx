@@ -3,7 +3,7 @@ title: "Simulations"
 description: "Run an agent in a fresh simulated world per case and score its sealed journal."
 ---
 
-Your agent runs in your process; Hue runs a disposable world and records its action journal. Hue neither executes agent code nor holds provider credentials.
+Your agent runs in your process; Hue runs an isolated instance of a World and records its action journal. Hue neither executes agent code nor holds provider credentials.
 
 `runSimulation()` runs TypeScript agents against simulated worlds; Python provides the lower-level [`hue_sdk.environment`](/reference/python#environment-client). Each invocation creates a fresh run, an isolated world per case and a resumable checkpoint. See the [simulation](/reference/typescript#run-a-simulation) and [environment](/reference/typescript#environment-client) references.
 
@@ -19,11 +19,41 @@ Set `HUE_API_KEY` to a [project service key](/quickstart#project-keys) created w
 
 ## How worlds work
 
-An environment is an immutable, versioned world definition: initial collections of JSON entities and a closed action catalog. Each action maps to a deterministic kernel semantic, such as `hue.collection.get@1`, `hue.gmail.create_draft@1` or `hue.slack.read_channel@1`, with flat `string`, `number`, `boolean` or `string[]` parameters. Publishing creates a version and content digest; unchanged definitions reuse their version.
+A World is starting state. An instance is an isolated running copy. Instances can share immutable
+starting data, but their mutations and journals remain separate. Each case execution receives
+its own instance, even when several cases use the same World and represented time.
 
-A run instantiates one version into an isolated world with a virtual clock, lease, at most 500 actions and a journal. Each step records validated arguments, the observation, normalized effects and state digest; repeating an invocation identity replays its result. Sealing as `completed` or `abandoned` freezes journal and final state as evidence.
+A World definition contains initial collections of JSON entities and a closed action catalog. Each action maps to a deterministic kernel semantic, such as `hue.collection.get@1`, `hue.gmail.create_draft@1` or `hue.slack.read_channel@1`, with flat `string`, `number`, `boolean` or `string[]` parameters. Publishing creates a version and content digest; unchanged definitions reuse their version.
+
+An instance starts from one immutable World version with a virtual clock, lease, at most 500 actions and a journal. Each step records validated arguments, the observation, normalized effects and state digest; repeating an invocation identity replays its result. Sealing as `completed` or `abandoned` freezes journal and final state as evidence.
 
 An observation with `status: "error"` is a recorded world answer, for example a guard that refused a mutation. It is not a transport exception.
+
+## Capture user and account identity
+
+Automatic World reconstruction and its capture contract are not yet released.
+
+Record the complete user ID on the request's root span. For an entity other than a user, attach
+both `hue.world.entity.namespace` and `hue.world.entity.id` to that root. Each tool call needs
+its own account binding, regardless of how your agent framework wraps the service:
+
+| Tool-span attribute | Meaning |
+| --- | --- |
+| `hue.connection.provider_id` | Registered app ID, such as `google.gmail`. |
+| `hue.connection.account_id` | Your stable account or connection ID for this user. |
+| `hue.connection.generation` | Positive connection generation; increment when replacing the connection. |
+| `hue.connection.scope` | Optional app partition, such as a workspace. |
+| `hue.connection.principal` | Acting identity when the app requires one. |
+
+TypeScript can set these attributes on `trace.getSpan(hue.getContext())` inside `hue.tool`.
+Python exposes the tool span as `span.otel_span` inside `with hue.tool(...) as span`.
+Use your framework's equivalent tool-span hook when it owns instrumentation. A parent-only
+account label cannot distinguish different accounts used by child calls. Missing identity stays
+unresolved; a tool argument or matching email address does not establish a binding.
+
+Production provenance belongs on the OpenTelemetry resource (`deployment.environment.name`
+set to `production` for faithful production traffic). Eval, simulation and excluded traffic
+cannot populate a live user's World. Account identifiers are not OAuth tokens or credentials.
 
 ## Run a simulation
 

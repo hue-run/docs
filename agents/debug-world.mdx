@@ -1,10 +1,10 @@
 ---
-title: "Build an environment from a trace"
-sidebarTitle: "Environments from traces"
-description: "Build a simulated environment from a trace, run your agent, and inspect each attempt."
+title: "Build a World from a trace"
+sidebarTitle: "Worlds from traces"
+description: "Build a simulated World from a trace, run your agent, and inspect each attempt."
 ---
 
-Use one failed trace to build a populated Linear environment, then run your agent against it.
+Use one failed trace to build a populated Linear World, then run your agent against it.
 Each attempt has an isolated, persistent world. You can inspect its data and requests, change
 your agent and start another attempt from the same starting data.
 
@@ -19,7 +19,7 @@ https://mcp.hue.run/mcp?toolsets=debug
 
 Use **Sign in with Hue** when your client supports it, or a **Read and write** project key
 from the client's secret storage. A **Read** connection can inspect saved worlds; creating
-an environment, controlling an attempt and revealing its connections require write access.
+a World, controlling an attempt and revealing its connections require write access.
 For an organization connection, call `list_projects` and pass the intended `project_id` to
 each project tool. A pinned connection takes no `project_id`.
 Call `get_project_context` to verify the selected project. Setup tools outside the `debug`
@@ -28,7 +28,7 @@ profile are available through `search_hue_tools` and `execute_hue_tool` or
 
 Ask an owner or admin to enable **AI trace builds** in **Settings → Projects → Edit project**.
 This allows Hue to send redacted trace content and supplied context to models that populate
-the environment. The MCP setting is `update_project` with `ai_case_conversion_suggestions: true`;
+the World. The MCP setting is `update_project` with `ai_case_conversion_suggestions: true`;
 the same setting also controls case builds. See [AI processing](/guides/redaction#ai-processing).
 
 Linear is the first supported app. Keep your agent's own model, search and helper connections;
@@ -45,7 +45,7 @@ Select project <Hue project>. Retrieve trace <failed trace ID> through my Langfu
 including all observation pages, inputs, outputs and relevant expanded metadata.
 Keep source credentials in that connection and save the complete export in a private ignored file.
 My bad query was: <query>. Additional verified app facts: <facts, or none>.
-Build an environment from that one trace and optional context. Follow get_environment_build.
+Build a World from that one trace and optional context. Follow get_environment_build.
 If evidence is insufficient, tell me which project identity or app facts are needed; do not invent them.
 When Ready, reveal its connections and replace only my Linear URL and credential.
 Run the task, then inspect state, diff, steps and requests. Use get_world's returned collection bindings.
@@ -281,7 +281,7 @@ whether to retry a mutation.
 
 Call `reset_environment_world` with the current `world_id` and a new `idempotency_key`.
 It finishes the previous attempt and creates a fresh world and token from the same immutable
-environment version, without rebuilding the environment. Reconnect your agent with the new
+environment version, without rebuilding the World. Reconnect your agent with the new
 connection values. The previous `world_id` still identifies its saved data and activity.
 
 Call `reset_environment_world` with:

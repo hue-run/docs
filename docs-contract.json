@@ -219,7 +219,7 @@
     "evaluations/managed-runs",
     "agents/overview",
     "agents/mcp-server",
-    "agents/debug-environment",
+    "agents/debug-world",
     "concepts",
     "sdks/cli",
     "agents/mcp-tools",

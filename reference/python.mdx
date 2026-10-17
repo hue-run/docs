@@ -372,7 +372,9 @@ For uncertain work, investigate side effects before starting another attempt. Th
 
 Required evidence waits for both signals after the root span ends. Omission is an explicit policy, never an automatic fallback after export failure. For a runnable example, see the public [First evaluation](/evaluations/first-evaluation).
 
-## Environment client
+<span id="environment-client" />
+
+## World client
 
 ```python
 import os
@@ -382,7 +384,7 @@ from hue_sdk.environment import EnvironmentClient
 environments = EnvironmentClient(api_key=os.environ["HUE_API_KEY"])
 ```
 
-`hue_sdk.environment` is a synchronous client for Hue's simulated worlds. Pass a **Read and write** project service key as `api_key=`; `base_url` defaults to Hue Cloud, and a bare key in the first position raises `TypeError`. `timeout_seconds` (default `10`) bounds each request and `max_attempts` (default `4`, integer `1–10`) bounds retries. It creates, drives, seals and reads worlds of published environment versions; it does not publish environments, bind tools or run your agent. `run_simulation` has no Python counterpart.
+`hue_sdk.environment` is a synchronous client for Hue's simulated worlds. Pass a **Read and write** project service key as `api_key=`; `base_url` defaults to Hue Cloud, and a bare key in the first position raises `TypeError`. `timeout_seconds` (default `10`) bounds each request and `max_attempts` (default `4`, integer `1–10`) bounds retries. It creates, drives, seals and reads instances of published World versions; it does not publish Worlds, bind tools or run your agent. `run_simulation` has no Python counterpart.
 
 | Method | Result or purpose |
 | --- | --- |
